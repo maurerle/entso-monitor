@@ -6,7 +6,7 @@ Created on Tue Nov  3 13:03:22 2020
 """
 from entsog_api import *
 # point Data
-transportData = getDataFrame('operationaldatas')
+transportData = getDataFrame('operationaldata',['limit=1000'])
 cmpUnsuccessfulRequest= getDataFrame('cmpUnsuccessfulRequests')
 cmpUnavailableFirmCapacities = getDataFrame('cmpUnavailables')
 cmpAuctionPremiums = getDataFrame('cmpAuctions')
@@ -54,3 +54,52 @@ interconnections = getDataFrame('Interconnections')
 operators and their respective balancing zones'''
 aggregate_interconnections = getDataFrame('aggregateInterconnections')
 # TODO, diese müssen von entry und exit auseinander sortiert werden
+
+
+# SPARK TEST
+# write to parquet
+import findspark
+findspark.init()
+
+
+import pyspark
+from pyspark.sql import SparkSession
+import pandas as pd
+
+# Create a spark session
+spark = SparkSession.builder.getOrCreate()
+
+# Create pandas data frame and convert it to a spark data frame
+pandas_df = pd.DataFrame({"Letters":["X", "Y", "Z"]})
+spark_df = spark.createDataFrame(pandas_df)
+
+# Add the spark data frame to the catalog
+spark_df.createOrReplaceTempView('spark_df')
+
+spark_df.show()
+spark_df.write.parquet("people.parquet")
+
+spark.catalog.listTables()
+
+
+# visualize Data
+conn = sql.connect('entsog.db')
+query = "SELECT periodFrom,value FROM AggregatedData WHERE directionKey='entry' and adjacentSystemsLabel='IUK' and operatorKey='BE-TSO-0001'"
+
+query = '''select value-exit_value as diff,a.periodFrom,value, exit_value from (SELECT periodFrom,value FROM AggregatedData WHERE directionKey='entry' and adjacentSystemsLabel='IUK') a
+join (select periodFrom,value as exit_value from AggregatedData where directionKey='exit' and adjacentSystemsLabel='IUK') b
+on a.periodFrom = b.periodFrom
+'''
+
+#and operatorKey='BE-TSO-0001'
+
+df = pd.read_sql_query(query,conn)
+df['begin']=pd.to_datetime(df['periodFrom']).dt.to_period('M').dt.to_timestamp()
+df['begin']=pd.to_datetime(df['periodFrom']).dt.floor('d')
+
+sums = df.groupby('begin').sum()
+sums['begin']=sums.index
+sums.plot('begin','diff',rot=45)
+sums.plot('begin',['value','exit_value'],rot=45)
+
+df.plot("periodFrom","value", rot=45)

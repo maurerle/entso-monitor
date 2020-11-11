@@ -10,6 +10,9 @@ European Network of Transmission System Operators for Gas (ENTSO-G)
 """
 import requests
 import pandas as pd
+import time
+import datetime
+
 
 api_endpoint = 'https://transparency.entsog.eu/api/v1/'
 
@@ -17,22 +20,6 @@ response = requests.get(api_endpoint+'operationaldatas')
 data = pd.read_csv(api_endpoint+'AggregatedData.csv?limit=1000')
 response = requests.get(api_endpoint+'AggregatedData?limit=1000')
 data = pd.DataFrame(response.json()['AggregatedData'])
-
-
-names=['operationaldatas',
- 'cmpUnsuccessfulRequests',
- 'cmpUnavailables',
- 'cmpAuctions',
- 'AggregatedData',
- 'tariffssimulations',
- 'tariffsfulls',
- 'urgentmarketmessages',
- 'connectionpoints',
- 'operators',
- 'balancingzones',
- 'operatorpointdirections',
- 'Interconnections',
- 'aggregateInterconnections']
 
 def getDataFrame(name, params=['limit=10000'], json=False):
     params_str = ''
@@ -51,21 +38,68 @@ def getDataFrame(name, params=['limit=10000'], json=False):
     else:
         try:
             data = pd.read_csv(api_endpoint+name+'.csv'+params_str)
-        except Exception as e:
+        except requests.exceptions.InvalidURL as e:
+            raise e
+        except requests.exceptions.HTTPError as e:
             raise Exception("{} : {} ".format(e.reason, e.url))
 
     return data
 
+def loadDataSeries(name,indicator='Physical%20Flow',step=7,bulks=52*3):
+    delta = datetime.timedelta(days=step)
+    begin=datetime.date(2020,11,10)-delta
+    end=datetime.date(2020,11,10)
+
+    physicalFlow = pd.DataFrame()
+    for i in range(int(bulks)*7):
+        beg1 =begin-i*delta
+        end1 =end - i*delta + datetime.timedelta(days=step)
+        print('from '+str(beg1)+' to '+str(end1))
+        #pointDirection=DE-TSO-0001ITP-00096entry
+        params = ['limit=-1','indicator='+indicator,'from='+str(beg1),'to='+str(end1),'periodType=hour']
+        phys = getDataFrame(name, params)
+        physicalFlow =pd.concat([physicalFlow,phys])
+    return physicalFlow
+
+
+def yieldData(name,indicator='Physical%20Flow',bulks=52*3,begin=datetime.date(2017,7,10)):
+    if name == 'AggregatedData':
+        step=7
+    else:
+        step=1
+    delta = datetime.timedelta(days=step)
+
+    end=begin+delta
+
+    for i in range(int(bulks)):
+        beg1 =begin+i*delta
+        end1 =end + i*delta + datetime.timedelta(days=step)
+        #pointDirection=DE-TSO-0001ITP-00096entry
+        params = ['limit=-1','indicator='+indicator,'from='+str(beg1),'to='+str(end1),'periodType=hour']
+        yield end1, getDataFrame(name, params)
+
 import sqlite3 as sql
 from contextlib import closing
-import time
-from datetime import datetime, timedelta
-
-
 
 print(datetime.date(2020,11,5)-datetime.timedelta(days=4))
 
 if __name__ == "__main__":
+    names=[ 'cmpUnsuccessfulRequests',
+           # 'operationaldata',
+            'cmpUnavailables',
+            'cmpAuctions',
+           # 'AggregatedData', # operationaldata aggregated for each zone
+            'tariffssimulations',
+            'tariffsfulls',
+            'urgentmarketmessages',
+            'connectionpoints',
+            'operators',
+            'balancingzones',
+            'operatorpointdirections',
+            'Interconnections',
+            'aggregateInterconnections']
+
+
     with closing(sql.connect('entsog.db')) as conn:
         t_ges = time.time()
         for name in names:
@@ -76,7 +110,16 @@ if __name__ == "__main__":
             data.to_sql(name,conn, if_exists='replace')
         print(time.time()-t_ges)
 
+        name = 'operationaldata'
+        print('getting values from',name)
+        for end1, phys in yieldData(name,bulks=365*1):
+            print(end1)
+            phys.to_sql(name,conn, if_exists='append')
 
-    fr=f"{datetime.today()-timedelta(days=2):%Y-%m-%d}"
-    to=f"{datetime.today():%Y-%m-%d}"
-    data = getDataFrame('operationaldatas',['from='+fr,'to='+to,'limit=-1'])
+        name = 'AggregatedData'
+        print('getting values from',name)
+        for end1, phys in yieldData(name,bulks=52*1):
+            print(end1)
+            phys.to_sql(name,conn, if_exists='append')
+
+
