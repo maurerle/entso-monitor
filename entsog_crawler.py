@@ -59,6 +59,7 @@ aggregate_interconnections = getDataFrame('aggregateInterconnections')
 # SPARK TEST
 # write to parquet
 import findspark
+
 findspark.init()
 
 
@@ -79,8 +80,31 @@ spark_df.createOrReplaceTempView('spark_df')
 spark_df.show()
 spark_df.write.parquet("people.parquet")
 
+
+df = spark.read.parquet("agg.parquet")
+df.show() 
+
 spark.catalog.listTables()
 
+df.write.mode('append').partitionBy("year","month").parquet('AggregatedData')
+
+
+teset2 = pd.read_parquet('AggregatedData')
+
+test =spark.read.parquet('AggregatedData')
+
+filter2= test.filter("month=8")
+filter2.select("value").show()
+
+test.show()
+
+spark.sql("CREATE TEMPORARY VIEW PERSON2 USING parquet OPTIONS (path \"/tmp/output/people2.parquet/gender=F\")")
+
+#dd = test['value'].toPandas() does not work, other runs out of mem
+
+test.createOrReplaceTempView("tbl")
+parkSQL = spark.sql("select value from tbl where month = 7")
+dd = parkSQL.toPandas()
 
 # visualize Data
 conn = sql.connect('entsog.db')
