@@ -71,40 +71,60 @@ import pandas as pd
 spark = SparkSession.builder.getOrCreate()
 
 # Create pandas data frame and convert it to a spark data frame
-pandas_df = pd.DataFrame({"Letters":["X", "Y", "Z"]})
-spark_df = spark.createDataFrame(pandas_df)
+#pandas_df = pd.DataFrame({"Letters":["X", "Y", "Z"]})
 
+import sqlite3 as sql
+conn = sql.connect('entsog.db')
+pandas_df = pd.read_sql('select * from operationaldata', conn)
+pandas_df.to_parquet('operationaldata.parquet')
+
+spark_df = spark.read.parquet("operationaldata.parquet")
+
+spark_df.write.parquet("entsog/operationaldata.parquet")
 # Add the spark data frame to the catalog
 spark_df.createOrReplaceTempView('spark_df')
 
 spark_df.show()
-spark_df.write.parquet("people.parquet")
+spark_df.write.parquet("operationaldata.parquet")
 
+from pyspark.sql.functions import year, month, dayofmonth, to_timestamp, hour
+opdata = (spark_df.withColumn("year", year("periodFrom"))
+        .withColumn("month", month("periodFrom"))
+        .withColumn("day", dayofmonth("periodFrom"))
+        .withColumn("time", to_timestamp("periodFrom"))
+        .withColumn("hour", hour("periodFrom"))
+        )
 
-df = spark.read.parquet("agg.parquet")
-df.show() 
+opdata.select(['year','month','day','periodFrom','time','hour']).show()
 
 spark.catalog.listTables()
 
-df.write.mode('append').partitionBy("year","month").parquet('AggregatedData')
+spark_df.write.mode('append').partitionBy("year","month").parquet('opdata')
 
+agg =pd.read_sql('select * from AggregatedData', conn)
 
-teset2 = pd.read_parquet('AggregatedData')
-
-test =spark.read.parquet('AggregatedData')
-
-filter2= test.filter("month=8")
-filter2.select("value").show()
-
-test.show()
-
-spark.sql("CREATE TEMPORARY VIEW PERSON2 USING parquet OPTIONS (path \"/tmp/output/people2.parquet/gender=F\")")
+filtered= agg.filter("month=8")
+filtered.select("value").show()
+filtered.show()
 
 #dd = test['value'].toPandas() does not work, other runs out of mem
 
-test.createOrReplaceTempView("tbl")
-parkSQL = spark.sql("select value from tbl where month = 7")
+agg.createOrReplaceTempView("agg")
+parkSQL = spark.sql("select value from agg where month = 7")
 dd = parkSQL.toPandas()
+
+"""
+load = pd.DataFrame(client.query_load(country_code, start=start,end=end))
+load['time'] = load.index
+spark_load = spark.createDataFrame(load)
+spark_load.rdd.getNumPartitions()
+"""
+
+spark_data = spark_load.withColumn("Year", year("time")).withColumn(
+"Month", month("time")).withColumn("Day", dayofmonth("time"))
+
+spark_data.schema
+spark_data.write.mode('append').partitionBy("Year","Month").parquet("Load")
 
 # visualize Data
 conn = sql.connect('entsog.db')

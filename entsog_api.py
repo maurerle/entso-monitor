@@ -45,6 +45,7 @@ def getDataFrame(name, params=['limit=10000'], json=False):
 
     return data
 
+#@deprecated
 def loadDataSeries(name,indicator='Physical%20Flow',step=7,bulks=52*3):
     delta = datetime.timedelta(days=step)
     begin=datetime.date(2020,11,10)-delta
@@ -78,12 +79,12 @@ def yieldData(name,indicator='Physical%20Flow',bulks=52*3,begin=datetime.date(20
         params = ['limit=-1','indicator='+indicator,'from='+str(beg1),'to='+str(end1),'periodType=hour']
         yield end1, getDataFrame(name, params)
 
-import sqlite3 as sql
-from contextlib import closing
 
-print(datetime.date(2020,11,5)-datetime.timedelta(days=4))
+#print(datetime.date(2020,11,5)-datetime.timedelta(days=4))
 
 if __name__ == "__main__":
+    import sqlite3 as sql
+    from contextlib import closing
     names=[ 'cmpUnsuccessfulRequests',
            # 'operationaldata',
             'cmpUnavailables',
