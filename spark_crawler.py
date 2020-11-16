@@ -7,83 +7,18 @@ Created on Fri Nov 13 12:04:45 2020
 """
 
 import findspark
-import time
-import datetime
-from entsoe import EntsoePandasClient
-from entsoe.mappings import PSRTYPE_MAPPINGS,NEIGHBOURS,Area
-from entsoe.exceptions import NoMatchingDataError
 
 findspark.init()
 
-import pyspark
 from pyspark import SparkConf
 from pyspark.sql import SparkSession
 import pandas as pd
+import time
+import datetime
+from pyspark.sql.functions import year, month
 
-# ENTSOE
-
-from_n = []
-to_n = []
-for n1 in NEIGHBOURS:
-    for n2 in NEIGHBOURS[n1]:
-        from_n.append(n1)
-        to_n.append(n2)
-neighbours=pd.DataFrame({'from':from_n,'to':to_n})
-
-
-psrtype =pd.DataFrame.from_dict(PSRTYPE_MAPPINGS,orient='index')
-areas = pd.DataFrame([[e.name,e.value,e._tz,e._meaning] for e in Area])
-
-from pyspark.sql.functions import year, month, dayofmonth, to_timestamp, hour, to_date, trunc
-
-def pullData(procedure,country_code, start,end):
-    t = time.time()
-    data = pd.DataFrame(procedure(country_code,start=start,end=end))
-    data['time'] = data.index
-    spark_data = spark.createDataFrame(data)
-    dur = time.time()-t
-    print(procedure.__name__, dur)
-    return spark_data
-
-def replaceStr(string):
-    
-    st = str.replace(string,')','')
-    st = str.replace(st,'(','')
-    st = str.replace(st,',','')
-    st = str.replace(st,"'",'')
-    st = st.strip()
-    st = str.replace(st,' ','_')
-    return st
-
-def entsoeToParquet(countries,procs,start,delta,times):
-    end = start+delta-datetime.timedelta(days=1)
-    for country_code in countries:
-        for i in range(times):
-            start = start + delta
-            end = end + delta
-            print(country_code, start, end)
-            print('')
-            for proc in procs:
-                try:
-                    spark_data = pullData(proc,country_code, start, end)    
-                    # replace spaces in column names
-                    new_names = list(map(replaceStr, spark_data.schema.fieldNames()))
-                    spark_data = spark_data.toDF(*new_names)
-                    # add year, month and day columns from timestamp for partition
-                    #if proc.__name__ == 'query_generation':
-                    #    spark_data = spark_data.withColumn("time", to_date("time_")).drop("'time_''")
-                    spark_data = (spark_data
-                                  .withColumn("year", year("time"))
-                                  .withColumn("month", month("time"))
-                                  .withColumn("day", dayofmonth("time"))
-                                 )
-                    
-                    spark_data.write.mode('append').partitionBy("year").parquet('entsoe/'+proc.__name__)
-                    print('')
-                except NoMatchingDataError as e:
-                    print('no data found for ',proc.__name__)
-                except Exception as e:
-                    print('Error:',e)
+from entsoe import EntsoePandasClient
+from helper import persistEntsoe
 
 if __name__ == "__main__":  
     
@@ -96,12 +31,6 @@ if __name__ == "__main__":
     entsog=True
     if entsoe:
         client = EntsoePandasClient(api_key='ae2ed060-c25c-4eea-8ae4-007712f95375')
-        print()
-        country_code='DE'
-        start = pd.Timestamp('20170131', tz='Europe/Berlin')
-        delta=datetime.timedelta(days=90)
-        end = start+delta
-        
         procs= [client.query_day_ahead_prices,
                 client.query_load,
                 client.query_load_forecast,
@@ -110,9 +39,13 @@ if __name__ == "__main__":
                 client.query_generation,
                 client.query_installed_generation_capacity ]
         
-        entsoeToParquet(['DE'],procs,start,delta,3*4)
-    
-        #dat= pullData(client.query_wind_and_solar_forecast,country_code,start,start+datetime.timedelta(days=4))
+        print()
+        country_code='DE'
+        start = pd.Timestamp('20150101', tz='Europe/Berlin')
+        delta=datetime.timedelta(days=90)
+        end = start+delta
+        
+        persistEntsoe(['DE'],procs,start,delta,3*4)
     
     if entsog:
         # ENTSOG
@@ -162,20 +95,17 @@ if __name__ == "__main__":
         name = 'operationaldata'
         print('getting values from',name)
         tt = time.time()
-        for span, phys in yieldData(name,bulks=365*2+7*30,begin=datetime.date(2018,1,9)):
+        for span, phys in yieldData(name,bulks=365*2+7*30,begin=datetime.date(2018,4,20)):
             phys.to_parquet('entsog/'+name+'.parquet')
             spark_data = spark.read.parquet('entsog/'+name+'.parquet')            
             
             spark_data = (spark_data
-                            .withColumn("year", year("periodFrom"))
-                            .withColumn("month", month("periodFrom"))
+                            .withColumn('year', year('periodFrom'))
+                            .withColumn('month', month('periodFrom'))
                             # .withColumn("day", dayofmonth("periodFrom"))
                             # .withColumn("time", to_timestamp("periodFrom"))
                             # .withColumn("hour", hour("periodFrom"))
                             )
-            spark_data.write.mode('append').partitionBy("year","month").parquet('entsog/'+name)
+            spark_data.write.mode('append').partitionBy('year').parquet('entsog/'+name)
             print('finished',span[0],span[1],time.time()-tt)
             tt=time.time()
-            
-        import traceback,sys
-        traceback.print_exception(etype=sys.last_type,value=sys.last_value,tb=sys.last_traceback)
