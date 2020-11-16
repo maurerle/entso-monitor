@@ -21,6 +21,8 @@ data = pd.read_csv(api_endpoint+'AggregatedData.csv?limit=1000')
 response = requests.get(api_endpoint+'AggregatedData?limit=1000')
 data = pd.DataFrame(response.json()['AggregatedData'])
 
+import urllib
+
 def getDataFrame(name, params=['limit=10000'], json=False):
     params_str = ''
     if len(params) > 0:
@@ -41,7 +43,11 @@ def getDataFrame(name, params=['limit=10000'], json=False):
         except requests.exceptions.InvalidURL as e:
             raise e
         except requests.exceptions.HTTPError as e:
-            raise Exception("{} : {} ".format(e.reason, e.url))
+            print("{} : {} ".format(e.reason, e.url))
+            try:
+                data = pd.read_csv(api_endpoint+name+'.csv'+params_str)
+            except (requests.exceptions.HTTPError, urllib.error.HTTPError) as e:
+                raise Exception("{} : {} ".format(e.reason, e.url))
 
     return data
 
@@ -63,9 +69,9 @@ def loadDataSeries(name,indicator='Physical%20Flow',step=7,bulks=52*3):
     return physicalFlow
 
 
-def yieldData(name,indicator='Physical%20Flow',bulks=52*3,begin=datetime.date(2017,7,10)):
+def yieldData(name,indicator='Physical%20Flow',bulks=365*3,begin=datetime.date(2017,7,10)):
     if name == 'AggregatedData':
-        step=7
+        step=1
     else:
         step=1
     delta = datetime.timedelta(days=step)
@@ -74,10 +80,10 @@ def yieldData(name,indicator='Physical%20Flow',bulks=52*3,begin=datetime.date(20
 
     for i in range(int(bulks)):
         beg1 =begin+i*delta
-        end1 =end + i*delta + datetime.timedelta(days=step)
+        end1 =end + i*delta
         #pointDirection=DE-TSO-0001ITP-00096entry
         params = ['limit=-1','indicator='+indicator,'from='+str(beg1),'to='+str(end1),'periodType=hour']
-        yield end1, getDataFrame(name, params)
+        yield (beg1,end1), getDataFrame(name, params)
 
 
 #print(datetime.date(2020,11,5)-datetime.timedelta(days=4))

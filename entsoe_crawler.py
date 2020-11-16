@@ -62,9 +62,5 @@ unavailability_of_generation_units = client.query_unavailability_of_generation_u
 #         unavailability_of_generation_units]
 import sqlite3 as sql
 from contextlib import closing
-
-with closing(sql.connect('entsog.db')) as conn:
-    df = pd.read_sql_query('select * from  operationaldata', conn)
-    df.to_parquet('operationaldata.parquet')
     
 abc = pd.read_parquet('operationaldata.parquet')

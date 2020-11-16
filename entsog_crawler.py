@@ -4,7 +4,7 @@ Created on Tue Nov  3 13:03:22 2020
 
 @author: fmaurer
 """
-from entsog_api import *
+from entsog_api import getDataFrame,yieldData
 # point Data
 transportData = getDataFrame('operationaldata',['limit=1000'])
 cmpUnsuccessfulRequest= getDataFrame('cmpUnsuccessfulRequests')

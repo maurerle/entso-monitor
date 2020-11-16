@@ -7,7 +7,6 @@ Created on Fri Nov 13 12:04:45 2020
 """
 
 import findspark
-import requests
 import time
 import datetime
 from entsoe import EntsoePandasClient
@@ -16,13 +15,10 @@ from entsoe.exceptions import NoMatchingDataError
 
 findspark.init()
 
-
 import pyspark
+from pyspark import SparkConf
 from pyspark.sql import SparkSession
 import pandas as pd
-
-# Create a spark session
-spark = SparkSession.builder.getOrCreate()
 
 # ENTSOE
 
@@ -38,7 +34,7 @@ neighbours=pd.DataFrame({'from':from_n,'to':to_n})
 psrtype =pd.DataFrame.from_dict(PSRTYPE_MAPPINGS,orient='index')
 areas = pd.DataFrame([[e.name,e.value,e._tz,e._meaning] for e in Area])
 
-from pyspark.sql.functions import year, month, dayofmonth, to_timestamp, hour, to_date
+from pyspark.sql.functions import year, month, dayofmonth, to_timestamp, hour, to_date, trunc
 
 def pullData(procedure,country_code, start,end):
     t = time.time()
@@ -87,11 +83,17 @@ def entsoeToParquet(countries,procs,start,delta,times):
                 except NoMatchingDataError as e:
                     print('no data found for ',proc.__name__)
                 except Exception as e:
-                    print(e)
+                    print('Error:',e)
 
 if __name__ == "__main__":  
+    
+    # Create a spark session
+    conf = SparkConf().setAppName('entsoe').setMaster('local')
+    spark = SparkSession.builder.config(conf=conf).getOrCreate()
+    print('')
+
     entsoe=False
-    entsog=False
+    entsog=True
     if entsoe:
         client = EntsoePandasClient(api_key='ae2ed060-c25c-4eea-8ae4-007712f95375')
         print()
@@ -114,7 +116,7 @@ if __name__ == "__main__":
     
     if entsog:
         # ENTSOG
-        from entsog_api import yieldData,getDataFrame
+        from entsog_api import yieldData
         
         names=[ 'cmpUnsuccessfulRequests',
                    # 'operationaldata',
@@ -132,36 +134,48 @@ if __name__ == "__main__":
                     'aggregateInterconnections']
     
     
-        t_ges = time.time()
-        for name in names:
-            print(name)
-            t = time.time()
-            data = getDataFrame(name)
-            data.to_parquet('entsog/'+name+'.parquet')
-            #spark_data = spark.read.parquet(name+'.parquet')
-            print(time.time()-t)
+        # t_ges = time.time()
+        # for name in names:
+        #     try:
+        #         print(name)
+        #         t = time.time()
+        #         data = getDataFrame(name)
+        #         data.to_parquet('entsog/'+name+'.parquet')
+        #         #spark_data = spark.read.parquet(name+'.parquet')
+        #         print(time.time()-t)
+        #     except Exception as e:
+        #         print(e)
             
-        print(time.time()-t_ges)
+        # print(time.time()-t_ges)
+        
+        # name = 'AggregatedData'
+        # print('getting values from',name)
+        # tt = time.time()
+        # for span, phys in yieldData(name,bulks=365*3+90,begin=datetime.date(2017,7,10))):
+        #     print(end1)
+        #     spark_data = spark.createDataFrame(phys)
+        #     #phys.to_sql(name,conn, if_exists='append')
+        #     spark_data.write.mode('append').partitionBy("year","month").parquet('entsog/'+name)        
+        #     print('finished',span[0],span[1],time.time()-tt)
+        #     tt=time.time()
     
         name = 'operationaldata'
         print('getting values from',name)
-        for end1, phys in yieldData(name,bulks=365*3):
-            print(end1)
+        tt = time.time()
+        for span, phys in yieldData(name,bulks=365*2+7*30,begin=datetime.date(2018,1,9)):
             phys.to_parquet('entsog/'+name+'.parquet')
             spark_data = spark.read.parquet('entsog/'+name+'.parquet')            
             
-            spark_data = (spark_data.withColumn("year", year("periodFrom"))
-                    .withColumn("month", month("periodFrom"))
-                    .withColumn("day", dayofmonth("periodFrom"))
-                    .withColumn("time", to_timestamp("periodFrom"))
-                    .withColumn("hour", hour("periodFrom"))
-                    )
+            spark_data = (spark_data
+                            .withColumn("year", year("periodFrom"))
+                            .withColumn("month", month("periodFrom"))
+                            # .withColumn("day", dayofmonth("periodFrom"))
+                            # .withColumn("time", to_timestamp("periodFrom"))
+                            # .withColumn("hour", hour("periodFrom"))
+                            )
             spark_data.write.mode('append').partitionBy("year","month").parquet('entsog/'+name)
-    
-        name = 'AggregatedData'
-        print('getting values from',name)
-        for end1, phys in yieldData(name,bulks=52*3):
-            print(end1)
-            spark_data = spark.createDataFrame(phys)
-            #phys.to_sql(name,conn, if_exists='append')
-            spark_data.write.mode('append').partitionBy("year","month").parquet('entsog/'+name)
+            print('finished',span[0],span[1],time.time()-tt)
+            tt=time.time()
+            
+        import traceback,sys
+        traceback.print_exception(etype=sys.last_type,value=sys.last_value,tb=sys.last_traceback)
