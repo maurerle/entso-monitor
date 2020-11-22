@@ -12,6 +12,7 @@ import time
 import datetime
 import sqlite3 as sql
 from contextlib import closing
+from tqdm import tqdm
 
 def pd2par(dbname,table,parquet=''):
     '''
@@ -91,8 +92,6 @@ def getDataFrame(name, params=['limit=10000'], json=False):
                 data = pd.read_csv(api_endpoint+name+'.csv'+params_str)
             except (requests.exceptions.HTTPError, urllib.error.HTTPError) as e:
                 raise Exception("{} : {} ".format(e.reason, e.url))
-                
-
     return data
 
 def yieldData(name,indicator='Physical%20Flow',bulks=365*3,begin=datetime.date(2017,7,10)):
@@ -110,8 +109,6 @@ def yieldData(name,indicator='Physical%20Flow',bulks=365*3,begin=datetime.date(2
         #pointDirection=DE-TSO-0001ITP-00096entry
         params = ['limit=-1','indicator='+indicator,'from='+str(beg1),'to='+str(end1),'periodType=hour']
         yield (beg1,end1), getDataFrame(name, params)
-
-        
 
 ######## ENTSOE ###########
 
@@ -160,7 +157,7 @@ def entsoeToParquet(country_code,proc,start,end):
                       .withColumn("day", dayofmonth("time"))
                      )
 
-        spark_data.write.mode('append').partitionBy("year").parquet('entsoe/'+country_code+'/'+proc.__name__)
+        spark_data.write.mode('append').parquet('entsoe/'+country_code+'/'+proc.__name__)
         print('')
     except NoMatchingDataError:
         print('no data found for ',proc.__name__,start,end)
@@ -172,25 +169,30 @@ def persistEntsoe(countries,procs,start,delta,times):
     for country_code in countries:
         # hier könnte man parallelisieren
         for proc in procs:
-            for i in range(times):
-                start = start + delta
-                end = end + delta
-                print(country_code, start, end)
-                entsoeToParquet(country_code,proc, start, end)     
+            pbar = tqdm(range(times))
+            for i in pbar:
+                start1 = start + i *delta
+                end1 = end + i*delta
+                pbar.set_description(country_code+' '+str(start1)+' '+str(end1))
+                entsoeToParquet(country_code,proc, start1, end1)     
                     
-def pullCrossboarders(start,delta,times,client):
+def pullCrossboarders(start,delta,times,proc):
     end = start+delta
     for i in range(times):
         data = pd.DataFrame()
         start = start + delta
         end = end + delta
         for n1 in NEIGHBOURS:
+            print(n1)
+            
             for n2 in NEIGHBOURS[n1]:
                 try:
-                    dataN = client.query_crossborder_flows(n1, n2, start=start,end=end)
+                    dataN = proc(n1, n2, start=start,end=end)
                     # TODO
-                    data[n1+'.'+n2]=dataN['0']
+                    data[n1+'.'+n2]=dataN
                 except Exception as e:
-                    print(e)                
+                    print(e)
+                    
+                    
         spark_data = spark.createDataFrame(data)
-        spark_data.write.mode('append').partitionBy('year').parquet('entsoe/query_crossborder_flows')        
+        spark_data.write.mode('append').parquet('entsoe/query_crossborder_flows')                
