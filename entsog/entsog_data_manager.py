@@ -15,36 +15,32 @@ class Filter:
         self.end = end
         self.groupby = groupby
 
-class EntsogDataManager:
-    def countries(self):
-        '''returns all the valid countries'''
+class EntsogDataManager:    
+    def connectionpoints(self):
         pass
     
-    def interconnections(self, balancingZones: List[str], operators: List[str]):
+    def interconnections(self):
         '''
         interconnections which are in one of the balancingZones
         to be determined whats useful hiere (coming from, to or both)
         '''
         pass
         
-    def balancingZones(self):
+    def balancingzones(self):
         """also known as bidding zones"""
         pass
     
-    def operators(self, balancingZones: List[str], operatorType: str):
+    def operators(self):
         '''
         returns operators which have an interconnection in one of the balancingZones
         '''
         pass
-    
+
+    def operatorpointdirections(self):
+        pass
+
     def physicalFlow(self, balancingZones: List[str], pointKey, filt: Filter):
         pass
-    
-    def generation(self, country: str, filt: Filter):
-        pass
-    
-    def pumpStorage(self, country: str, filt: Filter):
-        pass
-    
+      
     def crossborderFlows(self, country: str, filt: Filter):
         pass

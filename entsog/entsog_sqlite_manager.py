@@ -14,29 +14,39 @@ from entsog_data_manager import EntsogDataManager, Filter
 import sqlite3 as sql
 from contextlib import closing
 
+ftime={'day': '%Y-%m-%d',
+       'month': '%Y-%m-01',
+       'year': '%Y-01-01',
+       'hour': '%Y-%m-%d %H:00:00',
+       'minute': '%Y-%m-%d %H:%M:00'}
 
 class EntsogSQLite(EntsogDataManager):
     def __init__(self, database: str):
         self.database=database
         
-    def countries(self):
-        '''returns all the valid countries'''
-        pass
-    
-    def interconnections(self, balancingZones: List[str], operators: List[str]):
+    def connectionpoints(self):
+        selectString = 'tpMapX as lat, tpMapY as long, pointKey, pointLabel'
+        
+        with closing(sql.connect(self.database)) as conn:
+            zones = pd.read_sql_query(f'select {selectString} from connectionpoints', conn)
+        return zones
+
+    def interconnections(self):
         '''
         interconnections which are in one of the balancingZones
         to be determined whats useful here (coming from, to or both)
         '''
-        selectString = 'pointKey, pointLabel, direction,operatorKey, fromOperatorLabel, fromCountryKey, fromBzKey'
+        selectString = 'pointTpMapY as lat, pointTpMapX as lon, fromDirectionKey, '
+        selectString += 'pointKey, pointLabel, fromOperatorKey, fromOperatorLabel, fromCountryKey, fromBzKey, fromBzLabel, '
+        selectString += 'toCountryKey, toOperatorLabel, toPointKey, toPointLabel, toBzKey,toBzLabel'
         
         with closing(sql.connect(self.database)) as conn:
-            interconnections = pd.read_sql_query(f'select * from Interconnections', conn)
+            interconnections = pd.read_sql_query(f'select {selectString} from Interconnections', conn)
         return interconnections
         
-    def balancingZones(self):
+    def balancingzones(self):
         """also known as bidding zones"""
-        selectString = 'tpMapX as lat, tpMapY as long, bzLabel'
+        selectString = 'tpMapY as lat, tpMapX as lon, bzLabel'
         
         with closing(sql.connect(self.database)) as conn:
             zones = pd.read_sql_query(f'select {selectString} from balancingzones', conn)
@@ -61,8 +71,23 @@ class EntsogSQLite(EntsogDataManager):
             operators = pd.read_sql_query(f'select {selectString} from operators {whereString}', conn)
         return operators
     
+    def operatorpointdirections(self):
+        selectString = 'pointKey, pointLabel, operatorLabel, directionKey, tpTsoItemLabel, tpTsoBalancingZone, tpTsoCountry, '
+        selectString += 'adjacentCountry, connectedOperators, adjacentOperatorKey, adjacentZones'
+        
+        with closing(sql.connect(self.database)) as conn:
+            opd = pd.read_sql_query(f'select {selectString} from operatorpointdirections', conn)
+        return opd
+    
     def physicalFlow(self, balancingZones: List[str], pointKey, filt: Filter):
-        pass
+        timeString='"{}" < time and time < "{}"'.format(filt.begin.strftime("%Y-%m-%d"),filt.end.strftime("%Y-%m-%d"))
+        selectString = f'strftime("{ftime[filt.groupby]}", "periodFrom") as time, '
+        selectString+= 'pointKey, pointLabel, operatorKey, operatorLabel, directionKey, value, indicator'
+        groupString=f'strftime("{ftime[filt.groupby]}", "time")'
+        # TODO
+        with closing(sql.connect(self.database)) as conn:
+            flow = pd.read_sql_query(f'select {selectString} from operationaldata where {timeString} group by {groupString}', conn)
+        return flow
     
     def crossborderFlows(self, country: str, filt: Filter):
         pass
@@ -70,9 +95,10 @@ class EntsogSQLite(EntsogDataManager):
 if __name__ == "__main__":  
 
     par = EntsogSQLite('entsog.db')
-    operators = par.operators('DE')
+    operators = par.operators()
     
     filt = Filter(datetime(2017,7,1),datetime(2017,7,2),'hour')
-    balzones = par.balancingZones()
-    intercon = par.interconnections(None, [''])
+    balzones = par.balancingzones()
+    intercon = par.interconnections()
+    cpp = par.connectionpoints()
     #gen = generation.melt(var_name='kind', value_name='value',ignore_index=False)    
