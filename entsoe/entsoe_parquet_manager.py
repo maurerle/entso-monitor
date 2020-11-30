@@ -1,63 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Sat Nov 28 09:30:46 2020
+Created on Sun Nov 29 21:55:39 2020
 
 @author: maurer
 """
-from datetime import *
 
-class Filter:
-    def __init__(self, begin: datetime, end: datetime, groupby='day'):
-        self.begin = begin
-        self.end = end
-        self.groupby = groupby
-
-class EntsoeDataManager:
-    '''
-    Assumptions on the DataManager:
-    
-    index is time series, everything else are values
-    no date and month columns
-    '''
-    def capacity(self, country: str):
-        pass
-    
-    def load(self, country: str, filt: Filter):
-        pass
-    
-    def generation(self, country: str, filt: Filter):
-        pass
-    
-    def pumpStorage(self, country: str, filt: Filter):
-        pass
-    
-    def crossborderFlows(self, country: str, filt: Filter):
-        pass
-    
-    def countries(self):
-        pass
-    
 import findspark
 
+from entsoe_data_manager import EntsoeDataManager, Filter, revReplaceStr
+from datetime import datetime
 
 from pyspark import SparkConf
 from pyspark.sql import SparkSession
-import pandas as pd
 from pyspark.sql.functions import date_trunc
 
-def revReplaceStr(string):
-    '''
-    replaces series names for better visualization
-    '''
-    st = str.replace(string,'sum(','')
-    st = str.replace(st,')','')
-    st = str.replace(st,'(','')
-    st = str.replace(st,'_',' ')
-    st = st.strip()
-    
-    return st
-    
 class EntsoeParquet(EntsoeDataManager):
     def __init__(self, folder, spark):
         self.folder=folder
@@ -80,40 +37,53 @@ class EntsoeParquet(EntsoeDataManager):
     def load(self, country: str, filt: Filter):
         load = self.spark.read.parquet('{}/{}/query_load'.format(self.folder,country))
         timeString='"{}" < time and time < "{}"'.format(filt.begin.strftime("%Y-%m-%d"),filt.end.strftime("%Y-%m-%d"))
-        return (load.filter(timeString)
-                     .withColumn("group", date_trunc(filt.groupby,"time"))
-                     .groupby(['group']).sum()
-                     .sort("group").toPandas()
+        data = (load.filter(timeString)
+                     .withColumn("time", date_trunc(filt.groupby,"time"))
+                     .groupby(['time']).sum()
+                     .sort("time").toPandas()
                )
+        data['value'] = data['sum(0)']
+        del data['sum(0)']
+        
+        return data
     
     def generation(self, country: str, filt: Filter):
         gen = self.spark.read.parquet('{}/{}/query_generation'.format(self.folder,country))
         timeString='"{}" < time and time < "{}"'.format(filt.begin.strftime("%Y-%m-%d"),filt.end.strftime("%Y-%m-%d"))
+        cols = list(filter(lambda x: x.endswith('_Actual_Aggregated') ,gen.columns))        
+        cols.append('time')
+        gen = gen.select(cols)
+        newcols=list(map(lambda x: x.replace('_Actual_Aggregated',''), gen.columns))
+        gen = gen.toDF(*newcols)
         genPandas = (gen.filter(timeString)
-                     .withColumn("group", date_trunc(filt.groupby,"time"))
-                     .groupby(['group']).sum()
-                     .sort("group").toPandas()
+                     .withColumn("time", date_trunc(filt.groupby,"time"))
+                     .groupby(['time']).sum()
+                     .sort("time").toPandas()
                )
-        #convert multiindex to index
+        
+        #convert multiindex to index, and make columns readable
         genPandas.columns = genPandas.columns.map(''.join).map(revReplaceStr)
-        genPandas.index=genPandas['group']
-        del genPandas['group']
-        del genPandas['year']
-        del genPandas['day']
-        del genPandas['month']
+        genPandas.index=genPandas['time']
+        del genPandas['time']
         # gen = genPandas.melt(id_vars=['time'],  var_name='kind', value_name='value')
         
         
         return genPandas
     
-    def pumpStorage(self, country: str, filt: Filter):
+    def consumption(self, country: str, filt: Filter):
         pumpSto = self.spark.read.parquet('{}/{}/query_generation'.format(self.folder,country))
         timeString='"{}" < time and time < "{}"'.format(filt.begin.strftime("%Y-%m-%d"),filt.end.strftime("%Y-%m-%d"))
-        return (pumpSto.filter(timeString)
-                     .withColumn("group", date_trunc(filt.groupby,"time"))
-                     .groupby(['group']).sum()
-                     .sort("group").toPandas()
+        cols = list(filter(lambda x: x.endswith('Actual_Consumption') ,pumpSto.columns))
+        pumpSto = pumpSto.select(cols)
+        data= (pumpSto.filter(timeString)
+                     .withColumn("time", date_trunc(filt.groupby,"time"))
+                     .groupby(['time']).sum()
+                     .sort("time").toPandas()
                )
+        data.columns = data.columns.map(''.join).map(revReplaceStr)
+        data.index = data['time']
+        del data['time']
+        return data
     
     def crossborderFlows(self, country: str, filt: Filter):
         timeString='"{}" < time and time < "{}"'.format(filt.begin.strftime("%Y-%m-%d"),filt.end.strftime("%Y-%m-%d"))
@@ -126,9 +96,6 @@ class EntsoeParquet(EntsoeDataManager):
         columns.append('group')
         
         return crossborder.select(columns).groupby(['group']).sum().toPandas()
-    
-    def countries(self):
-        return ['DE','BE','FR','IT','FI','NL','AT']
     
 if __name__ == "__main__":  
     findspark.init()
@@ -148,4 +115,3 @@ if __name__ == "__main__":
     
     from entsoe_data_manager import EntsoeDataManager
     issubclass(par.__class__,EntsoeDataManager)
-    

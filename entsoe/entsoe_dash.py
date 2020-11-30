@@ -13,7 +13,9 @@ from dash.dependencies import Input, Output, ClientsideFunction
 import dash_core_components as dcc
 import dash_html_components as html
 
-from entsoe_data_manager import EntsoeParquet, Filter
+from entsoe_data_manager import Filter
+from entsoe_parquet_manager import EntsoeParquet
+from entsoe_sqlite_manager import EntsoeSQLite
 import plotly.express as px 
 import json
 import copy
@@ -37,7 +39,8 @@ except:
     conf = SparkConf().setAppName('entsoe').setMaster('local')
     spark = SparkSession.builder.config(conf=conf).getOrCreate()
 
-dm= EntsoeParquet('entsoe',spark)
+#dm= EntsoeParquet('data',spark)
+dm= EntsoeSQLite('data/entsoe.db')
 
 app.layout = html.Div(
     [
@@ -101,11 +104,11 @@ app.layout = html.Div(
                             id='date_picker',
                             min_date_allowed=date(2015, 1, 1),
                             max_date_allowed=date(2020, 10, 19),
-                            start_date=date(2020,5,21),
-                            end_date=date(2020,6,4),
+                            start_date=date(2015,2,21),
+                            end_date=date(2015,3,4),
                             display_format='MMMM Y, DD',
                             #with_portal=True,
-                            initial_visible_month='2020-05-01',
+                            initial_visible_month='2015-02-01',
                             show_outside_days=True,
                             start_date_placeholder_text='MMMM Y, DD'
                         ),
@@ -123,6 +126,7 @@ app.layout = html.Div(
                                 {"label": "Month", "value": "month"},
                                 {"label": "Day ", "value": "day"},
                                 {"label": "Hour", "value": "hour"},
+                                {"label": "Minute", "value": "minute"},
                             ],
                             value="day",
                             labelStyle={"display": "inline-block"},
@@ -159,19 +163,15 @@ app.layout = html.Div(
             className="row flex-display",
         ),
         html.Div(
-            [html.Div(
-                                [dcc.Graph(id="load_graph")],
-                                id="loadGraphContainer",
-                                className="pretty_container six columns",
-            ),
-            html.Div(
-                        [dcc.Graph(id="generation_graph")],
-                        id="generationGraphContainer",
-                        className="pretty_container six columns",
-            ),
-            ],
-            className='row flex-display'
-        )
+                            [dcc.Graph(id="load_graph")],
+                            id="loadGraphContainer",
+                            className="pretty_container",
+        ),
+        html.Div(
+                    [dcc.Graph(id="generation_graph")],
+                    id="generationGraphContainer",
+                    className="pretty_container",
+        ),
 ])
 
 
@@ -240,12 +240,11 @@ def update_figure(clickData):
 def make_load_figure(country_control, start_date, end_date, group_by_control):
 
     layout_count = copy.deepcopy(layout)
-    print(start_date,end_date)
     start =datetime.strptime(start_date, '%Y-%m-%d').date()
     end =datetime.strptime(end_date, '%Y-%m-%d').date()
     dff = dm.load(country_control,Filter(start,end,group_by_control))
-    g = dff[["group", "sum(0)"]]
-    g.index = g["group"]
+    g = dff[["time", "value"]]
+    g.index = g["time"]
     #g = g.resample("A").count()
 
     data = [
@@ -253,7 +252,7 @@ def make_load_figure(country_control, start_date, end_date, group_by_control):
             type="lines",
             mode="lines",
             x=g.index,
-            y=g["sum(0)"],
+            y=g["value"],
             name="Load",
             opacity=0.8,
             
@@ -269,7 +268,7 @@ def make_load_figure(country_control, start_date, end_date, group_by_control):
     ]
 
     layout_count["title"] = "Load for {} from {} to {}".format(country_control,start_date,end_date)
-    layout_count["dragmode"] = "select"
+    #layout_count["dragmode"] = "select"
     layout_count["showlegend"] = True
     layout_count["autosize"] = True
 
@@ -299,7 +298,8 @@ def make_generation_figure(country_control, start_date, end_date, group_by_contr
     figure = px.area(g, x=g.index, y="value", color='kind',line_group="kind")
     figure.update_layout(title="Generation for {} from {} to {}".format(country_control,start_date,end_date),
                    xaxis_title=group_by_control,
-                   yaxis_title='Generated Energy by Production kind in GWh per day')
+                   yaxis_title='Generated Energy by Production kind in GWh per day',
+                   legend=dict(font=dict(size=10), orientation="h"),)
     return figure
 
 ############ Capacity Graph   ##############
@@ -322,7 +322,7 @@ def make_capacity_figure(country_control):
     figure = px.bar(g, x=g.index, y="value", color='kind')#bar_group="kind")
     figure.update_layout(title="Generation capacity for {} per year".format(country_control),
                    xaxis_title='years',
-                   yaxis_title='Capacity by Production kind')
+                   yaxis_title='Capacity by Production kind',)
     figure.update_yaxes(ticksuffix="GW")
     return figure
 
