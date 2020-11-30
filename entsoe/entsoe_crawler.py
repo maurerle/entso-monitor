@@ -96,19 +96,21 @@ class EntsoeCrawler:
                     pbar.set_description(f"{country} {start1:%Y-%m-%d} to {end1:%Y-%m-%d}")
                     self.persist(country,proc, start1, end1)               
         
-    def pullCrossboarders(self,start,delta,times,proc):
-        end = start+delta
+    def pullCrossboarders(self,start,delta,times,proc,allZones=False):
+        # reverse so that new relations exist
+        end = start+times*delta
         for i in range(times):
             data = pd.DataFrame()
-            start = start + delta
-            end = end + delta
+            start1 = end-(i+1)*delta
+            end1 = end -i*delta
             for n1 in NEIGHBOURS:
                 print(n1)
                 
                 for n2 in NEIGHBOURS[n1]:
                     try:
-                        dataN = proc(n1, n2, start=start,end=end)
-                        data[n1+'.'+n2]=dataN
+                        if (len(n1)==2 and len(n2)==2) or allZones:
+                            dataN = proc(n1, n2, start=start1,end=end1)
+                            data[n1+'.'+n2]=dataN
                     except Exception as e:
                         print(e)
                         
@@ -151,7 +153,7 @@ if __name__ == "__main__":
     entsoe_path='hdfs://149.201.206.53:9000/user/fmaurer/entsoe'
     
     crawler = EntsoeCrawler('data',spark=spark,database='data/entsoe.db')
-    crawler.bulkDownload(countries,procs,start,delta,times)
+    #crawler.bulkDownload(countries,procs,start,delta,times)
     
     proc= client.query_crossborder_flows
     crawler.pullCrossboarders(start,delta,times,proc)

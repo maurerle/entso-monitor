@@ -73,8 +73,10 @@ class EntsoeParquet(EntsoeDataManager):
     def consumption(self, country: str, filt: Filter):
         pumpSto = self.spark.read.parquet('{}/{}/query_generation'.format(self.folder,country))
         timeString='"{}" < time and time < "{}"'.format(filt.begin.strftime("%Y-%m-%d"),filt.end.strftime("%Y-%m-%d"))
-        cols = list(filter(lambda x: x.endswith('Actual_Consumption') ,pumpSto.columns))
+        cols = list(filter(lambda x: x.endswith('_Actual_Consumption') ,pumpSto.columns))
         pumpSto = pumpSto.select(cols)
+        newcols=list(map(lambda x: x.replace('_Actual_Consumption',''), pumpSto.columns))
+        pumpSto = pumpSto.toDF(*newcols)
         data= (pumpSto.filter(timeString)
                      .withColumn("time", date_trunc(filt.groupby,"time"))
                      .groupby(['time']).sum()

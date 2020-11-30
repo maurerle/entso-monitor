@@ -31,16 +31,17 @@ from pyspark import SparkConf,SparkContext
 from pyspark.sql import SparkSession,SQLContext
 findspark.init()
 
-try:
-    spark
-    print('using existing spark object')
-except:
-    print('creating new spark object')
-    conf = SparkConf().setAppName('entsoe').setMaster('local')
-    spark = SparkSession.builder.config(conf=conf).getOrCreate()
-
-#dm= EntsoeParquet('data',spark)
-dm= EntsoeSQLite('data/entsoe.db')
+if True:
+    dm= EntsoeSQLite('data/entsoe.db.bck')    
+else:
+    try:
+        spark
+        print('using existing spark object')
+    except:
+        print('creating new spark object')
+        conf = SparkConf().setAppName('entsoe').setMaster('local')
+        spark = SparkSession.builder.config(conf=conf).getOrCreate()
+    dm= EntsoeParquet('data',spark)
 
 app.layout = html.Div(
     [
@@ -104,11 +105,11 @@ app.layout = html.Div(
                             id='date_picker',
                             min_date_allowed=date(2015, 1, 1),
                             max_date_allowed=date(2020, 10, 19),
-                            start_date=date(2015,2,21),
-                            end_date=date(2015,3,4),
+                            start_date=date(2020,2,21),
+                            end_date=date(2020,3,4),
                             display_format='MMMM Y, DD',
                             #with_portal=True,
-                            initial_visible_month='2015-02-01',
+                            initial_visible_month='2020-02-01',
                             show_outside_days=True,
                             start_date_placeholder_text='MMMM Y, DD'
                         ),
@@ -138,7 +139,7 @@ app.layout = html.Div(
                             options=[
                                 {"label": "Renewable ", "value": "renewable"},
                                 {"label": "Traditional", "value": "traditional"},
-                                {"label": "Nuclear", "value": "nuclea"},
+                                {"label": "Nuclear", "value": "nuclear"},
                             ],
                             multi=True,
                             value=['renewable'],
@@ -242,11 +243,8 @@ def make_load_figure(country_control, start_date, end_date, group_by_control):
     layout_count = copy.deepcopy(layout)
     start =datetime.strptime(start_date, '%Y-%m-%d').date()
     end =datetime.strptime(end_date, '%Y-%m-%d').date()
-    dff = dm.load(country_control,Filter(start,end,group_by_control))
-    g = dff[["time", "value"]]
-    g.index = g["time"]
-    #g = g.resample("A").count()
-
+    g = dm.load(country_control,Filter(start,end,group_by_control))
+    
     data = [
         dict(
             type="lines",

@@ -29,15 +29,16 @@ class EntsoeDataManager:
     def generation(self, country: str, filt: Filter):
         pass
     
-    def pumpStorage(self, country: str, filt: Filter):
+    def consumption(self, country: str, filt: Filter):
         pass
     
     def crossborderFlows(self, country: str, filt: Filter):
         pass
     
     def countries(self):
-        return ['DE','BE','NL','AT','FR','CH','CZ','PL','GB','IT','HU','ES','FI','GR','MT','BA','LV','SK']
-
+        return ['AT','BE','BA','BG','HR','CY','CZ','DK','EE','FI','MK',
+                'FR','DE','GR','HU','IE','IT','LV','LT','LU','ME','GB',
+                'NL','NO','PL','PT','RO','RS','SK','SI','ES','SE','CH','UA']
 
 def revReplaceStr(string):
     '''
