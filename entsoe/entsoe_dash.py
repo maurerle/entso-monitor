@@ -32,7 +32,7 @@ from pyspark.sql import SparkSession,SQLContext
 findspark.init()
 
 if True:
-    dm= EntsoeSQLite('data/entsoe.db.bck')    
+    dm= EntsoeSQLite('data/entsoe2.db')    
 else:
     try:
         spark
@@ -207,6 +207,10 @@ df['countries']=['GR'] #dm.countries()
 df['values']=[3] # list(map(lambda x: len(x),dm.countries()))
 location = 'DE'
 
+d = dm.powersystems2('AT')
+for c in ['BE','CH','FR']:
+     d = pd.concat([d,dm.powersystems2(c)])
+
 @app.callback(
     Output('choro-graph', 'figure'),
     [Input('choro-graph', 'clickData')])
@@ -214,17 +218,19 @@ def update_figure(clickData):
     if clickData is not None:            
         location = clickData['points'][0]['location']
         print(location)
-    
-    fig = px.choropleth_mapbox(df, geojson=geo, locations="countries", color='values',
-                               #color_continuous_scale="Viridis",
-                               featureidkey="properties.iso_a2",
-                               #range_color=(0, 12),
-                               mapbox_style="carto-positron", # open-street-map
-                               zoom=3, center = {"lat": 51.0902, "lon": 10.7129},
-                               #opacity=0.9,
-                               labels={'values':'Werte'}
-                              )
-    fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
+    fig = px.scatter_mapbox(d, lat="lat", lon="lon", color='Production_Type',hover_name="name",hover_data=["capacity",'country'],zoom=3)
+    fig.update_layout(mapbox_style="open-street-map",margin={"r":0,"t":0,"l":0,"b":0},
+                      legend=dict(font=dict(size=10), orientation="h")
+                      )
+    # fig = px.choropleth_mapbox(df, geojson=geo, locations="countries", color='values',
+    #                            #color_continuous_scale="Viridis",
+    #                            featureidkey="properties.iso_a2",
+    #                            #range_color=(0, 12),
+    #                            mapbox_style="carto-positron", # open-street-map
+    #                            zoom=3, center = {"lat": 51.0902, "lon": 10.7129},
+    #                            #opacity=0.9,
+    #                            labels={'values':'Werte'}
+    #                           )
     return fig
 
 ############## Load Graph ##############################
@@ -269,6 +275,7 @@ def make_load_figure(country_control, start_date, end_date, group_by_control):
     #layout_count["dragmode"] = "select"
     layout_count["showlegend"] = True
     layout_count["autosize"] = True
+    layout_count['hovermode']='x unified'
 
     figure = dict(data=data, layout=layout_count)
     return figure
@@ -290,13 +297,17 @@ def make_generation_figure(country_control, start_date, end_date, group_by_contr
     end =datetime.strptime(end_date, '%Y-%m-%d').date()
     
     generation = dm.generation(country_control,Filter(start,end,group_by_control))
+        
     generation=generation/1000
     g = generation.melt(var_name='kind', value_name='value',ignore_index=False)
     
+    if g.empty:
+        return dict(data=[], layout=dict(title="No Data Found for current interval"))
     figure = px.area(g, x=g.index, y="value", color='kind',line_group="kind")
     figure.update_layout(title="Generation for {} from {} to {}".format(country_control,start_date,end_date),
                    xaxis_title=group_by_control,
-                   yaxis_title='Generated Energy by Production kind in GWh per day',
+                   yaxis_title='Generated Energy by Production kind in GW',
+                   hovermode="closest",
                    legend=dict(font=dict(size=10), orientation="h"),)
     return figure
 
@@ -316,11 +327,14 @@ def make_capacity_figure(country_control):
     capacity=capacity/1000
     g = capacity.melt(var_name='kind', value_name='value',ignore_index=False)
     
+    if g.empty:
+        return {'data': [], 'layout': dict(title="No Data Found for current interval")}
     
-    figure = px.bar(g, x=g.index, y="value", color='kind')#bar_group="kind")
+    figure = px.bar(g, x=g.index, y="value", color='kind', text='value')#bar_group="kind")
     figure.update_layout(title="Generation capacity for {} per year".format(country_control),
                    xaxis_title='years',
                    yaxis_title='Capacity by Production kind',)
+    figure.update_traces(texttemplate='%{text:.2s}', textposition='inside')
     figure.update_yaxes(ticksuffix="GW")
     return figure
 

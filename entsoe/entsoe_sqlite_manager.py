@@ -26,11 +26,7 @@ class EntsoeSQLite(EntsoeDataManager):
         
     def capacity(self, country: str):
         with closing(sql.connect(self.database)) as conn:
-            cap = pd.read_sql_query('select distinct * from {}_query_installed_generation_capacity'.format(country), conn)
-        
-        cap.index = cap['index']
-        # del cap['time']
-        del cap['index']
+            cap = pd.read_sql_query('select distinct * from {}_query_installed_generation_capacity'.format(country), conn,index_col='index')
         return cap
 
     def load(self, country: str, filt: Filter):
@@ -39,9 +35,7 @@ class EntsoeSQLite(EntsoeDataManager):
         groupString=f'strftime("{ftime[filt.groupby]}", "time")'
         with closing(sql.connect(self.database)) as conn:
             query = f"select {selectString} from {country}_query_load where {timeString} group by {groupString}"
-            load = pd.read_sql_query(query,conn)
-        load.index = load['time']
-        del load['time']
+            load = pd.read_sql_query(query,conn,index_col='time')
         return load
         
             
@@ -62,20 +56,19 @@ class EntsoeSQLite(EntsoeDataManager):
         del gen['time']
         return gen
     
-    def consumption(self, country: str, filt: Filter):
+    def generated(self, country: str, filt: Filter):
         timeString='"{}" < time and time < "{}"'.format(filt.begin.strftime("%Y-%m-%d"),filt.end.strftime("%Y-%m-%d"))
         selectString=f'strftime("{ftime[filt.groupby]}", "index") as time'
         groupString=f'strftime("{ftime[filt.groupby]}", "time")'
         with closing(sql.connect(self.database)) as conn:
             columns = pd.read_sql_query(f'select * from {country}_query_generation where 1=0',conn).columns
+            
             columns= list(filter(lambda x: x.endswith('Actual_Consumption'), map(str,columns)))
             colNames = '","'.join(columns)
             colNames = '"'+colNames+'"'
             query = f"select {selectString},{colNames} from {country}_query_generation where {timeString} group by {groupString}"
-            gen = pd.read_sql_query(query,conn)
+            gen = pd.read_sql_query(query,conn,index_col='time')
         gen.columns = gen.columns.map(''.join).map(revReplaceStr)
-        gen.index = gen['time']
-        del gen['time']
         return gen
     
     def crossborderFlows(self, country: str, filt: Filter):
@@ -87,16 +80,29 @@ class EntsoeSQLite(EntsoeDataManager):
         
         # return crossborder.select(columns).groupby(['group']).sum().toPandas()
         pass
-
-if __name__ == "__main__":  
-
-    par = EntsoeSQLite('entsoe.db')
-    cap = par.capacity('DE')
-    cap = par.capacity('FI')
     
-    filt = Filter(datetime(2015,2,1),datetime(2015,2,2),'hour')
-    load = par.load('DE', filt)
-    generation = par.generation('GR', filt)
+    def powersystems(self, country):
+        selectString='eic_code,p.name,company,p.country,q.country as area,lat,lon,capacity,Production_Type'
+        with closing(sql.connect(self.database)) as conn:
+            df = pd.read_sql(f'select {selectString} from powersystemdata p join query_installed_generation_capacity_per_unit q on q."index" = p.eic_code', conn)    
+        return df
+    
+    def powersystems2(self, country):
+        selectString='eic_code,p.name,company,p.country,lat,lon,capacity,Production_Type'
+        with closing(sql.connect(self.database)) as conn:
+            df = pd.read_sql(f'select {selectString} from powersystemdata p join {country}_query_installed_generation_capacity_per_unit q on q."index" = p.eic_code', conn)    
+        return df
+    
+    
+if __name__ == "__main__":  
+    country='NL'
+    par = EntsoeSQLite('data/entsoe2.db')
+    cap = par.capacity(country)
+    
+    filt = Filter(datetime(2020,2,1),datetime(2020,2,2),'hour')
+    load = par.load(country, filt)
+    generation = par.generation(country, filt)
+    generation=generation/1000
     gen = generation.melt(var_name='kind', value_name='value',ignore_index=False)
     
     # from entsoe_data_manager import EntsoeDataManager

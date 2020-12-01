@@ -35,7 +35,8 @@ neighbours=pd.DataFrame({'from':from_n,'to':to_n})
 psrtype =pd.DataFrame.from_dict(PSRTYPE_MAPPINGS,orient='index')
 areas = pd.DataFrame([[e.name,e.value,e._tz,e._meaning] for e in Area])
 
-countries = ['DE','BE','NL','AT','FR','CH','CZ','PL','GB','IT','HU','ES','FI','GR','MT','BA','LV','SK']
+#areas = [e.name for e in Area]
+countries = list(filter(lambda x: len(x)<=2,areas[0]))
 
 def replaceStr(string):
     '''
@@ -50,6 +51,31 @@ def replaceStr(string):
     st = str.replace(st,' ','_')
     return st
 
+def calcDiff(data, inplace=False):
+    if not inplace:
+        dat = data.copy()
+    else:
+        dat=data
+    for c in filter(lambda x:x.endswith('_Actual_Aggregated'), dat.columns):        
+        new = str.replace(c,'_Actual_Aggregated','')
+        dif = list(filter(lambda x: x.endswith('_Actual_Consumption') and x.startswith(new), dat.columns ))
+        if len(dif) > 0:
+            # wenn es beides gibt wird die Differenz gebildet
+            dat[new]=dat[c]-dat[dif[0]]
+            del dat[c]
+            del dat[dif[0]]
+        else:
+            # sonst wird direkt 
+            dat[new]=dat[c]
+            del dat[c]
+    for c in filter(lambda x:x.endswith('_Actual_Consumption'), dat.columns):
+        # wenn es nur Verbrauch aber kein Erzeugnis gibt, mach negativ
+        new = str.replace(c,'_Actual_Consumption','')
+        dat[new]=-dat[c]
+        del dat[c]
+    return dat
+            
+
 class EntsoeCrawler:
     def __init__(self, folder, spark=None,database=None):
         self.spark = spark
@@ -62,16 +88,30 @@ class EntsoeCrawler:
     def persist(self, country, proc, start, end):    
         try:
             data = self.pullData(proc, country, start, end)    
+            # replace spaces and invalid chars in column names
+            data.columns = list(map(replaceStr, map(str,data.columns)))
+            data.fillna(0, inplace=True)
+            # calculate difference betweeen agg and consumption
+            data = calcDiff(data, inplace=True)
+            # add country column
+            data['country']=country
             if self.database != None:
-                # replace spaces and invalid chars in column names
-                new_names = list(map(replaceStr, map(str,data.columns)))
-                data.columns = new_names
                 with closing(sql.connect(self.database)) as conn:
-                    data.to_sql(f'{country}_{proc.__name__}',conn,if_exists='append')
+                    try:
+                        data.to_sql(proc.__name__,conn,if_exists='append')
+                    except Exception as e:
+                        print(e)
+                        # merge old data with new data
+                        prev = pd.read_sql_query(f'select * from {proc.__name__}',conn, index_col='index')
+                        dat = pd.concat([prev,data])
+                        # convert type as pandas needs it
+                        dat.index = dat.index.astype('datetime64[ns]')
+                        dat.to_sql(proc.__name__,conn,if_exists = 'replace')
+                        print(f'replaced table {proc.__name__}')
 
             if self.spark != None:
                 data['time'] = data.index
-                spark_data = spark.createDataFrame(data)
+                spark_data = self.spark.createDataFrame(data)
                 
                 #new_names = list(map(replaceStr, spark_data.schema.fieldNames()))
                 #spark_data = spark_data.toDF(*new_names)
@@ -96,7 +136,7 @@ class EntsoeCrawler:
                     pbar.set_description(f"{country} {start1:%Y-%m-%d} to {end1:%Y-%m-%d}")
                     self.persist(country,proc, start1, end1)               
         
-    def pullCrossboarders(self,start,delta,times,proc,allZones=False):
+    def pullCrossboarders(self,start,delta,times,proc,allZones=True):
         # reverse so that new relations exist
         end = start+times*delta
         for i in range(times):
@@ -116,12 +156,33 @@ class EntsoeCrawler:
                         
             if self.database != None:
                 with closing(sql.connect(self.database)) as conn:
-                    data.to_sql(f'{proc.__name__}',conn,if_exists='append')
+                    try:
+                        data.to_sql(proc.__name__,conn,if_exists='append')
+                    except Exception as e:
+                        print(e)
+                        prev = pd.from_sql(proc.__name__,conn)
+                        pd.concat([prev,data]).to_sql(proc.__name__,conn,if_exists = 'replace')
+                        
             
             if self.spark != None:
                 data['time']=data.index
-                spark_data = spark.createDataFrame(data)
-                spark_data.write.mode('append').parquet(f'{self.folder}/query_crossborder_flows')    
+                spark_data = self.spark.createDataFrame(data)
+                spark_data.write.mode('append').parquet(f'{self.folder}/{proc.__name__}')    
+    def pullPowerSystemData(self):
+        df = pd.read_csv('https://data.open-power-system-data.org/conventional_power_plants/latest/conventional_power_plants_EU.csv')
+        df.dropna(axis=0,subset=['lon','lat','eic_code'],inplace=True)
+        df = df[['eic_code','name','company','country','capacity','energy_source','lon','lat']]
+        # delete those without location or eic_code
+        
+        if self.database != None:
+            with closing(sql.connect(self.database)) as conn:
+                df.to_sql('powersystemdata',conn,if_exists='replace')
+            
+        if self.spark != None:
+            df.to_parquet(f'{self.folder}/powersystemdata')
+            #spark_data = spark.createDataFrame(df)
+            #spark_data.write.mode('append').parquet(f'{self.folder}/powersystemdata') 
+        return df
 
 if __name__ == "__main__":  
     # Create a spark session
@@ -129,34 +190,37 @@ if __name__ == "__main__":
     spark = SparkSession.builder.config(conf=conf).getOrCreate()
     print('')
     print('ENTSOE')
-    print()
 
-    client = EntsoePandasClient(api_key='ae2ed060-c25c-4eea-8ae4-007712f95375')
-    procs= [client.query_day_ahead_prices,
-            client.query_load,
-            client.query_load_forecast,
-            client.query_generation_forecast,
-            client.query_wind_and_solar_forecast,
-            client.query_generation,
-            client.query_installed_generation_capacity ]
-    
-    print()
+    client = EntsoePandasClient(api_key='ae2ed060-c25c-4eea-8ae4-007712f95375')    
+
     #country_code='DE'
     start = pd.Timestamp('20150101', tz='Europe/Berlin')
     #start = pd.Timestamp('20171216', tz='Europe/Berlin')
     delta=timedelta(days=90)
     end = start+delta
     
-    times=6*4 # bis 2020
-    #times=2 #  test    
+    times=6*4 # bis 2020    
     
     entsoe_path='hdfs://149.201.206.53:9000/user/fmaurer/entsoe'
     
-    crawler = EntsoeCrawler('data',spark=spark,database='data/entsoe.db')
-    #crawler.bulkDownload(countries,procs,start,delta,times)
+    crawler = EntsoeCrawler(folder='data/spark',spark=None,database='data/entsoe.db')
+    procs= [client.query_day_ahead_prices,
+        client.query_load,
+        client.query_load_forecast,
+        client.query_generation_forecast,
+        client.query_wind_and_solar_forecast,
+        client.query_generation]
+    # client.query_generation_per_plant
+    # must be handled differently
+    countries = [e.name for e in Area]
+    countries = countries[1:] # finished DE_50HZ
     
+    crawler.bulkDownload(countries,procs,start,delta,times)
+    procs = [client.query_installed_generation_capacity, client.query_installed_generation_capacity_per_unit]
+    #crawler.bulkDownload(countries,procs,start,delta=timedelta(days=365*6),times=1)
+    
+    crawler.pullPowerSystemData()
     proc= client.query_crossborder_flows
     crawler.pullCrossboarders(start,delta,times,proc)
-    
     #cross = spark.read.parquet('data/query_crossborder_flows')
-    #cross.repartition(1).write.parquet('data/query_crossborder_flows2')
+    #cross.repartition(1).write.parquet('data/query_crossborder_flows2'
