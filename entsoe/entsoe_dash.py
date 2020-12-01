@@ -32,7 +32,7 @@ from pyspark.sql import SparkSession,SQLContext
 findspark.init()
 
 if True:
-    dm= EntsoeSQLite('data/entsoe2.db')    
+    dm= EntsoeSQLite('entsoe.db')    
 else:
     try:
         spark
@@ -42,6 +42,8 @@ else:
         conf = SparkConf().setAppName('entsoe').setMaster('local')
         spark = SparkSession.builder.config(conf=conf).getOrCreate()
     dm= EntsoeParquet('data',spark)
+    
+d = dm.powersystems('')
 
 app.layout = html.Div(
     [
@@ -207,10 +209,6 @@ df['countries']=['GR'] #dm.countries()
 df['values']=[3] # list(map(lambda x: len(x),dm.countries()))
 location = 'DE'
 
-d = dm.powersystems2('AT')
-for c in ['BE','CH','FR']:
-     d = pd.concat([d,dm.powersystems2(c)])
-
 @app.callback(
     Output('choro-graph', 'figure'),
     [Input('choro-graph', 'clickData')])
@@ -297,7 +295,7 @@ def make_generation_figure(country_control, start_date, end_date, group_by_contr
     end =datetime.strptime(end_date, '%Y-%m-%d').date()
     
     generation = dm.generation(country_control,Filter(start,end,group_by_control))
-        
+    del generation['country']    
     generation=generation/1000
     g = generation.melt(var_name='kind', value_name='value',ignore_index=False)
     
@@ -323,7 +321,7 @@ def make_capacity_figure(country_control):
 
     # produces duplicates for FR even though distinct is used
     capacity = dm.capacity(country_control).drop_duplicates()
-    
+    del capacity['country']
     capacity=capacity/1000
     g = capacity.melt(var_name='kind', value_name='value',ignore_index=False)
     

@@ -26,29 +26,28 @@ class EntsoeSQLite(EntsoeDataManager):
         
     def capacity(self, country: str):
         with closing(sql.connect(self.database)) as conn:
-            cap = pd.read_sql_query('select distinct * from {}_query_installed_generation_capacity'.format(country), conn,index_col='index')
+            cap = pd.read_sql_query(f'select distinct * from query_installed_generation_capacity where country="{country}"', conn,index_col='index')
         return cap
 
     def load(self, country: str, filt: Filter):
-        timeString='"{}" < time and time < "{}"'.format(filt.begin.strftime("%Y-%m-%d"),filt.end.strftime("%Y-%m-%d"))
+        whereString=f'country="{country}" and "{filt.begin.strftime("%Y-%m-%d")}" < time and time < "{filt.end.strftime("%Y-%m-%d")}"'
         selectString=f'strftime("{ftime[filt.groupby]}", "index") as time, avg("0") as value'
         groupString=f'strftime("{ftime[filt.groupby]}", "time")'
         with closing(sql.connect(self.database)) as conn:
-            query = f"select {selectString} from {country}_query_load where {timeString} group by {groupString}"
+            query = f"select {selectString} from query_load where {whereString} group by {groupString}"
             load = pd.read_sql_query(query,conn,index_col='time')
         return load
         
             
     def generation(self, country: str, filt: Filter):
-        timeString='"{}" < time and time < "{}"'.format(filt.begin.strftime("%Y-%m-%d"),filt.end.strftime("%Y-%m-%d"))
+        whereString=f'country="{country}" and "{filt.begin.strftime("%Y-%m-%d")}" < time and time < "{filt.end.strftime("%Y-%m-%d")}"'
         selectString=f'strftime("{ftime[filt.groupby]}", "index") as time'
         groupString=f'strftime("{ftime[filt.groupby]}", "time")'
         with closing(sql.connect(self.database)) as conn:
-            columns = pd.read_sql_query(f'select * from {country}_query_generation where 1=0',conn).columns
-            columns= list(filter(lambda x: not x.endswith('Actual_Consumption'), map(str,columns)))
+            columns = pd.read_sql_query(f'select * from query_generation where 1=0',conn).columns
             colNames = '","'.join(columns)
             colNames = '"'+colNames+'"'
-            query = f"select {selectString},{colNames} from {country}_query_generation where {timeString} group by {groupString}"
+            query = f"select {selectString},{colNames} from query_generation where {whereString} group by {groupString}"
             gen = pd.read_sql_query(query,conn)
         gen.columns = gen.columns.map(''.join).map(revReplaceStr)
         gen.index = gen['time']
@@ -57,20 +56,19 @@ class EntsoeSQLite(EntsoeDataManager):
         return gen
     
     def generated(self, country: str, filt: Filter):
-        timeString='"{}" < time and time < "{}"'.format(filt.begin.strftime("%Y-%m-%d"),filt.end.strftime("%Y-%m-%d"))
+        whereString=f'country="{country}" and "{filt.begin.strftime("%Y-%m-%d")}" < time and time < "{filt.end.strftime("%Y-%m-%d")}"'
         selectString=f'strftime("{ftime[filt.groupby]}", "index") as time'
         groupString=f'strftime("{ftime[filt.groupby]}", "time")'
         with closing(sql.connect(self.database)) as conn:
-            columns = pd.read_sql_query(f'select * from {country}_query_generation where 1=0',conn).columns
+            columns = pd.read_sql_query(f'select * from query_generation where 1=0',conn).columns
             
             columns= list(filter(lambda x: x.endswith('Actual_Consumption'), map(str,columns)))
             colNames = '","'.join(columns)
             colNames = '"'+colNames+'"'
-            query = f"select {selectString},{colNames} from {country}_query_generation where {timeString} group by {groupString}"
+            query = f"select {selectString},{colNames} from query_generation where {whereString} group by {groupString}"
             gen = pd.read_sql_query(query,conn,index_col='time')
         gen.columns = gen.columns.map(''.join).map(revReplaceStr)
         return gen
-    
     def crossborderFlows(self, country: str, filt: Filter):
         
         # relList= map(lambda x: x.split('.'),crossborder.columns)
@@ -81,10 +79,14 @@ class EntsoeSQLite(EntsoeDataManager):
         # return crossborder.select(columns).groupby(['group']).sum().toPandas()
         pass
     
-    def powersystems(self, country):
+    def powersystems(self, country=''):
         selectString='eic_code,p.name,company,p.country,q.country as area,lat,lon,capacity,Production_Type'
+        if country=='':
+            whereString=''
+        else:
+            whereString=f'where p.country="{country}"'
         with closing(sql.connect(self.database)) as conn:
-            df = pd.read_sql(f'select {selectString} from powersystemdata p join query_installed_generation_capacity_per_unit q on q."index" = p.eic_code', conn)    
+            df = pd.read_sql(f'select {selectString} from powersystemdata p join query_installed_generation_capacity_per_unit q on q."index" = p.eic_code {whereString}', conn)    
         return df
     
     def powersystems2(self, country):
@@ -93,15 +95,23 @@ class EntsoeSQLite(EntsoeDataManager):
             df = pd.read_sql(f'select {selectString} from powersystemdata p join {country}_query_installed_generation_capacity_per_unit q on q."index" = p.eic_code', conn)    
         return df
     
+    def countries(self):
+        with closing(sql.connect(self.database)) as conn:
+            df = pd.read_sql('select distinct country from query_generation', conn)    
+        return list(df['country'])
+    
     
 if __name__ == "__main__":  
     country='NL'
-    par = EntsoeSQLite('data/entsoe2.db')
+    par = EntsoeSQLite('entsoe.db')
     cap = par.capacity(country)
+    countries= par.countries()
+    country = countries[0]
     
     filt = Filter(datetime(2020,2,1),datetime(2020,2,2),'hour')
     load = par.load(country, filt)
     generation = par.generation(country, filt)
+    del generation['country']
     generation=generation/1000
     gen = generation.melt(var_name='kind', value_name='value',ignore_index=False)
     
