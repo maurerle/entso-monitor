@@ -27,6 +27,7 @@ class EntsoeSQLite(EntsoeDataManager):
     def capacity(self, country: str):
         with closing(sql.connect(self.database)) as conn:
             cap = pd.read_sql_query(f'select distinct * from query_installed_generation_capacity where country="{country}"', conn,index_col='index')
+        cap.columns = cap.columns.map(revReplaceStr)
         return cap
 
     def load(self, country: str, filt: Filter):
@@ -44,40 +45,63 @@ class EntsoeSQLite(EntsoeDataManager):
         selectString=f'strftime("{ftime[filt.groupby]}", "index") as time'
         groupString=f'strftime("{ftime[filt.groupby]}", "time")'
         with closing(sql.connect(self.database)) as conn:
-            columns = pd.read_sql_query(f'select * from query_generation where 1=0',conn).columns
-            colNames = '","'.join(columns)
-            colNames = '"'+colNames+'"'
-            query = f"select {selectString},{colNames} from query_generation where {whereString} group by {groupString}"
-            gen = pd.read_sql_query(query,conn)
-        gen.columns = gen.columns.map(''.join).map(revReplaceStr)
-        gen.index = gen['time']
-        del gen['index']
-        del gen['time']
-        return gen
-    
-    def generated(self, country: str, filt: Filter):
-        whereString=f'country="{country}" and "{filt.begin.strftime("%Y-%m-%d")}" < time and time < "{filt.end.strftime("%Y-%m-%d")}"'
-        selectString=f'strftime("{ftime[filt.groupby]}", "index") as time'
-        groupString=f'strftime("{ftime[filt.groupby]}", "time")'
-        with closing(sql.connect(self.database)) as conn:
-            columns = pd.read_sql_query(f'select * from query_generation where 1=0',conn).columns
-            
-            columns= list(filter(lambda x: x.endswith('Actual_Consumption'), map(str,columns)))
+            columns = pd.read_sql_query('select * from query_generation where 1=0',conn).columns
             colNames = '","'.join(columns)
             colNames = '"'+colNames+'"'
             query = f"select {selectString},{colNames} from query_generation where {whereString} group by {groupString}"
             gen = pd.read_sql_query(query,conn,index_col='time')
         gen.columns = gen.columns.map(''.join).map(revReplaceStr)
+        del gen['index']
         return gen
-    def crossborderFlows(self, country: str, filt: Filter):
+    
+    def genPerPlant(self, plant: str, filt: Filter):
+        whereString=f'plant="{plant}" and "{filt.begin.strftime("%Y-%m-%d")}" < time and time < "{filt.end.strftime("%Y-%m-%d")}"'
+        selectString=f'strftime("{ftime[filt.groupby]}", "index") as time, sum("generation") as value'
+        groupString=f'strftime("{ftime[filt.groupby]}", "time")'
+        with closing(sql.connect(self.database)) as conn:
+            query = f"select {selectString} from query_generation_per_plant where {whereString} group by {groupString}"
+            gen = pd.read_sql_query(query,conn,index_col='time')
+        return gen
+    
+    def _selectBuilder(self, neighbours):
+        res =''
+        for x in neighbours:
+            fr =x.split('-')[0]
+            to =x.split('-')[1]
+            # export - import
+            res += f'sum("{fr}-{to}"-"{to}-{fr}") as diff_{to}'
+            res += ','
+        return res
         
+    def _neighbours(self,fromC):
+        with closing(sql.connect(self.database)) as conn:
+            query = 'select * from query_crossborder_flows where 0=1'
+            columns= pd.read_sql_query(query,conn).columns
+        nei=[]
+        for x in columns:
+            sp = x.split('-')
+            if sp[0]==fromC:
+                nei.append(x)  
+                #nei.append(sp[1]+'.'+sp[0])
+        return nei
+
+    def crossborderFlows(self, country: str, filt: Filter):
+        whereString=f'"{filt.begin.strftime("%Y-%m-%d")}" < time and time < "{filt.end.strftime("%Y-%m-%d")}"'
+        
+        nei = self._neighbours(country)        
+        selectString=f'{self._selectBuilder(nei)} strftime("{ftime[filt.groupby]}", "index") as time'
+        
+        groupString=f'strftime("{ftime[filt.groupby]}", "time")'
+        with closing(sql.connect(self.database)) as conn:
+            query = f"select {selectString} from query_crossborder_flows where {whereString} group by {groupString}"
+            cross = pd.read_sql_query(query,conn,index_col='time')
+        return cross
         # relList= map(lambda x: x.split('.'),crossborder.columns)
         # filteredRelations=filter(lambda x: x.count(country)>0,relList)
         # columns=list(map(lambda x: '{}.{}'.format(x[0],x[1]), filteredRelations))       
         # columns.append('group')
         
         # return crossborder.select(columns).groupby(['group']).sum().toPandas()
-        pass
     
     def powersystems(self, country=''):
         selectString='eic_code,p.name,company,p.country,q.country as area,lat,lon,capacity,Production_Type'
@@ -89,21 +113,22 @@ class EntsoeSQLite(EntsoeDataManager):
             df = pd.read_sql(f'select {selectString} from powersystemdata p join query_installed_generation_capacity_per_unit q on q."index" = p.eic_code {whereString}', conn)    
         return df
     
-    def powersystems2(self, country):
-        selectString='eic_code,p.name,company,p.country,lat,lon,capacity,Production_Type'
-        with closing(sql.connect(self.database)) as conn:
-            df = pd.read_sql(f'select {selectString} from powersystemdata p join {country}_query_installed_generation_capacity_per_unit q on q."index" = p.eic_code', conn)    
-        return df
-    
     def countries(self):
         with closing(sql.connect(self.database)) as conn:
             df = pd.read_sql('select distinct country from query_generation', conn)    
         return list(df['country'])
     
+    def climateImpact(self):
+        climate = pd.read_csv('data/CO2_factors_energy_carrier.CSV', sep=';',index_col=0)
+        return climate
+        
+    
     
 if __name__ == "__main__":  
     country='NL'
-    par = EntsoeSQLite('entsoe.db')
+    par = EntsoeSQLite('data/entsoe.db')
+    filt = Filter(datetime(2020,9,1),datetime(2020,9,2),'hour')
+    neighbours = par.crossborderFlows(country, filt)
     cap = par.capacity(country)
     countries= par.countries()
     country = countries[0]
@@ -114,12 +139,13 @@ if __name__ == "__main__":
     del generation['country']
     generation=generation/1000
     gen = generation.melt(var_name='kind', value_name='value',ignore_index=False)
+    climate = par.climateImpact()
+    generation.fillna(0,inplace=True)
+    nox = generation*climate['Summe NOX']
     
     # from entsoe_data_manager import EntsoeDataManager
     # issubclass(par.__class__,EntsoeDataManager)
-
-    # with closing(sql.connect('entsoe.db')) as conn:
-    #     data = pd.read_sql_query(f'select "index" from query_crossborder_flows',conn)
+            
     # with closing(sql.connect('data/entsoe2.db')) as conn:         
     #     data.to_sql('query_crossborder_flows',conn)
     #     columns = pd.read_sql_query(f'select * from DE_query_generation where 1=0',conn).columns

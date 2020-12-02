@@ -29,16 +29,18 @@ class EntsoeDataManager:
     def generation(self, country: str, filt: Filter):
         pass
     
-    def consumption(self, country: str, filt: Filter):
+    def genPerPlant(self, plant: str, filt: Filter):
         pass
     
     def crossborderFlows(self, country: str, filt: Filter):
         pass
     
     def countries(self):
-        return ['AT','BE','BA','BG','HR','CY','CZ','DK','EE','FI','MK',
-                'FR','DE','GR','HU','IE','IT','LV','LT','LU','ME','GB',
-                'NL','NO','PL','PT','RO','RS','SK','SI','ES','SE','CH','UA']
+        pass
+    
+    def climateImpact(self):
+        pass
+    
 
 def revReplaceStr(string):
     '''
@@ -51,4 +53,3 @@ def revReplaceStr(string):
     st = st.strip()
     
     return st
-    

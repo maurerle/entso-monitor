@@ -12,11 +12,11 @@ import pandas as pd
 from dash.dependencies import Input, Output, ClientsideFunction
 import dash_core_components as dcc
 import dash_html_components as html
+import plotly.graph_objects as go
+import plotly.express as px 
 
 from entsoe_data_manager import Filter
-from entsoe_parquet_manager import EntsoeParquet
 from entsoe_sqlite_manager import EntsoeSQLite
-import plotly.express as px 
 import json
 import copy
 
@@ -25,16 +25,16 @@ app = dash.Dash(
 )
 server = app.server
 
-import findspark
-import pyspark
-from pyspark import SparkConf,SparkContext
-from pyspark.sql import SparkSession,SQLContext
-findspark.init()
-
 if True:
-    dm= EntsoeSQLite('entsoe.db')    
+    dm= EntsoeSQLite('data/entsoe.db')    
 else:
+    from entsoe_parquet_manager import EntsoeParquet
+    import findspark
+    from pyspark import SparkConf
+    from pyspark.sql import SparkSession
     try:
+        findspark.init()
+        
         spark
         print('using existing spark object')
     except:
@@ -42,8 +42,10 @@ else:
         conf = SparkConf().setAppName('entsoe').setMaster('local')
         spark = SparkSession.builder.config(conf=conf).getOrCreate()
     dm= EntsoeParquet('data',spark)
-    
-d = dm.powersystems('')
+
+powersys = dm.powersystems('')
+climate = dm.climateImpact()
+climate.columns
 
 app.layout = html.Div(
     [
@@ -99,19 +101,26 @@ app.layout = html.Div(
                 html.Div(
                     [
                         html.P(
+                            "Select Climate metric:",
+                            className="control_label",
+                        ),
+                        dcc.Dropdown(id='climate_picker',
+                                     options=[{'label':x, 'value': x} for x in list(climate.columns)],
+                                     value='CO2 mit VK'),
+                        html.P(
                             "Select Time Filter:",
                             className="control_label",
                         ),
-                        #dcc.Dropdown(options=[{'label':x, 'value': x} for x in range(2015, 2020)]),
+                        #dcc.Dropdown(options=[{'label':x, 'value': x} for x in range(2015, 2020)]),                        
                         dcc.DatePickerRange(
                             id='date_picker',
                             min_date_allowed=date(2015, 1, 1),
                             max_date_allowed=date(2020, 10, 19),
-                            start_date=date(2020,2,21),
-                            end_date=date(2020,3,4),
-                            display_format='MMMM Y, DD',
+                            start_date=date(2020,8,21),
+                            end_date=date(2020,9,4),
+                            display_format='DD MM YY',
                             #with_portal=True,
-                            initial_visible_month='2020-02-01',
+                            initial_visible_month='2020-08-01',
                             show_outside_days=True,
                             start_date_placeholder_text='MMMM Y, DD'
                         ),
@@ -166,14 +175,19 @@ app.layout = html.Div(
             className="row flex-display",
         ),
         html.Div(
-                            [dcc.Graph(id="load_graph")],
-                            id="loadGraphContainer",
-                            className="pretty_container",
+            [dcc.Graph(id="generation_graph",config={"displaylogo": False})],
+            id="generationGraphContainer",
+            className="pretty_container",
         ),
         html.Div(
-                    [dcc.Graph(id="generation_graph")],
-                    id="generationGraphContainer",
-                    className="pretty_container",
+            [dcc.Graph(id="load_graph",config={"displaylogo": False})],
+            id="loadGraphContainer",
+            className="pretty_container",
+        ),
+        html.Div(
+            [dcc.Graph(id="neighbour_graph",config={"displaylogo": False})],
+            id="neighbourGraphContainer",
+            className="pretty_container",
         ),
 ])
 
@@ -205,29 +219,101 @@ with open("europe.geo.json", "r", encoding="utf-8") as f:
 
 #geo['features'][0]
 df = pd.DataFrame()
-df['countries']=['GR'] #dm.countries()
-df['values']=[3] # list(map(lambda x: len(x),dm.countries()))
+df['countries']=dm.countries()
+df['values']=list(map(lambda x: len(x),dm.countries()))
 location = 'DE'
+
+
+# dash_table.DataTable(
+#     id='table',
+#     columns=[{"name": i, "id": i} for i in df.columns],
+#     data=df.to_dict('records'),
+# )
+
+@app.callback(
+    Output('country_control', 'value'),
+    [Input('choro-graph', 'clickData')])
+def update_dropdown(clickData):    
+    # zur initialisierung
+    location = 'DE'
+    if clickData is not None:     
+        location = clickData['points'][0]['location']
+    return location
 
 @app.callback(
     Output('choro-graph', 'figure'),
-    [Input('choro-graph', 'clickData')])
-def update_figure(clickData):    
-    if clickData is not None:            
-        location = clickData['points'][0]['location']
-        print(location)
-    fig = px.scatter_mapbox(d, lat="lat", lon="lon", color='Production_Type',hover_name="name",hover_data=["capacity",'country'],zoom=3)
-    fig.update_layout(mapbox_style="open-street-map",margin={"r":0,"t":0,"l":0,"b":0},
-                      legend=dict(font=dict(size=10), orientation="h")
-                      )
-    # fig = px.choropleth_mapbox(df, geojson=geo, locations="countries", color='values',
-    #                            #color_continuous_scale="Viridis",
-    #                            featureidkey="properties.iso_a2",
-    #                            #range_color=(0, 12),
-    #                            mapbox_style="carto-positron", # open-street-map
-    #                            zoom=3, center = {"lat": 51.0902, "lon": 10.7129},
-    #                            #opacity=0.9,
-    #                            labels={'values':'Werte'}
+    [#Input('choro-graph', 'clickData'),
+     Input("climate_picker", "value")])
+def update_figure(climate_sel):    
+    
+
+    countries = dm.countries()
+    
+    if climate_sel == None:
+        values=list(map(lambda x: len(x),dm.countries()))
+    else:
+        values = []
+        for country in countries:
+            capacity = dm.capacity(country)    
+            del capacity['country']
+            da = capacity*climate[climate_sel] 
+            
+            if da.empty:
+                values.append(0)
+            else:
+                gramSum = da.iloc[-1].sum()
+                values.append(gramSum/capacity.iloc[-1].sum())
+                
+    choro = go.Choroplethmapbox(z=values,
+                                locations = countries, 
+                                colorscale = 'algae', # carto
+                                colorbar = dict(thickness=20, ticklen=3,title='Austoß in g/kWh'),
+                                geojson = geo,
+                                featureidkey="properties.iso_a2",
+                                text = countries,
+                                below=True,
+                                hovertemplate = '<b>Country</b>: <b>%{text}</b>'+
+                                                '<br><b>Austoß pro GWh </b>: %{z}<br>',
+                                marker_line_width=0.1, marker_opacity=0.8,
+                                )
+    
+    vals = powersys['Production_Type'].unique()
+    data=[]
+    data.append(choro)
+    for val in vals:
+        d= powersys[powersys['Production_Type']==val]
+        scatt = go.Scattermapbox(lat=d['lat'],name=val,
+                lon=d['lon'],
+                mode='markers+text',
+                text=d["name"],
+                hovertext=d[['name','capacity','country']],
+                hoverinfo=['text'],
+                below='',                 
+                #marker=dict( size=12, color ='rgb(235, 0, 100)')
+                )
+        data.append(scatt)
+    layout = go.Layout(title_text ='Europe mapbox choropleth', title_x =0.5, #width=750, height=700,
+                       showlegend=True,
+                       mapbox = dict(center = {"lat": 50, "lon": 10},
+                                     zoom=3,
+                                     style="carto-positron"
+                                   ),
+                       margin={"r":0,"t":0,"l":0,"b":0},
+                       legend=dict(font=dict(size=9), orientation="h"),
+                       )
+    fig=go.Figure(data=data, layout =layout)        
+
+
+    # fig2 = px.scatter_mapbox(d, lat="lat", lon="lon", color='Production_Type',hover_name="name",hover_data=["capacity",'country'],zoom=3)
+    # fig2.update_layout(mapbox_style="open-street-map",margin={"r":0,"t":0,"l":0,"b":0}, legend=dict(font=dict(size=10), orientation="h"))
+    # fig2 = px.choropleth_mapbox(df, geojson=geo, locations="countries", color='values',
+    #                             #color_continuous_scale="Viridis",
+    #                             featureidkey="properties.iso_a2",
+    #                             #range_color=(0, 12),
+    #                             mapbox_style="carto-positron", # open-street-map
+    #                             zoom=3, center = {"lat": 50, "lon": 10},
+    #                             opacity=0.5,
+    #                             labels={'values':'Werte'}
     #                           )
     return fig
 
@@ -271,6 +357,8 @@ def make_load_figure(country_control, start_date, end_date, group_by_control):
 
     layout_count["title"] = "Load for {} from {} to {}".format(country_control,start_date,end_date)
     #layout_count["dragmode"] = "select"
+    layout_count['xaxis_title']=group_by_control
+    layout_count['yaxis_title']='Current net load in MW'
     layout_count["showlegend"] = True
     layout_count["autosize"] = True
     layout_count['hovermode']='x unified'
@@ -288,23 +376,31 @@ def make_load_figure(country_control, start_date, end_date, group_by_control):
         Input("date_picker", "end_date"),
         Input("group_by_control", "value"),
         Input("energy_type_selector", "value"),
+        Input("climate_picker", "value"),
     ],
 )
-def make_generation_figure(country_control, start_date, end_date, group_by_control,energy_type_selector):
+def make_generation_figure(country_control, start_date, end_date, group,e_type,climate_sel):
     start =datetime.strptime(start_date, '%Y-%m-%d').date()
     end =datetime.strptime(end_date, '%Y-%m-%d').date()
     
-    generation = dm.generation(country_control,Filter(start,end,group_by_control))
+    generation = dm.generation(country_control,Filter(start,end,group))
     del generation['country']    
-    generation=generation/1000
+    
+    desc = 'Generated Energy by Production kind in MWh'
+    
+    if climate_sel != None:
+        generation=generation*climate[climate_sel]
+        desc=climate_sel+' in g/MWh'
+    
+    
     g = generation.melt(var_name='kind', value_name='value',ignore_index=False)
     
     if g.empty:
         return dict(data=[], layout=dict(title="No Data Found for current interval"))
     figure = px.area(g, x=g.index, y="value", color='kind',line_group="kind")
-    figure.update_layout(title="Generation for {} from {} to {}".format(country_control,start_date,end_date),
-                   xaxis_title=group_by_control,
-                   yaxis_title='Generated Energy by Production kind in GW',
+    figure.update_layout(title=desc+" for {} from {} to {}".format(country_control,start_date,end_date),
+                   xaxis_title=group,
+                   yaxis_title=desc,
                    hovermode="closest",
                    legend=dict(font=dict(size=10), orientation="h"),)
     return figure
@@ -318,11 +414,8 @@ def make_generation_figure(country_control, start_date, end_date, group_by_contr
     ],
 )
 def make_capacity_figure(country_control):
-
-    # produces duplicates for FR even though distinct is used
-    capacity = dm.capacity(country_control).drop_duplicates()
+    capacity = dm.capacity(country_control)
     del capacity['country']
-    capacity=capacity/1000
     g = capacity.melt(var_name='kind', value_name='value',ignore_index=False)
     
     if g.empty:
@@ -333,7 +426,42 @@ def make_capacity_figure(country_control):
                    xaxis_title='years',
                    yaxis_title='Capacity by Production kind',)
     figure.update_traces(texttemplate='%{text:.2s}', textposition='inside')
-    figure.update_yaxes(ticksuffix="GW")
+    figure.update_yaxes(ticksuffix="MW")
     return figure
 
-app.run_server(debug=True, use_reloader=False)
+############ Neighbour Graph   ##############
+
+@app.callback(
+    Output("neighbour_graph", "figure"),
+    [
+        Input("country_control", "value"),
+        Input("date_picker", "start_date"),
+        Input("date_picker", "end_date"),
+        Input("group_by_control", "value"),
+        Input("energy_type_selector", "value"),
+    ],
+)
+def make_neighbour_figure(country_control, start_date, end_date, group_by_control,energy_type_selector):
+    start =datetime.strptime(start_date, '%Y-%m-%d').date()
+    end =datetime.strptime(end_date, '%Y-%m-%d').date()
+    
+    g = dm.crossborderFlows(country_control,Filter(start,end,group_by_control))
+        
+    if g.empty:
+        return dict(data=[], layout=dict(title=f"No Data for {country_control} from {start_date} to {end_date}"))
+    fig = go.Figure()
+    for col in g.columns:
+        fig.add_trace(go.Scatter(x=g.index, y=g[col],
+                        mode='lines',
+                        name=col))
+
+    fig.update_layout(title=f"Netto Export for {country_control} from {start_date} to {end_date}",
+                   xaxis_title=group_by_control,
+                   yaxis_title='Exported to neighbour - imported in MW',
+                   hovermode="closest",
+                   showlegend=True,
+                   legend=dict(font=dict(size=10), orientation="h"),)
+    return fig
+
+if __name__ == "__main__":  
+    app.run_server(debug=True, host='0.0.0.0', port=8051)
