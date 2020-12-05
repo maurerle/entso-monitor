@@ -1,11 +1,8 @@
 import requests
 import os
 import shutil
-routes = ['countries_zones','pipelines_small_medium_large','pipelines_medium_large','pipelines_large','drilling_platforms','gasfields','projects','country_names']
 
-url = "https://transparency.entsog.eu/assets/images/map_layers/"
-
-def loadMap(folder,route,url=url):
+def loadMap(folder,route,url):
     curUrl = url+route
     for z in range(2,6):
         numItems = 2**z
@@ -32,7 +29,10 @@ def convertTmsXyz(source,target):
             for y in range(numItems):
                 shutil.copy(sourceFolder+"/{}.png".format(y), saveFolder+"/{}.png".format(numItems-y-1))
 if __name__ == "__main__":  
+    routes = ['countries_zones','pipelines_small_medium_large','pipelines_medium_large','pipelines_large','drilling_platforms','gasfields','projects','country_names']
+    
     for route in routes:
-        loadMap('data_tms',route)
+        url = "https://transparency.entsog.eu/assets/images/map_layers/"
+        loadMap('data_tms',route,url)
         convertTmsXyz('data_tms/'+route,'data_xyz/'+route)
     

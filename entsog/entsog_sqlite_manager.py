@@ -79,14 +79,18 @@ class EntsogSQLite(EntsogDataManager):
             opd = pd.read_sql_query(f'select {selectString} from operatorpointdirections', conn)
         return opd
     
-    def physicalFlow(self, balancingZones: List[str], pointKey, filt: Filter):
-        timeString='"{}" < time and time < "{}"'.format(filt.begin.strftime("%Y-%m-%d"),filt.end.strftime("%Y-%m-%d"))
+    def physicalFlow(self, operatorKeys: List[str], filt: Filter):
+        whereString='"{}" < time and time < "{}"'.format(filt.begin.strftime("%Y-%m-%d"),filt.end.strftime("%Y-%m-%d"))
+        inString = '("'+'","'.join(operatorKeys)+'")'
+        whereString+=f'and operatorKey in {inString}'
         selectString = f'strftime("{ftime[filt.groupby]}", "periodFrom") as time, '
-        selectString+= 'pointKey, pointLabel, operatorKey, operatorLabel, directionKey, value, indicator'
-        groupString=f'strftime("{ftime[filt.groupby]}", "time")'
+        selectString+= 'pointKey, pointLabel, operatorKey, operatorLabel, directionKey, sum(value) as value, indicator'
+        groupString=f'strftime("{ftime[filt.groupby]}", "time"), directionKey'
         # TODO
         with closing(sql.connect(self.database)) as conn:
-            flow = pd.read_sql_query(f'select {selectString} from operationaldata where {timeString} group by {groupString}', conn)
+            query = f'select {selectString} from operationaldata where {whereString} group by {groupString}'
+            print(query)
+            flow = pd.read_sql_query(query, conn,index_col='time')
         return flow
     
     def crossborderFlows(self, country: str, filt: Filter):
@@ -94,11 +98,14 @@ class EntsogSQLite(EntsogDataManager):
     
 if __name__ == "__main__":  
 
-    par = EntsogSQLite('entsog.db')
-    operators = par.operators()
+    entsog = EntsogSQLite('entsog.db')
+    operators = entsog.operators()
     
-    filt = Filter(datetime(2017,7,1),datetime(2017,7,2),'hour')
-    balzones = par.balancingzones()
-    intercon = par.interconnections()
-    cpp = par.connectionpoints()
+    filt = Filter(datetime(2017,7,1),datetime(2017,7,22),'hour')
+    balzones = entsog.balancingzones()
+    intercon = entsog.interconnections()
+    cpp = entsog.connectionpoints()
     #gen = generation.melt(var_name='kind', value_name='value',ignore_index=False)    
+    operatorLabels = ['bayernets', 'sdf']
+    
+    phy = entsog.physicalFlow(operatorLabels,filt)
