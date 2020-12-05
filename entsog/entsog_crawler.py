@@ -188,4 +188,7 @@ if __name__ == "__main__":
             
         with closing(sql.connect(database)) as conn:
             query = (f'CREATE INDEX IF NOT EXISTS "idx_opdata" ON "operationaldata" ("operatorKey","periodFrom");')
-            conn.execute(query)        
+            conn.execute(query)       
+            # sqlite will only use one index. EXPLAIN QUERY PLAIN shows if index is used
+            # ref: https://www.sqlite.org/optoverview.html#or_optimizations
+            # reference https://stackoverflow.com/questions/31031561/sqlite-query-to-get-the-closest-datetime

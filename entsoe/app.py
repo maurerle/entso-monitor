@@ -128,7 +128,7 @@ app.layout = html.Div(
                         html.P("Country:", className="control_label"),
                         dcc.Dropdown(id="country_control",
                                      options=[{'label':x, 'value': x} for x in dm.countries()],
-                                     value='DE',
+                                     value='FR',
                                      className="dcc_control",
                                     ),
                         html.P("Group by:", className="control_label"),
@@ -200,7 +200,10 @@ layout = dict(
     hovermode="closest",
     plot_bgcolor="#F9F9F9",
     paper_bgcolor="#F9F9F9",
-    legend=dict(font=dict(size=10), orientation="h")
+    legend=dict(font=dict(size=10), orientation="h"),
+    xaxis= dict(anchor='y', domain=[0.0, 1.0], title= dict(text= 'time')),
+    yaxis= dict(anchor='x', domain=[0.0, 1.0], title= dict(text= 'value'))
+
 )
 
 app.clientside_callback(
@@ -351,8 +354,8 @@ def make_load_figure(country_control, start_date, end_date, group_by_control):
 
     layout_count["title"] = "Load for {} from {} to {}".format(country_control,start_date,end_date)
     #layout_count["dragmode"] = "select"
-    layout_count['xaxis_title']=group_by_control
-    layout_count['yaxis_title']='Current net load in MW'
+    layout_count['xaxis']['title']['text']=group_by_control
+    layout_count['yaxis']['title']['text']='Current net load in MW'
     layout_count["showlegend"] = True
     layout_count["autosize"] = True
     layout_count['hovermode']='x unified'
@@ -382,9 +385,10 @@ def make_generation_figure(country_control, start_date, end_date, group,e_type,c
     
     desc = 'Generated Energy by Production kind in MWh'
     
+    generation /= 1000
     if climate_sel != None:
         generation=generation*climate[climate_sel]
-        desc=climate_sel+' in g/MWh'
+        desc=climate_sel+' in g'
     
     
     g = generation.melt(var_name='kind', value_name='value',ignore_index=False)
@@ -410,6 +414,7 @@ def make_generation_figure(country_control, start_date, end_date, group,e_type,c
 def make_capacity_figure(country_control):
     capacity = dm.capacity(country_control)
     del capacity['country']
+    capacity/=1000
     g = capacity.melt(var_name='kind', value_name='value',ignore_index=False)
     
     if g.empty:
@@ -451,7 +456,7 @@ def make_neighbour_figure(country_control, start_date, end_date, group_by_contro
 
     fig.update_layout(title=f"Netto Export for {country_control} from {start_date} to {end_date}",
                    xaxis_title=group_by_control,
-                   yaxis_title='Exported to neighbour - imported in MW',
+                   yaxis_title='Exported to neighbour - imported in kWh',
                    hovermode="closest",
                    showlegend=True,
                    legend=dict(font=dict(size=10), orientation="h"),)
