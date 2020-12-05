@@ -9,23 +9,25 @@ Created on Fri Nov 27 23:31:45 2020
 import dash
 from datetime import datetime, date
 import pandas as pd
-from dash.dependencies import Input, Output, ClientsideFunction
+from dash.dependencies import Input, Output, State, ClientsideFunction
 import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objects as go
 import plotly.express as px 
 
 from entsoe_data_manager import Filter
-from entsoe_sqlite_manager import EntsoeSQLite
 import json
 import copy
 
 app = dash.Dash(
     __name__, meta_tags=[{"name": "viewport", "content": "width=device-width"}]
 )
+appname = "ENTSO-E Energy Monitor"
+app.title = appname
 server = app.server
 
 if True:
+    from entsoe_sqlite_manager import EntsoeSQLite
     dm= EntsoeSQLite('data/entsoe.db')    
 else:
     from entsoe_parquet_manager import EntsoeParquet
@@ -67,14 +69,14 @@ app.layout = html.Div(
                             },
                         )
                     ],
-                    className="one-third column",
+                    className="one-third column pretty_container",
                 ),
                 html.Div(
                     [
                         html.Div(
                             [
                                 html.H3(
-                                    "ENTSO-E Energy Monitor",
+                                    appname,
                                     style={"margin-bottom": "0px"},
                                 ),
                                 html.H5(
@@ -92,7 +94,7 @@ app.layout = html.Div(
             style={"margin-bottom": "25px"},
         ),
         html.Div(
-                    [dcc.Graph(id='choro-graph')],
+                    [dcc.Graph(id='choro-graph',config={"displaylogo": False})],
                     id="locationMapContainer",
                     className="pretty_container",
         ),
@@ -118,8 +120,7 @@ app.layout = html.Div(
                             max_date_allowed=date(2020, 10, 19),
                             start_date=date(2020,8,21),
                             end_date=date(2020,9,4),
-                            display_format='DD MM YY',
-                            #with_portal=True,
+                            display_format='DD.MM.YY',
                             initial_visible_month='2020-08-01',
                             show_outside_days=True,
                             start_date_placeholder_text='MMMM Y, DD'
@@ -199,13 +200,7 @@ layout = dict(
     hovermode="closest",
     plot_bgcolor="#F9F9F9",
     paper_bgcolor="#F9F9F9",
-    legend=dict(font=dict(size=10), orientation="h"),
-    title="Satellite Overview",
-    mapbox=dict(
-        style="light",
-        center=dict(lon=-78.05, lat=42.54),
-        zoom=7,
-    ),
+    legend=dict(font=dict(size=10), orientation="h")
 )
 
 app.clientside_callback(
@@ -221,29 +216,28 @@ with open("europe.geo.json", "r", encoding="utf-8") as f:
 df = pd.DataFrame()
 df['countries']=dm.countries()
 df['values']=list(map(lambda x: len(x),dm.countries()))
-location = 'DE'
 
-
-# dash_table.DataTable(
-#     id='table',
-#     columns=[{"name": i, "id": i} for i in df.columns],
-#     data=df.to_dict('records'),
-# )
 
 @app.callback(
     Output('country_control', 'value'),
-    [Input('choro-graph', 'clickData')])
-def update_dropdown(clickData):    
+    [Input('choro-graph', 'clickData'),
+     State('country_control', 'value')])
+def update_dropdown(clickData, prev):    
     # zur initialisierung
-    location = 'DE'
-    if clickData is not None:     
-        location = clickData['points'][0]['location']
+    location = prev
+    if clickData is not None:    
+        print(clickData['points'][0])
+        if 'location' in clickData['points'][0]:
+            location = clickData['points'][0]['location']
+        elif 'text' in clickData['points'][0]:
+            print(clickData['points'][0]['text'])
+            # TODO click on energy plant
+        
     return location
 
 @app.callback(
     Output('choro-graph', 'figure'),
-    [#Input('choro-graph', 'clickData'),
-     Input("climate_picker", "value")])
+    [Input("climate_picker", "value")])
 def update_figure(climate_sel):    
     
 

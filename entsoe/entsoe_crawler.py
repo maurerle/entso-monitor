@@ -251,11 +251,12 @@ if __name__ == "__main__":
     procs = [client.query_installed_generation_capacity, client.query_installed_generation_capacity_per_unit]
     #crawler.bulkDownload(countries,procs,start,delta=timedelta(days=365*6),times=1)
     #crawler.pullPowerSystemData()
+    #crawler.bulkDownload(countries,[client.query_installed_generation_capacity_per_unit],start,delta=timedelta(days=360*6),times=1)
     
     # Crossborder Data
     start = pd.Timestamp('20181211', tz='Europe/Berlin')
     # 2018-12-11 00:00:00+01:00 fehlt 1 mal, database locked
-    crawler.pullCrossborders(start,delta,1,client.query_crossborder_flows)    
+    #crawler.pullCrossborders(start,delta,1,client.query_crossborder_flows)    
     
     # per plant generation
     #client.query_generation_per_plant('DE_50HZ',start=start+timedelta(days=4),end=start+timedelta(days=8)) 
@@ -264,5 +265,5 @@ if __name__ == "__main__":
     # create indices if not existing
     with closing(sql.connect(db)) as conn:
         for proc in procs:
-            query = (f'CREATE INDEX IF NOT EXISTS "country_{proc.__name__}" ON "{proc.__name__}" ("country");')
+            query = (f'CREATE INDEX IF NOT EXISTS "country_idx_{proc.__name__}" ON "{proc.__name__}" ("country", "index");')
             conn.execute(query)        

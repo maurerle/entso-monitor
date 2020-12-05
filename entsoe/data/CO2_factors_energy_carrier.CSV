@@ -1,0 +1,21 @@
+Typ;CO2 ohne VK;CO2 mit VK;Summe SO2;Summe NOX;Summe Staub;Eigenverbrauch
+Biomass;4.4;162.0;3.4;0.9;0.0;8.0
+Fossil Brown coal/Lignite;1031.0;1058.3;0.0;0.6;0.0;7.1
+Fossil Gas;507.5;556.8;0.4;0.5;0.7;2.9
+Fossil Hard coal;842.4;973.2;1.4;0.9;0.1;8.3
+Fossil Oil;688.0;789.5;1.7;0.7;0.1;8.2
+Geothermal;0.0;95.5;0.1;0.1;0.0;6.0
+Hydro Pumped Storage;0.0;2.8;0.0;0.0;0.0;2.5
+Hydro Run-of-river and poundage;0.0;2.8;0.0;0.0;0.0;1.6
+Other;767.2;844.4;0.9;0.7;0.2;5.4
+Other renewable;0.5;43.7;0.5;0.2;0.0;0.0
+Solar;0.0;67.2;0.2;0.1;0.0;0.0
+Waste;1223.0;1227.3;1.5;1.7;0.0;20.4
+Wind Offshore;0.0;6.0;0.0;0.0;0.0;0.0
+Wind Onshore;0.0;10.7;0.0;0.0;0.0;0.0
+Fossil Coal-derived gas;842.4;973.2;1.4;0.9;0.1;0.0
+Nuclear;0.0;55.4;0.1;0.1;0.0;5.4
+Hydro Water Reservoir;0.0;2.8;0.0;0.0;0.0;1.0
+Marine;0.0;0.0;0.0;0.0;0.0;0.0
+Fossil Oil shale;688.0;789.5;1.7;0.7;0.1;8.2
+Fossil Peat;1120.0;1120.0;0.27;0.6;0.0;62.0

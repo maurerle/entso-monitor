@@ -31,7 +31,7 @@ class EntsoeSQLite(EntsoeDataManager):
         return cap
 
     def load(self, country: str, filt: Filter):
-        whereString=f'country="{country}" and "{filt.begin.strftime("%Y-%m-%d")}" < time and time < "{filt.end.strftime("%Y-%m-%d")}"'
+        whereString=f'country="{country}" and "{filt.begin.strftime("%Y-%m-%d")}" < "index" and "index" < "{filt.end.strftime("%Y-%m-%d")}"'
         selectString=f'strftime("{ftime[filt.groupby]}", "index") as time, avg("0") as value'
         groupString=f'strftime("{ftime[filt.groupby]}", "time")'
         with closing(sql.connect(self.database)) as conn:
@@ -41,21 +41,22 @@ class EntsoeSQLite(EntsoeDataManager):
         
             
     def generation(self, country: str, filt: Filter):
-        whereString=f'country="{country}" and "{filt.begin.strftime("%Y-%m-%d")}" < time and time < "{filt.end.strftime("%Y-%m-%d")}"'
+        whereString=f'country="{country}" and "{filt.begin.strftime("%Y-%m-%d")}" < "index" and "index" < "{filt.end.strftime("%Y-%m-%d")}"'
         selectString=f'strftime("{ftime[filt.groupby]}", "index") as time'
         groupString=f'strftime("{ftime[filt.groupby]}", "time")'
         with closing(sql.connect(self.database)) as conn:
-            columns = pd.read_sql_query('select * from query_generation where 1=0',conn).columns
-            colNames = '","'.join(columns)
-            colNames = '"'+colNames+'"'
+            columns = list(pd.read_sql_query('select * from query_generation where 1=0',conn).columns)
+            columns.remove('country')
+            columns.remove('index')
+            colNames = ','.join([f'avg("{column}") as "{column}"' for column in columns])+', country '
             query = f"select {selectString},{colNames} from query_generation where {whereString} group by {groupString}"
+            print(query)
             gen = pd.read_sql_query(query,conn,index_col='time')
         gen.columns = gen.columns.map(''.join).map(revReplaceStr)
-        del gen['index']
         return gen
     
     def genPerPlant(self, plant: str, filt: Filter):
-        whereString=f'plant="{plant}" and "{filt.begin.strftime("%Y-%m-%d")}" < time and time < "{filt.end.strftime("%Y-%m-%d")}"'
+        whereString=f'plant="{plant}" and "{filt.begin.strftime("%Y-%m-%d")}" < "index" and "index" < "{filt.end.strftime("%Y-%m-%d")}"'
         selectString=f'strftime("{ftime[filt.groupby]}", "index") as time, sum("generation") as value'
         groupString=f'strftime("{ftime[filt.groupby]}", "time")'
         with closing(sql.connect(self.database)) as conn:
@@ -86,7 +87,7 @@ class EntsoeSQLite(EntsoeDataManager):
         return nei
 
     def crossborderFlows(self, country: str, filt: Filter):
-        whereString=f'"{filt.begin.strftime("%Y-%m-%d")}" < time and time < "{filt.end.strftime("%Y-%m-%d")}"'
+        whereString=f'"{filt.begin.strftime("%Y-%m-%d")}" < "index" and "index" < "{filt.end.strftime("%Y-%m-%d")}"'
         
         nei = self._neighbours(country)        
         selectString=f'{self._selectBuilder(nei)} strftime("{ftime[filt.groupby]}", "index") as time'
@@ -133,6 +134,7 @@ if __name__ == "__main__":
     countries= par.countries()
     country = countries[0]
     
+    df2 = par.powersystems()
     filt = Filter(datetime(2020,2,1),datetime(2020,2,2),'hour')
     load = par.load(country, filt)
     generation = par.generation(country, filt)
@@ -145,8 +147,7 @@ if __name__ == "__main__":
     
     # from entsoe_data_manager import EntsoeDataManager
     # issubclass(par.__class__,EntsoeDataManager)
-            
-    # with closing(sql.connect('data/entsoe2.db')) as conn:         
+        
     #     data.to_sql('query_crossborder_flows',conn)
     #     columns = pd.read_sql_query(f'select * from DE_query_generation where 1=0',conn).columns
     #         query = "select * from DE_query_generation"
