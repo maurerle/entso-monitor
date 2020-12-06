@@ -9,23 +9,22 @@ Created on Mon Nov 30 00:57:00 2020
 import dash
 from datetime import datetime, date
 import pandas as pd
-from dash.dependencies import Input, Output, ClientsideFunction,State
+from dash.dependencies import Input, Output, State
 import dash_core_components as dcc
 import dash_html_components as html
-from entsog_data_manager import Filter
 import plotly.express as px 
+from entsog_data_manager import Filter
 
-app = dash.Dash(
-    __name__, meta_tags=[{"name": "viewport", "content": "width=device-width"}]
-)
-appname = "ENTSO-G Energy Monitor"
-app.title = appname
-server = app.server
-
+print(__name__)
+if __name__ == "__main__":  
+    app = dash.Dash(__name__, meta_tags=[{"name": "viewport", "content": "width=device-width"}])
+    server = app.server
+else:
+    from app import app
 
 if True:
     from entsog_sqlite_manager import EntsogSQLite
-    dm= EntsogSQLite('entsog.db')
+    dm= EntsogSQLite('data/entsog.db')
 else:
     #from entsoe_parquet_manager import EntsogParquet
     import findspark
@@ -59,13 +58,11 @@ allPointOptions = [{'label':points[i], 'value': pointKeys[i]} for i in range(len
 
 available_maplayers = ['countries_zones','pipelines_small_medium_large','pipelines_medium_large','pipelines_large','drilling_platforms','gasfields','projects','country_names']
 standard_layers = ['countries_zones','pipelines_small_medium_large']
+appname = 'ENTSOG Monitor'
 
 # initialize layout
-app.layout = html.Div(
+layout = html.Div(
     [
-        dcc.Store(id="aggregate_data"),
-        # empty Div to trigger javascript file for graph resizing
-        html.Div(id="output-clientside"),
         html.Div(
             [
                 html.Div(
@@ -76,7 +73,7 @@ app.layout = html.Div(
                             style={
                                 "height": "60px",
                                 "width": "auto",
-                                "margin-bottom": "25px",
+                                "marginBottom": "25px",
                                 "backgroundColor":'white',
                             },
                         )
@@ -89,10 +86,10 @@ app.layout = html.Div(
                             [
                                 html.H3(
                                     appname,
-                                    style={"margin-bottom": "0px"},
+                                    style={"marginBottom": "0px"},
                                 ),
                                 html.H5(
-                                    "Transmission Overview", style={"margin-top": "0px"}
+                                    "Transmission Overview", style={"marginTop": "0px"}
                                 ),
                             ]
                         )
@@ -103,7 +100,7 @@ app.layout = html.Div(
             ],
             id="header",    
             className="row flex-display",
-            style={"margin-bottom": "25px"},
+            style={"marginBottom": "25px"},
         ),
         html.Div(
             [
@@ -197,29 +194,6 @@ app.layout = html.Div(
             className="pretty_container",
         ),
 ])
-
-
-layout = dict(
-    autosize=True,
-    automargin=True,
-    margin=dict(l=30, r=30, b=20, t=40),
-    hovermode="closest",
-    plot_bgcolor="#F9F9F9",
-    paper_bgcolor="#F9F9F9",
-    legend=dict(font=dict(size=10), orientation="h"),
-    title="Satellite Overview",
-    mapbox=dict(
-        style="light",
-        center=dict(lon=-78.05, lat=42.54),
-        zoom=7,
-    ),
-)
-
-app.clientside_callback(
-    ClientsideFunction(namespace="clientside", function_name="resize"),
-    Output("output-clientside", "children"),
-    [Input("point_map", "figure")],
-)
 
 
 # dash_table.DataTable(
@@ -369,16 +343,15 @@ def updatePointsLabelGraph(points, operatorKeys, bz, start_date, end_date, group
         print('d',points)
         valid_points = points
         
-    elif operatorKeys != None and len(operatorKeys)>0:
-        p = incons[['fromOperatorKey','toOperatorKey']].apply(lambda x: x.apply(lambda y: y in operatorKeys))
-        inter = incons[p['fromOperatorKey'] | p['toOperatorKey']].dropna()
-        desc = str(inter['fromOperatorLabel'].unique())
-        ops = list(set(inter['fromOperatorKey'])|set(inter['toOperatorKey']))
-        
-    elif bz != None and len(bz)>0:
-        inter = incons[incons['fromBzLabel']==bz]
-        ops = inter['fromOperatorKey'].dropna().unique()
-        desc = bz
+    # elif operatorKeys != None and len(operatorKeys)>0:
+    #     p = incons[['fromOperatorKey','toOperatorKey']].apply(lambda x: x.apply(lambda y: y in operatorKeys))
+    #     inter = incons[p['fromOperatorKey'] | p['toOperatorKey']].dropna()
+    #     desc = str(inter['fromOperatorLabel'].unique())
+    #     ops = list(set(inter['fromOperatorKey'])|set(inter['toOperatorKey']))
+    # elif bz != None and len(bz)>0:
+    #     inter = incons[incons['fromBzLabel']==bz]
+    #     ops = inter['fromOperatorKey'].dropna().unique()
+    #     desc = bz
     else:
         valid_points=['']
         
@@ -401,4 +374,5 @@ def updatePointsLabelGraph(points, operatorKeys, bz, start_date, end_date, group
 
 
 if __name__ == "__main__":  
+    app.layout = layout
     app.run_server(debug=True, use_reloader=True, host='0.0.0.0', port=8050)

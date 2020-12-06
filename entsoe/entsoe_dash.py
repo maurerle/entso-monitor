@@ -19,12 +19,11 @@ from entsoe_data_manager import Filter
 import json
 import copy
 
-app = dash.Dash(
-    __name__, meta_tags=[{"name": "viewport", "content": "width=device-width"}]
-)
-appname = "ENTSO-E Energy Monitor"
-app.title = appname
-server = app.server
+if __name__ == "__main__":  
+    app = dash.Dash(__name__, meta_tags=[{"name": "viewport", "content": "width=device-width"}])
+    server = app.server
+else:
+    from app import app
 
 if True:
     from entsoe_sqlite_manager import EntsoeSQLite
@@ -48,8 +47,9 @@ else:
 powersys = dm.powersystems('')
 climate = dm.climateImpact()
 climate.columns
+appname='Entsoe Monitor'
 
-app.layout = html.Div(
+layout = html.Div(
     [
         dcc.Store(id="aggregate_data"),
         # empty Div to trigger javascript file for graph resizing
@@ -193,7 +193,7 @@ app.layout = html.Div(
 ])
 
 
-layout = dict(
+layout2 = dict(
     autosize=True,
     automargin=True,
     margin=dict(l=30, r=30, b=20, t=40),
@@ -267,9 +267,9 @@ def update_figure(climate_sel):
                                 colorbar = dict(thickness=20, ticklen=3,title='Austoß in g/kWh'),
                                 geojson = geo,
                                 featureidkey="properties.iso_a2",
-                                text = countries,
+                                #custom_data = [countries],
                                 below=True,
-                                hovertemplate = '<b>Country</b>: <b>%{text}</b>'+
+                                hovertemplate = '<b>Country</b>: <b>%{locations}</b>'+
                                                 '<br><b>Austoß pro GWh </b>: %{z}<br>',
                                 marker_line_width=0.1, marker_opacity=0.8,
                                 )
@@ -327,7 +327,7 @@ def update_figure(climate_sel):
 )
 def make_load_figure(country_control, start_date, end_date, group_by_control):
 
-    layout_count = copy.deepcopy(layout)
+    layout_count = copy.deepcopy(layout2)
     start =datetime.strptime(start_date, '%Y-%m-%d').date()
     end =datetime.strptime(end_date, '%Y-%m-%d').date()
     g = dm.load(country_control,Filter(start,end,group_by_control))
@@ -463,4 +463,5 @@ def make_neighbour_figure(country_control, start_date, end_date, group_by_contro
     return fig
 
 if __name__ == "__main__":  
+    app.layout = layout
     app.run_server(debug=True, host='0.0.0.0', port=8051)
