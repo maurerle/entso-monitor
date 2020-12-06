@@ -41,6 +41,9 @@ class EntsogDataManager:
 
     def physicalFlow(self, balancingZones: List[str], pointKey, filt: Filter):
         pass
+    
+    def physicalFlowByPoints(self, points: List[str], filt: Filter,group_by='directionKey'):
+        pass
       
-    def crossborderFlows(self, country: str, filt: Filter):
+    def crossborderFlows(self, bz: str, filt: Filter):
         pass

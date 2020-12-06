@@ -2,7 +2,4 @@
 *.db
 __pycache__
 .ipynb_checkpoints
-*.parquet
-*.parquet.crc
-_SUCCESS
-._*
+data/

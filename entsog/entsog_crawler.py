@@ -185,9 +185,14 @@ if __name__ == "__main__":
             spark_data.write.mode('append').parquet(f'{sparkfolder}/{name}')
             #print('finished',span[0],span[1],time.time()-tt)
             tt=time.time()
+        
+        database='entsog.db'
             
         with closing(sql.connect(database)) as conn:
-            query = (f'CREATE INDEX IF NOT EXISTS "idx_opdata" ON "operationaldata" ("operatorKey","periodFrom");')
+            query = ('CREATE INDEX IF NOT EXISTS "idx_opdata" ON "operationaldata" ("operatorKey","periodFrom");')
+            conn.execute(query)       
+        with closing(sql.connect(database)) as conn:
+            query = ('CREATE INDEX IF NOT EXISTS "idx_pointKey" ON "operationaldata" ("pointKey","periodFrom");')
             conn.execute(query)       
             # sqlite will only use one index. EXPLAIN QUERY PLAIN shows if index is used
             # ref: https://www.sqlite.org/optoverview.html#or_optimizations

@@ -42,7 +42,8 @@ else:
         spark = SparkSession.builder.config(conf=conf).getOrCreate()
     dm= EntsogParquet('data',spark)
 
-interconnections=dm.interconnections()
+# initialize data
+incons=dm.interconnections()
 bzs=dm.balancingzones()
 connectionPoints=dm.connectionpoints()
 operators=dm.operators()
@@ -50,9 +51,16 @@ operators=dm.operators()
 #a = oppointdir['tpTsoBalancingZone']== operators[operators['operatorKey'] in ]
 oppointdir=dm.operatorpointdirections()
 
+defaultBZ = 'Austria'
+inter = incons[incons['fromBzLabel'] ==defaultBZ]
+points = inter['pointLabel'].dropna().unique()
+pointKeys = inter['pointKey'].dropna().unique()
+allPointOptions = [{'label':points[i], 'value': pointKeys[i]} for i in range(len(points))]
+
 available_maplayers = ['countries_zones','pipelines_small_medium_large','pipelines_medium_large','pipelines_large','drilling_platforms','gasfields','projects','country_names']
 standard_layers = ['countries_zones','pipelines_small_medium_large']
 
+# initialize layout
 app.layout = html.Div(
     [
         dcc.Store(id="aggregate_data"),
@@ -120,7 +128,7 @@ app.layout = html.Div(
                         html.P("Balancing Zone:", className="control_label"),
                         dcc.Dropdown(id="bz_control",
                                      options=[{'label':x, 'value': x} for x in list(dm.balancingzones()['bzLabel'])],
-                                     value='NCG',
+                                     value=defaultBZ,
                                      className="dcc_control",
                                     ),
                         html.P("Operators:", className="control_label"),
@@ -132,7 +140,9 @@ app.layout = html.Div(
                                     ),
                         html.P("Points:", className="control_label"),
                         dcc.Dropdown(id="point_control",
-                                     options=[{'label':x, 'value': x} for x in dm.interconnections()['pointLabel'].unique()],
+                                     
+    
+                                     options=allPointOptions,
                                      #value=[''],
                                      multi=True,
                                      className="dcc_control",
@@ -177,14 +187,14 @@ app.layout = html.Div(
             className="row flex-display",
         ),
         html.Div(
-                            [dcc.Graph(id="points_graph")],
-                            id="pointsGraphContainer",
-                            className="pretty_container",
+            [dcc.Graph(id="points_graph")],
+            id="pointsGraphContainer",
+            className="pretty_container",
         ),
         html.Div(
-                    [dcc.Graph(id="points_graph_op")],
-                    id="generationGraphContainer",
-                    className="pretty_container",
+            [dcc.Graph(id="points_label_graph")],
+            id="pointLabelGraphContainer",
+            className="pretty_container",
         ),
 ])
 
@@ -218,7 +228,7 @@ app.clientside_callback(
 #     data=df.to_dict('records'),
 # )
 
-############ Capacity Graph   ##############
+############ Physical Flow Graph   ##############
 @app.callback(
     Output("points_graph", "figure"),
     [
@@ -237,14 +247,16 @@ def updateFlowGraph(operator, bz, start_date, end_date, group, options):
 
     desc = 'invalid'
     if operator != None and len(operator)>0:
-        inter = interconnections[interconnections['fromOperatorKey'].apply(lambda x: x in operator)]
+        inter = incons[incons['fromOperatorKey'].apply(lambda x: x in operator)]
+        desc = str(inter['fromOperatorLabel'].unique())
+        
         g = dm.physicalFlow(operator,Filter(start,end,group))
-        desc = str(inter['fromOperatorLabel'])
     elif bz != None:
-        inter = interconnections[interconnections['fromBzLabel']==bz]
+        
+        inter = incons[incons['fromBzLabel']==bz]
         operator = inter['fromOperatorKey'].dropna().unique()
         desc = bz
-        print(operator)
+        
         g = dm.physicalFlow(operator,Filter(start,end,group))
     
     if g.empty:
@@ -268,13 +280,12 @@ def updateFlowGraph(operator, bz, start_date, end_date, group, options):
     ],
 )
 def updatePointControl(operatorKey, bz):
-    print(operatorKey)
-    if operatorKey != None:
-        inter = interconnections[interconnections['fromOperatorKey'].apply(lambda x: x in operatorKey)]
-    elif bz != None:
-        inter = interconnections[interconnections['fromBzLabel'] ==bz]
+    if operatorKey != None and len(operatorKey)> 0:
+        inter = incons[incons['fromOperatorKey'].apply(lambda x: x in operatorKey)]
+    elif bz != None and len(bz)>0:
+        inter = incons[incons['fromBzLabel'] ==bz]
     else:
-        inter= interconnections
+        inter= incons
     points = inter['pointLabel'].dropna().unique()
     pointKeys = inter['pointKey'].dropna().unique()
     return [{'label':points[i], 'value': pointKeys[i]} for i in range(len(points))]
@@ -288,9 +299,9 @@ def updatePointControl(operatorKey, bz):
 )
 def updateOperatorControl(bz):
     if bz != None:
-        inter = interconnections[interconnections['fromBzLabel']==bz]
+        inter = incons[incons['fromBzLabel']==bz]
     else:
-        inter= interconnections
+        inter= incons
     opt = inter['fromOperatorLabel'].dropna().unique()
     optKeys = inter['fromOperatorKey'].dropna().unique()
     return [{'label':opt[i], 'value': optKeys[i]} for i in range(len(opt))]
@@ -306,15 +317,15 @@ def updateOperatorControl(bz):
 )
 def makePointMap(bz, ops, layer_control, curfig):
     layers = []
-    inter =interconnections
-    if bz != None:
-        inter = interconnections[interconnections['fromBzLabel']==bz]
-    if ops != None:
-        inter = interconnections[interconnections['fromOperatorKey'].apply(lambda x: x in ops)]
-
+    inter =incons
+    if bz != None and len(bz)> 0:
+        inter = incons[incons['fromBzLabel']==bz]
+    elif ops != None and len(ops)> 0:
+        inter = incons[incons['fromOperatorKey'].apply(lambda x: x in ops)]
+    
     if inter.empty:
-        return {'data': [], 'layout': dict(title=f"No Data Found for {desc} from {start_date} to {end_date}")}
-        #inter =interconnections
+        return {'data': [], 'layout': dict(title="No Data Found")}
+        #inter =incons
         # TODO handle inter.empty properly
         
     for layer in layer_control:
@@ -330,5 +341,64 @@ def makePointMap(bz, ops, layer_control, curfig):
     fig.update_layout(mapbox_style="white-bg",mapbox_layers=layers,margin={"r":0,"t":0,"l":0,"b":0})
     return fig
 
+@app.callback(
+    Output("points_label_graph", "figure"),
+    [
+        Input("point_control", "value"),
+        Input("operator_control", "value"),
+        Input("bz_control", "value"),
+        Input("date_picker", "start_date"),
+        Input("date_picker", "end_date"),
+        Input("group_by_control", "value"),        
+        State("point_control", "options")
+    ],
+)
+def updatePointsLabelGraph(points, operatorKeys, bz, start_date, end_date, group, options):
+    start =datetime.strptime(start_date, '%Y-%m-%d').date()
+    end =datetime.strptime(end_date, '%Y-%m-%d').date()
+    g = pd.DataFrame()
+
+    valid_points = list(map(lambda x: x['value'],options))    
+    
+    desc = 'invalid'
+    if points != None and len(points)>0:
+        #include with toPointKey:
+        inter = incons[incons['pointKey'].apply(lambda x: x in points)]
+        points = list(set(points)|set(inter['toPointKey'].unique()))
+        desc= str(points)
+        print('d',points)
+        valid_points = points
+        
+    elif operatorKeys != None and len(operatorKeys)>0:
+        p = incons[['fromOperatorKey','toOperatorKey']].apply(lambda x: x.apply(lambda y: y in operatorKeys))
+        inter = incons[p['fromOperatorKey'] | p['toOperatorKey']].dropna()
+        desc = str(inter['fromOperatorLabel'].unique())
+        ops = list(set(inter['fromOperatorKey'])|set(inter['toOperatorKey']))
+        
+    elif bz != None and len(bz)>0:
+        inter = incons[incons['fromBzLabel']==bz]
+        ops = inter['fromOperatorKey'].dropna().unique()
+        desc = bz
+    else:
+        valid_points=['']
+        
+    g = dm.physicalFlowByPoints(valid_points,Filter(start,end,group),'pointKey, directionKey')
+    
+    
+    if g.empty:
+        return {'data': [], 'layout': dict(title=f"No Data Found for {desc} from {start_date} to {end_date}")}
+    
+    
+    g['point']=g['pointLabel']+' '+g['directionKey']
+    figure = px.line(g, x=g.index, y="value", color='point',line_group="point", custom_data=['operatorLabel', 'pointKey'])
+    figure.update_traces(hovertemplate='<b>%{y}</b>, %{customdata[0]}, %{customdata[1]}') #
+    figure.update_layout(title=f"Physical Flow in kWh/h for {desc} from {start_date} to {end_date}",
+                   xaxis_title=group,
+                   yaxis_title='Physical Flow in kWh/h',
+                   hovermode="x unified",
+                   legend=dict(font=dict(size=10), orientation="v"),)
+    return figure
+
+
 if __name__ == "__main__":  
-    app.run_server(debug=True, use_reloader=False, host='0.0.0.0', port=8052)
+    app.run_server(debug=True, use_reloader=True, host='0.0.0.0', port=8050)

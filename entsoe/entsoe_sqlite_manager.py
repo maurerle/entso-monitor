@@ -120,7 +120,7 @@ class EntsoeSQLite(EntsoeDataManager):
         return list(df['country'])
     
     def climateImpact(self):
-        climate = pd.read_csv('data/CO2_factors_energy_carrier.CSV', sep=';',index_col=0)
+        climate = pd.read_csv('CO2_factors_energy_carrier.CSV', sep=';',index_col=0)
         return climate
         
     

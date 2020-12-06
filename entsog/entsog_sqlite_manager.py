@@ -38,7 +38,7 @@ class EntsogSQLite(EntsogDataManager):
         '''
         selectString = 'pointTpMapY as lat, pointTpMapX as lon, fromDirectionKey, '
         selectString += 'pointKey, pointLabel, fromOperatorKey, fromOperatorLabel, fromCountryKey, fromBzKey, fromBzLabel, '
-        selectString += 'toCountryKey, toOperatorLabel, toPointKey, toPointLabel, toBzKey,toBzLabel'
+        selectString += 'toCountryKey, toOperatorKey,toOperatorLabel, toPointKey, toPointLabel, toBzKey,toBzLabel'
         
         with closing(sql.connect(self.database)) as conn:
             interconnections = pd.read_sql_query(f'select {selectString} from Interconnections', conn)
@@ -79,13 +79,92 @@ class EntsogSQLite(EntsogDataManager):
             opd = pd.read_sql_query(f'select {selectString} from operatorpointdirections', conn)
         return opd
     
-    def physicalFlow(self, operatorKeys: List[str], filt: Filter):
-        whereString='"{}" < time and time < "{}"'.format(filt.begin.strftime("%Y-%m-%d"),filt.end.strftime("%Y-%m-%d"))
+    def physicalFlow(self, operatorKeys: List[str], filt: Filter,group_by='directionKey'):
+        whereString='"{}" < periodFrom and periodFrom < "{}"'.format(filt.begin.strftime("%Y-%m-%d"),filt.end.strftime("%Y-%m-%d"))
         inString = '("'+'","'.join(operatorKeys)+'")'
         whereString+=f'and operatorKey in {inString}'
         selectString = f'strftime("{ftime[filt.groupby]}", "periodFrom") as time, '
         selectString+= 'pointKey, pointLabel, operatorKey, operatorLabel, directionKey, sum(value) as value, indicator'
-        groupString=f'strftime("{ftime[filt.groupby]}", "time"), directionKey'
+        groupString=f'strftime("{ftime[filt.groupby]}", "time"), {group_by}'
+
+        with closing(sql.connect(self.database)) as conn:
+            query = f'select {selectString} from operationaldata where {whereString} group by {groupString}'
+            flow = pd.read_sql_query(query, conn,index_col='time')
+        return flow
+    
+    def physicalFlowByPoints(self, points: List[str], filt: Filter,group_by='directionKey'):
+        whereString='"{}" < periodFrom and periodFrom < "{}"'.format(filt.begin.strftime("%Y-%m-%d"),filt.end.strftime("%Y-%m-%d"))
+        inString = '("'+'","'.join(points)+'")'
+        whereString+=f'and pointKey in {inString}'
+        selectString = f'strftime("{ftime[filt.groupby]}", "periodFrom") as time, '
+        selectString+= 'pointKey, pointLabel, operatorKey, operatorLabel, directionKey, sum(value) as value, indicator'
+        groupString=f'strftime("{ftime[filt.groupby]}", "time"), {group_by}'
+
+        with closing(sql.connect(self.database)) as conn:
+            query = f'select {selectString} from operationaldata where {whereString} group by {groupString}'
+            flow = pd.read_sql_query(query, conn,index_col='time')
+        return flow
+    
+    
+    def bilanz(self, bz: str, filt: Filter):
+        with closing(sql.connect(self.database)) as conn:
+            query = f'select  fromOperatorKey from Interconnections where "{bz}"=fromBzLabel'
+            operatorKeys=pd.read_sql_query(query, conn).dropna()['fromOperatorKey'].unique()
+        inString = '("'+'","'.join(operatorKeys)+'")'
+        
+        whereString='"{}" < periodFrom and periodFrom < "{}"'.format(filt.begin.strftime("%Y-%m-%d"),filt.end.strftime("%Y-%m-%d"))
+        whereString+=f'and operatorKey in {inString}'
+        
+        selectString = f'strftime("{ftime[filt.groupby]}", "periodFrom") as time, '
+        selectString+= 'infrastructureKey, directionKey, sum(value) as value'
+        groupString=f'strftime("{ftime[filt.groupby]}", "time")'
+
+        with closing(sql.connect(self.database)) as conn:
+            query = f'select {selectString} from operationaldata o left join connectionpoints c on o.pointKey=c.pointKey where {whereString} group by {groupString}, directionKey, c.infrastructureKey'
+            print(query)
+            bil = pd.read_sql_query(query, conn,index_col='time')
+        return bil
+        
+    
+    def diffHelper(self,df):
+        l = []
+        p = pd.DataFrame()
+        for col in df.columns:
+            if col[2] not in l:
+                for col2 in df.columns:
+                    if col[2]==str(col2[2]) and col!=col2:
+                        # same category
+                        l.append(str(col[2]))
+                        if col[1]=='entry':
+                            print(col,col2)
+                            p[str(col[2])]=df[col]-df[col2]
+                        else: # entry - exit
+                            p[str(col[2])]=df[col2]-df[col]
+                    
+                if str(col[2]) not in l:
+                    if col[1]=='entry':
+                        p[str(col[2])]=df[col]
+                    else:
+                        p[str(col[2])]=-df[col]
+        return p
+                    
+        
+        
+    
+    
+    
+    def crossborderFlows(self, bz: str, filt: Filter,group_by='directionKey'):
+        with closing(sql.connect(self.database)) as conn:
+            query = f'select distinct fromOperatorKey from Interconnections where "{bz}"=fromBzLabel'
+            operatorKeys=pd.read_sql_query(query, conn).dropna().unique()
+        inString = '("'+'","'.join(operatorKeys)+'")'
+        
+        whereString=f'"{filt.begin.strftime("%Y-%m-%d")}" < time and time < "{filt.end.strftime("%Y-%m-%d")}"'
+        whereString+=f'and operatorKey in {inString}'
+        
+        selectString = f'strftime("{ftime[filt.groupby]}", "periodFrom") as time, '
+        selectString+= 'pointKey, pointLabel, operatorKey, operatorLabel, directionKey, sum(value) as value, indicator'
+        groupString=f'strftime("{ftime[filt.groupby]}", "time"), {group_by}'
         # TODO
         with closing(sql.connect(self.database)) as conn:
             query = f'select {selectString} from operationaldata where {whereString} group by {groupString}'
@@ -93,15 +172,15 @@ class EntsogSQLite(EntsogDataManager):
             flow = pd.read_sql_query(query, conn,index_col='time')
         return flow
     
-    def crossborderFlows(self, country: str, filt: Filter):
-        pass
-    
 if __name__ == "__main__":  
 
     entsog = EntsogSQLite('entsog.db')
     operators = entsog.operators()
     
-    filt = Filter(datetime(2017,7,1),datetime(2017,7,22),'hour')
+    start=datetime(2017,7,1)
+    end=datetime(2017,7,22)
+    group='hour'
+    filt = Filter(start,end,group)
     balzones = entsog.balancingzones()
     intercon = entsog.interconnections()
     cpp = entsog.connectionpoints()
@@ -109,3 +188,13 @@ if __name__ == "__main__":
     operatorLabels = ['bayernets', 'sdf']
     
     phy = entsog.physicalFlow(operatorLabels,filt)
+    
+    bil = entsog.bilanz('GASPOOL', filt)
+    bb_ncg = bil.pivot(columns=['directionKey','infrastructureKey'])
+    
+    bb_ncg.plot(rot=45)
+    
+    p = entsog.diffHelper(bb_ncg)
+
+    p.plot(rot=45)
+    
