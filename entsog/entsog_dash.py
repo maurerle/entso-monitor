@@ -13,6 +13,7 @@ from dash.dependencies import Input, Output, State
 import dash_core_components as dcc
 import dash_html_components as html
 import plotly.express as px 
+import plotly.graph_objects as go
 from entsog_data_manager import Filter
 
 print(__name__)
@@ -24,7 +25,7 @@ else:
 
 if True:
     from entsog_sqlite_manager import EntsogSQLite
-    dm= EntsogSQLite('data/entsog.db')
+    dm= EntsogSQLite('entsog.db')
 else:
     #from entsoe_parquet_manager import EntsogParquet
     import findspark
@@ -159,7 +160,6 @@ layout = html.Div(
                                 {"label": "Month", "value": "month"},
                                 {"label": "Day ", "value": "day"},
                                 {"label": "Hour", "value": "hour"},
-                                {"label": "Minute", "value": "minute"},
                             ],
                             value="day",
                             labelStyle={"display": "inline-block"},
@@ -172,7 +172,7 @@ layout = html.Div(
                 html.Div(
                     [
                         html.Div(
-                            [dcc.Graph(id="point_map", config={"displaylogo": False})],
+                            [dcc.Graph(id="point_map", animate=True,config={"displaylogo": False})], 
                             id="mapContainer",
                             className="pretty_container",
                         ),                        
@@ -210,34 +210,51 @@ layout = html.Div(
         Input("bz_control", "value"),
         Input("date_picker", "start_date"),
         Input("date_picker", "end_date"),
-        Input("group_by_control", "value"),        
-        State("operator_control", "options")
+        Input("group_by_control", "value")
     ],
 )
-def updateFlowGraph(operator, bz, start_date, end_date, group, options):
+def updateFlowGraph(operator, bz, start_date, end_date, group):
     start =datetime.strptime(start_date, '%Y-%m-%d').date()
     end =datetime.strptime(end_date, '%Y-%m-%d').date()
-    g = pd.DataFrame()
+    p = pd.DataFrame()
+    a = pd.DataFrame()
 
     desc = 'invalid'
     if operator != None and len(operator)>0:
         inter = incons[incons['fromOperatorKey'].apply(lambda x: x in operator)]
-        desc = str(inter['fromOperatorLabel'].unique())
-        
-        g = dm.physicalFlow(operator,Filter(start,end,group))
+        desc = ', '.join(inter['fromOperatorLabel'].unique())
     elif bz != None:
-        
         inter = incons[incons['fromBzLabel']==bz]
-        operator = inter['fromOperatorKey'].dropna().unique()
+        operator = list(inter['fromOperatorKey'].dropna().unique())
         desc = bz
-        
-        g = dm.physicalFlow(operator,Filter(start,end,group))
     
-    if g.empty:
+    if operator != None and len(operator)>0:
+        p = dm.operationaldata(operator,Filter(start,end,group))
+        a = dm.operationaldata(operator,Filter(start,end,group),table='Allocation')
+
+    if p.empty and a.empty:
         return {'data': [], 'layout': dict(title=f"No Data Found for {desc} from {start_date} to {end_date}")}
     
     
-    figure = px.line(g, x=g.index, y="value", color='directionKey',line_group="directionKey")
+    a = a.pivot(columns=['directionKey'],values='value')
+    p = p.pivot(columns=['directionKey'],values='value')
+    
+    if 'entry' in a.columns and 'exit' in a.columns: 
+        a['usage']=a['entry']-a['exit']
+    
+    if 'entry' in p.columns and 'exit' in p.columns: 
+        p['usage']=p['entry']-p['exit']
+        
+    a.columns = list(map(lambda x: 'alloc_'+x, a.columns))
+    p.columns = list(map(lambda x: 'physical_'+x, p.columns))
+        
+    figure=go.Figure()
+    for column in p.columns:
+        figure.add_trace(go.Scatter(x=p.index, y=p[column], mode='lines', name=column))
+    
+    for column in a.columns:
+        figure.add_trace(go.Scatter(x=a.index, y=a[column], mode='lines', name=column))
+        
     figure.update_layout(title=f"Physical Flow in kWh/h for {desc} from {start_date} to {end_date}",
                    xaxis_title=group,
                    yaxis_title='Physical Flow in kWh/h',
@@ -283,25 +300,20 @@ def updateOperatorControl(bz):
 @app.callback(
     Output("point_map", "figure"),
     [
-        Input("bz_control", "value"),
-        Input("operator_control", "value"),
         Input("map_layer_control", "value"),
-        State('point_map', 'figure'),
+        Input("point_control", "options")
     ],
 )
-def makePointMap(bz, ops, layer_control, curfig):
+def makePointMap(layer_control, options):
     layers = []
-    inter =incons
-    if bz != None and len(bz)> 0:
-        inter = incons[incons['fromBzLabel']==bz]
-    elif ops != None and len(ops)> 0:
-        inter = incons[incons['fromOperatorKey'].apply(lambda x: x in ops)]
+
+    df = pd.DataFrame(options)
+    if df.empty:        
+        inter=incons
+    else:
+        points = list(df['value'])
+        inter = incons[incons['pointKey'].apply(lambda x: x in points)]
     
-    if inter.empty:
-        return {'data': [], 'layout': dict(title="No Data Found")}
-        #inter =incons
-        # TODO handle inter.empty properly
-        
     for layer in layer_control:
         layers.append({   "below": 'traces',
                     "sourcetype": "raster",
@@ -319,50 +331,43 @@ def makePointMap(bz, ops, layer_control, curfig):
     Output("points_label_graph", "figure"),
     [
         Input("point_control", "value"),
-        Input("operator_control", "value"),
-        Input("bz_control", "value"),
         Input("date_picker", "start_date"),
         Input("date_picker", "end_date"),
         Input("group_by_control", "value"),        
-        State("point_control", "options")
+        Input("point_control", "options")
     ],
 )
-def updatePointsLabelGraph(points, operatorKeys, bz, start_date, end_date, group, options):
+def updatePointsLabelGraph(points, start_date, end_date, group, options):
     start =datetime.strptime(start_date, '%Y-%m-%d').date()
     end =datetime.strptime(end_date, '%Y-%m-%d').date()
-    g = pd.DataFrame()
 
-    valid_points = list(map(lambda x: x['value'],options))    
-    
     desc = 'invalid'
+    
     if points != None and len(points)>0:
         #include with toPointKey:
         inter = incons[incons['pointKey'].apply(lambda x: x in points)]
+        
+        # select both from and to points here
         points = list(set(points)|set(inter['toPointKey'].unique()))
         desc= str(points)
-        print('d',points)
-        valid_points = points
-        
-    # elif operatorKeys != None and len(operatorKeys)>0:
-    #     p = incons[['fromOperatorKey','toOperatorKey']].apply(lambda x: x.apply(lambda y: y in operatorKeys))
-    #     inter = incons[p['fromOperatorKey'] | p['toOperatorKey']].dropna()
-    #     desc = str(inter['fromOperatorLabel'].unique())
-    #     ops = list(set(inter['fromOperatorKey'])|set(inter['toOperatorKey']))
-    # elif bz != None and len(bz)>0:
-    #     inter = incons[incons['fromBzLabel']==bz]
-    #     ops = inter['fromOperatorKey'].dropna().unique()
-    #     desc = bz
+        valid_points = [x for x in points if x is not None]
     else:
-        valid_points=['']
+        valid_points=[]
+        #valid_points = list(map(lambda x: x['value'],options))
+
+    g = pd.DataFrame()
+    if len(valid_points) > 0:
+        p = dm.operationaldataByPoints(valid_points,Filter(start,end,group),'pointKey, directionKey')
+        a = dm.operationaldataByPoints(valid_points,Filter(start,end,group),'pointKey, directionKey', table='Allocation')
+        p['indicator']='op'
+        a['indicator']='alloc'
         
-    g = dm.physicalFlowByPoints(valid_points,Filter(start,end,group),'pointKey, directionKey')
-    
-    
+        g = pd.concat([p,a])
     if g.empty:
         return {'data': [], 'layout': dict(title=f"No Data Found for {desc} from {start_date} to {end_date}")}
     
-    
-    g['point']=g['pointLabel']+' '+g['directionKey']
+    g['point']=g['pointLabel']+' '+g['directionKey']+' '+g['indicator']
+    #g = g[g.columns.sort_values()]
     figure = px.line(g, x=g.index, y="value", color='point',line_group="point", custom_data=['operatorLabel', 'pointKey'])
     figure.update_traces(hovertemplate='<b>%{y}</b>, %{customdata[0]}, %{customdata[1]}') #
     figure.update_layout(title=f"Physical Flow in kWh/h for {desc} from {start_date} to {end_date}",

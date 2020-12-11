@@ -78,21 +78,30 @@ class EntsogSQLite(EntsogDataManager):
         with closing(sql.connect(self.database)) as conn:
             opd = pd.read_sql_query(f'select {selectString} from operatorpointdirections', conn)
         return opd
-    
-    def physicalFlow(self, operatorKeys: List[str], filt: Filter,group_by='directionKey'):
+
+    def operationaldata(self, operatorKeys: List[str], filt: Filter,group_by='t.directionKey', table='operationaldata'):
         whereString='"{}" < periodFrom and periodFrom < "{}"'.format(filt.begin.strftime("%Y-%m-%d"),filt.end.strftime("%Y-%m-%d"))
         inString = '("'+'","'.join(operatorKeys)+'")'
-        whereString+=f'and operatorKey in {inString}'
+        whereString+=f'and t.operatorKey in {inString}'
+        
+        if table == 'operationaldata':
+            joinString =' left join (select distinct pointKey, isDoubleReporting, operatorKey, pipeInPipeWithTsoKey from operatorpointdirections) opd on t.pointKey = opd.pointKey and t.operatorKey = opd.operatorKey'
+            whereString+= ' and pipeInPipeWithTsoKey is null and isDoubleReporting is null'
+        else:
+            joinString = ''
+                
+        
         selectString = f'strftime("{ftime[filt.groupby]}", "periodFrom") as time, '
-        selectString+= 'pointKey, pointLabel, operatorKey, operatorLabel, directionKey, sum(value) as value, indicator'
+        selectString+= 't.operatorKey, t.operatorLabel, t.directionKey, sum(value) as value'
         groupString=f'strftime("{ftime[filt.groupby]}", "time"), {group_by}'
+        
 
         with closing(sql.connect(self.database)) as conn:
-            query = f'select {selectString} from operationaldata where {whereString} group by {groupString}'
+            query = f'select {selectString} from {table} t {joinString} where {whereString} group by {groupString}'
             flow = pd.read_sql_query(query, conn,index_col='time')
         return flow
     
-    def physicalFlowByPoints(self, points: List[str], filt: Filter,group_by='directionKey'):
+    def operationaldataByPoints(self, points: List[str], filt: Filter,group_by='directionKey',table='operationaldata'):
         whereString='"{}" < periodFrom and periodFrom < "{}"'.format(filt.begin.strftime("%Y-%m-%d"),filt.end.strftime("%Y-%m-%d"))
         inString = '("'+'","'.join(points)+'")'
         whereString+=f'and pointKey in {inString}'
@@ -101,7 +110,7 @@ class EntsogSQLite(EntsogDataManager):
         groupString=f'strftime("{ftime[filt.groupby]}", "time"), {group_by}'
 
         with closing(sql.connect(self.database)) as conn:
-            query = f'select {selectString} from operationaldata where {whereString} group by {groupString}'
+            query = f'select {selectString} from {table} where {whereString} group by {groupString}'
             flow = pd.read_sql_query(query, conn,index_col='time')
         return flow
     
@@ -177,19 +186,20 @@ if __name__ == "__main__":
     entsog = EntsogSQLite('entsog.db')
     operators = entsog.operators()
     
-    start=datetime(2017,7,1)
-    end=datetime(2017,7,22)
+    start=datetime(2018,7,1)
+    end=datetime(2018,7,22)
     group='hour'
     filt = Filter(start,end,group)
     balzones = entsog.balancingzones()
     intercon = entsog.interconnections()
     cpp = entsog.connectionpoints()
     #gen = generation.melt(var_name='kind', value_name='value',ignore_index=False)    
-    operatorLabels = ['bayernets', 'sdf']
+    operatorKeys = ['DE-TSO-0004','DE-TSO-0007','DE-TSO-0005','DE-TSO-0006']
     
-    phy = entsog.physicalFlow(operatorLabels,filt)
+    phy = entsog.operationaldata(operatorKeys,filt,group_by='operatorKey, directionKey')
+    piv  = phy.pivot(columns=['operatorKey','directionKey'],values='value')
     
-    bil = entsog.bilanz('GASPOOL', filt)
+    bil = entsog.bilanz('Greece', filt)
     bb_ncg = bil.pivot(columns=['directionKey','infrastructureKey'])
     
     bb_ncg.plot(rot=45)

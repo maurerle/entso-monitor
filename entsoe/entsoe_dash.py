@@ -267,9 +267,9 @@ def update_figure(climate_sel):
                                 colorbar = dict(thickness=20, ticklen=3,title='Austoß in g/kWh'),
                                 geojson = geo,
                                 featureidkey="properties.iso_a2",
-                                #custom_data = [countries],
+                                text = countries,
                                 below=True,
-                                hovertemplate = '<b>Country</b>: <b>%{locations}</b>'+
+                                hovertemplate = '<b>Country</b>: <b>%{text}</b>'+
                                                 '<br><b>Austoß pro GWh </b>: %{z}<br>',
                                 marker_line_width=0.1, marker_opacity=0.8,
                                 )
