@@ -79,7 +79,7 @@ class EntsogSQLite(EntsogDataManager):
             opd = pd.read_sql_query(f'select {selectString} from operatorpointdirections', conn)
         return opd
 
-    def operationaldata(self, operatorKeys: List[str], filt: Filter,group_by='t.directionKey', table='operationaldata'):
+    def operationaldata(self, operatorKeys: List[str], filt: Filter,group_by: List[str]=['directionKey'], table='operationaldata'):
         whereString='"{}" < periodFrom and periodFrom < "{}"'.format(filt.begin.strftime("%Y-%m-%d"),filt.end.strftime("%Y-%m-%d"))
         inString = '("'+'","'.join(operatorKeys)+'")'
         whereString+=f'and t.operatorKey in {inString}'
@@ -93,11 +93,13 @@ class EntsogSQLite(EntsogDataManager):
         
         selectString = f'strftime("{ftime[filt.groupby]}", "periodFrom") as time, '
         selectString+= 't.operatorKey, t.operatorLabel, t.directionKey, sum(value) as value'
+        group_by =', '.join(list(map(lambda x: 't.'+x,group_by)))
         groupString=f'strftime("{ftime[filt.groupby]}", "time"), {group_by}'
         
 
         with closing(sql.connect(self.database)) as conn:
             query = f'select {selectString} from {table} t {joinString} where {whereString} group by {groupString}'
+            print('op', query)
             flow = pd.read_sql_query(query, conn,index_col='time')
         return flow
     
@@ -111,6 +113,7 @@ class EntsogSQLite(EntsogDataManager):
 
         with closing(sql.connect(self.database)) as conn:
             query = f'select {selectString} from {table} where {whereString} group by {groupString}'
+            print(query)
             flow = pd.read_sql_query(query, conn,index_col='time')
         return flow
     
@@ -196,7 +199,7 @@ if __name__ == "__main__":
     #gen = generation.melt(var_name='kind', value_name='value',ignore_index=False)    
     operatorKeys = ['DE-TSO-0004','DE-TSO-0007','DE-TSO-0005','DE-TSO-0006']
     
-    phy = entsog.operationaldata(operatorKeys,filt,group_by='operatorKey, directionKey')
+    phy = entsog.operationaldata(operatorKeys,filt,group_by=['operatorKey', 'directionKey'])
     piv  = phy.pivot(columns=['operatorKey','directionKey'],values='value')
     
     bil = entsog.bilanz('Greece', filt)

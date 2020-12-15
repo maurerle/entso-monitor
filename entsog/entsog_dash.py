@@ -14,6 +14,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 import plotly.express as px 
 import plotly.graph_objects as go
+import dash_table
 from entsog_data_manager import Filter
 
 print(__name__)
@@ -25,7 +26,7 @@ else:
 
 if True:
     from entsog_sqlite_manager import EntsogSQLite
-    dm= EntsogSQLite('entsog.db')
+    dm= EntsogSQLite('data/entsog.db')
 else:
     #from entsoe_parquet_manager import EntsogParquet
     import findspark
@@ -50,6 +51,10 @@ operators=dm.operators()
 
 #a = oppointdir['tpTsoBalancingZone']== operators[operators['operatorKey'] in ]
 oppointdir=dm.operatorpointdirections()
+opd = oppointdir.copy()
+del opd['directionKey']
+
+opd = opd.drop_duplicates()
 
 defaultBZ = 'Austria'
 inter = incons[incons['fromBzLabel'] ==defaultBZ]
@@ -184,23 +189,31 @@ layout = html.Div(
             className="row flex-display",
         ),
         html.Div(
-            [dcc.Graph(id="points_graph")],
-            id="pointsGraphContainer",
+            dcc.Tabs([
+                dcc.Tab(label='Sum for Region', children=[dcc.Graph(id="points_graph")]),
+                dcc.Tab(label='Point Data', children=[dcc.Graph(id="points_label_graph")]),      
+            ]),
+            id="graphTabContainer",
             className="pretty_container",
         ),
         html.Div(
-            [dcc.Graph(id="points_label_graph")],
-            id="pointLabelGraphContainer",
+            [ html.P("Operator Point Directions:", className="control_label"),
+            dash_table.DataTable(
+                id='opdTable',
+                columns=[{"name": i, "id": i} for i in opd.columns],
+                data=opd.to_dict('records'),
+                filter_action="native",
+                sort_action="native",
+                sort_mode="multi",
+                page_action="native",
+                page_current= 0,
+                page_size= 25,
+                style_table={'overflowX': 'auto'},
+            )],
+            id="tableContainer",
             className="pretty_container",
         ),
 ])
-
-
-# dash_table.DataTable(
-#     id='table',
-#     columns=[{"name": i, "id": i} for i in df.columns],
-#     data=df.to_dict('records'),
-# )
 
 ############ Physical Flow Graph   ##############
 @app.callback(
@@ -219,7 +232,7 @@ def updateFlowGraph(operator, bz, start_date, end_date, group):
     p = pd.DataFrame()
     a = pd.DataFrame()
 
-    desc = 'invalid'
+    desc = 'no valid points'
     if operator != None and len(operator)>0:
         inter = incons[incons['fromOperatorKey'].apply(lambda x: x in operator)]
         desc = ', '.join(inter['fromOperatorLabel'].unique())
@@ -283,6 +296,33 @@ def updatePointControl(operatorKey, bz):
 
 
 @app.callback(
+    Output("point_control", "value"),
+    [
+        Input('point_map', 'clickData'),
+        Input('point_map', 'selectedData')
+    ],
+)
+def updateSelectedPoints(clickData,selectedData):
+    if selectedData is not None and len(selectedData) >0:
+        points = selectedData
+    elif clickData is not None and len(clickData) >0:    
+        points = clickData
+    else:
+        return []
+    print(points['points'])
+    pointKeys = []
+    for point in points['points']:
+        if 'customdata' in point:
+            pointKeys.append(point['customdata'][1])
+    
+    return pointKeys
+    
+
+
+
+
+
+@app.callback(
     Output("operator_control", "options"),
     [
         Input("bz_control", "value"),
@@ -320,9 +360,12 @@ def makePointMap(layer_control, options):
                     "sourceattribution": '<a href="https://transparency.entsog.eu/#/map">ENTSO-G Data</a>',
                     "source": [
                     "https://datensch.eu/cdn/entsog/"+layer+"/{z}/{x}/{y}.png"]})
-    fig = px.scatter_mapbox(inter, lat="lat", lon="lon", hover_name="pointLabel", color='fromCountryKey',
-                            hover_data=["pointKey", "fromCountryKey",'fromOperatorLabel','toOperatorLabel',"toCountryKey"],
+    #inter=inter[['lat','lon',"pointLabel","pointKey", "fromOperatorLabel",'fromCountryKey','toOperatorLabel',"toCountryKey"]].drop_duplicates()
+    fig = px.scatter_mapbox(inter, lat="lat", lon="lon", color='fromCountryKey',
+                            custom_data=["pointLabel","pointKey", "fromOperatorLabel",'fromCountryKey','toOperatorLabel',"toCountryKey"],                            
                             zoom=1, height=600)
+    
+    fig.update_traces(hovertemplate='</br><b>%{customdata[0]}</b> - %{customdata[1]}</br> from: %{customdata[2]}, %{customdata[3]} </br> to:     %{customdata[4]}, %{customdata[5]}')
     
     fig.update_layout(mapbox_style="white-bg",mapbox_layers=layers,margin={"r":0,"t":0,"l":0,"b":0})
     return fig
@@ -349,6 +392,7 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
         
         # select both from and to points here
         points = list(set(points)|set(inter['toPointKey'].unique()))
+        
         desc= str(points)
         valid_points = [x for x in points if x is not None]
     else:
@@ -359,7 +403,7 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
     if len(valid_points) > 0:
         p = dm.operationaldataByPoints(valid_points,Filter(start,end,group),'pointKey, directionKey')
         a = dm.operationaldataByPoints(valid_points,Filter(start,end,group),'pointKey, directionKey', table='Allocation')
-        p['indicator']='op'
+        p['indicator']='phys'
         a['indicator']='alloc'
         
         g = pd.concat([p,a])
@@ -376,6 +420,8 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
                    hovermode="x unified",
                    legend=dict(font=dict(size=10), orientation="v"),)
     return figure
+
+
 
 
 if __name__ == "__main__":  
