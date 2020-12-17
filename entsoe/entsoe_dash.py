@@ -50,11 +50,34 @@ climate = dm.climateImpact()
 climate.columns
 appname = 'Entsoe Monitor'
 
+color_map={
+            "Biomass": "red",
+            "Fossil Brown coal/Lignite": "darkred",
+            "Fossil Gas": "lightskyblue",
+            "Fossil Hard coal": "darkslategrey",
+            "Fossil Oil": "magenta",
+            "Geothermal" : "goldenrod",
+            "Hydro Pumped Storage" : "lightblue",
+            "Hydro Run-of-river and poundage" : "aqua",
+            "Other" : "grey",
+            "Other renewable" : "white",
+            "Solar" : "yellow",
+            "Waste" : "black",
+            "Wind Offshore" : "gainsboro",
+            "Wind Onshore" : "white",
+            "Fossil Coal-derived gas" : "cyan",
+            "Nuclear" : "violet",
+            "Hydro Water Reservoir" : "fuchsia",
+            "Marine" : "blue",
+            "Fossil Oil shale" : "maroon",
+            "Fossil Peat" : "brown",
+          }
+
+def cmap(index):
+    return list(map(lambda x: color_map[x],index))
+
 layout = html.Div(
     [
-        dcc.Store(id="aggregate_data"),
-        # empty Div to trigger javascript file for graph resizing
-        html.Div(id="output-clientside"),
         html.Div(
             [
                 html.Div(
@@ -93,6 +116,10 @@ layout = html.Div(
             id="header",
             className="row flex-display",
             style={"margin-bottom": "25px"},
+        ),
+        html.P(
+            "Country map including location of traditional energy sources",
+            className="control_label",
         ),
         html.Div(
             [dcc.Graph(id='choro-graph', config={"displaylogo": False})],
@@ -179,6 +206,8 @@ layout = html.Div(
             ],
             className="row flex-display",
         ),
+        # empty Div to trigger javascript file for graph resizing
+        html.Div(id="output-clientside"),
         html.Div(
             dcc.Tabs([
                 dcc.Tab(label='Energy Generation', children=[dcc.Graph(
@@ -255,7 +284,7 @@ def update_figure(climate_sel):
                                 locations=countries,
                                 colorscale='algae',  # carto
                                 colorbar=dict(
-                                    thickness=20, ticklen=3, title='Austoß in g/kWh'),
+                                    thickness=25, ticklen=3, title='Austoß in g/kWh'),
                                 geojson=geo,
                                 featureidkey="properties.iso_a2",
                                 text=countries,
@@ -272,12 +301,12 @@ def update_figure(climate_sel):
         d = powersys[powersys['Production_Type'] == val]
         scatt = go.Scattermapbox(lat=d['lat'], name=val,
                                  lon=d['lon'],
-                                 mode='markers+text',
+                                 mode='markers',
                                  text=d["name"],
                                  hovertext=d[['name', 'capacity', 'country']],
                                  hoverinfo=['text'],
                                  below='',
-                                 #marker=dict( size=12, color ='rgb(235, 0, 100)')
+                                 marker=dict( size=6, color =color_map[val])
                                  )
         data.append(scatt)
     layout = go.Layout(title_text='Europe mapbox choropleth', title_x=0.5,  # width=750, height=700,
@@ -303,13 +332,16 @@ def update_figure(climate_sel):
 def make_capacity_figure(country_control):
     capacity = dm.capacity(country_control)
     del capacity['country']
+    
+    capacity.fillna(0,inplace=True)
     capacity /= 1000
+    capacity = capacity.loc[:, (capacity != 0).any(axis=0)]
     g = capacity.melt(var_name='kind', value_name='value', ignore_index=False)
 
     if g.empty:
         return {'data': [], 'layout': dict(title="No Data Found for current interval")}
-
-    figure = px.bar(g, x=g.index, y="value", color='kind',
+    
+    figure = px.bar(g, x=g.index, y="value", color='kind', color_discrete_map=color_map,
                     text='value')  # bar_group="kind")
     figure.update_layout(title="Generation capacity for {} per year".format(country_control),
                          xaxis_title='years',
@@ -375,14 +407,16 @@ def make_generation_figure(country_control, start_date, end_date, group, e_type,
         unit = 'tons'
         desc = climate_sel+' in '+unit
 
+    generation.fillna(0,inplace=True)
+    generation = generation.loc[:, (generation != 0).any(axis=0)]
     g = generation.melt(
         var_name='kind', value_name='value', ignore_index=False)
-
+    
     if g.empty:
         return dict(data=[], layout=dict(title="No Data Found for current interval"))
-    figure = px.area(g, x=g.index, y="value", color='kind', line_group="kind")
+    figure = px.area(g, x=g.index, y="value", color='kind',color_discrete_map=color_map, line_group="kind")
     figure.update_layout(title=desc+" for {} from {} to {}".format(country_control, start_date, end_date),
-                         xaxis_title=group,
+                         #xaxis_title=group,
                          yaxis_title=desc,
                          hovermode="closest",
                          legend=dict(font=dict(size=10), orientation="h"),)
