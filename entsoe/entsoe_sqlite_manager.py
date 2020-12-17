@@ -50,8 +50,8 @@ class EntsoeSQLite(EntsoeDataManager):
             columns.remove('country')
             columns.remove('index')
             colNames = ','.join([f'avg("{column}") as "{column}"' for column in columns])+', country '
+            
             query = f"select {selectString},{colNames} from query_generation where {whereString} group by {groupString}"
-            print(query)
             gen = pd.read_sql_query(query,conn,index_col='time')
         gen.columns = gen.columns.map(''.join).map(revReplaceStr)
         return gen
