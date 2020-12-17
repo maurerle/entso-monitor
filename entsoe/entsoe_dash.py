@@ -194,12 +194,6 @@ layout = html.Div(
 
 
 layout2 = dict(
-    autosize=True,
-    automargin=True,
-    margin=dict(l=30, r=30, b=20, t=40),
-    hovermode="closest",
-    plot_bgcolor="#F9F9F9",
-    paper_bgcolor="#F9F9F9",
     legend=dict(font=dict(size=10), orientation="h"),
     xaxis= dict(anchor='y', domain=[0.0, 1.0], title= dict(text= 'time')),
     yaxis= dict(anchor='x', domain=[0.0, 1.0], title= dict(text= 'value'))
@@ -268,9 +262,9 @@ def update_figure(climate_sel):
                                 geojson = geo,
                                 featureidkey="properties.iso_a2",
                                 text = countries,
-                                below=True,
+                                #below=True,
                                 hovertemplate = '<b>Country</b>: <b>%{text}</b>'+
-                                                '<br><b>Austoß pro GWh </b>: %{z}<br>',
+                                                '<br><b>Austoß pro kWh </b>: %{z} g<br>',
                                 marker_line_width=0.1, marker_opacity=0.8,
                                 )
     
@@ -325,42 +319,19 @@ def update_figure(climate_sel):
         Input("group_by_control", "value"),
     ],
 )
-def make_load_figure(country_control, start_date, end_date, group_by_control):
-
-    layout_count = copy.deepcopy(layout2)
+def make_load_figure(country_control, start_date, end_date, group):
     start =datetime.strptime(start_date, '%Y-%m-%d').date()
     end =datetime.strptime(end_date, '%Y-%m-%d').date()
-    g = dm.load(country_control,Filter(start,end,group_by_control))
-    
-    data = [
-        dict(
-            type="lines",
-            mode="lines",
-            x=g.index,
-            y=g["value"],
-            name="Load",
-            opacity=0.8,
-            
-        ),
-        # dict(
-        #     type="bar",
-        #     x=g.index,
-        #     y=g["sum(0)"],
-        #     name="Load bar",
-        #     hoverinfo="skip",
-        #     #marker=dict(color=colors),
-        # ),
-    ]
-
-    layout_count["title"] = "Load for {} from {} to {}".format(country_control,start_date,end_date)
-    #layout_count["dragmode"] = "select"
-    layout_count['xaxis']['title']['text']=group_by_control
-    layout_count['yaxis']['title']['text']='Current net load in MW'
-    layout_count["showlegend"] = True
-    layout_count["autosize"] = True
-    layout_count['hovermode']='x unified'
-
-    figure = dict(data=data, layout=layout_count)
+    g = dm.load(country_control,Filter(start,end,group))
+    g/=1000
+    figure = px.line(g, x=g.index, y="value")
+    figure.update_layout(title="Load for {} from {} to {}".format(country_control,start_date,end_date),
+                   xaxis_title=group,
+                   yaxis_title='Load in GW for each interval',
+                   autosize=True,
+                   hovermode="x unified",
+                   legend=dict(font=dict(size=10), orientation="h"),)
+    figure.update_yaxes(ticksuffix="GW")
     return figure
 
 ############ Generation Graph   ##############
@@ -383,12 +354,14 @@ def make_generation_figure(country_control, start_date, end_date, group,e_type,c
     generation = dm.generation(country_control,Filter(start,end,group))
     del generation['country']    
     
-    desc = 'Generated Energy by Production kind in MWh'
+    desc = 'energy generation by production kind in GW'
     
+    unit = 'GW'
     generation /= 1000
     if climate_sel != None:
         generation=generation*climate[climate_sel]
-        desc=climate_sel+' in g'
+        unit = 'tons'
+        desc=climate_sel+' in '+unit
     
     
     g = generation.melt(var_name='kind', value_name='value',ignore_index=False)
@@ -401,6 +374,7 @@ def make_generation_figure(country_control, start_date, end_date, group,e_type,c
                    yaxis_title=desc,
                    hovermode="closest",
                    legend=dict(font=dict(size=10), orientation="h"),)
+    figure.update_yaxes(ticksuffix=' '+unit)
     return figure
 
 ############ Capacity Graph   ##############
@@ -425,7 +399,7 @@ def make_capacity_figure(country_control):
                    xaxis_title='years',
                    yaxis_title='Capacity by Production kind',)
     figure.update_traces(texttemplate='%{text:.2s}', textposition='inside')
-    figure.update_yaxes(ticksuffix="MW")
+    figure.update_yaxes(ticksuffix="GW")
     return figure
 
 ############ Neighbour Graph   ##############

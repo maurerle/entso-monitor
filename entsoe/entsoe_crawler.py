@@ -206,14 +206,6 @@ class EntsoeCrawler:
             pp['type']= ppp.melt(var_name='type',col_level=1)['type']
             return pp
         
-        plant_countries=[]
-        st = pd.Timestamp('20180101', tz='Europe/Berlin')
-        for country in countries:
-            try:
-                query_per_plant(country,st,st+timedelta(days=1))
-                plant_countries.append(country)
-            except:
-                print('no data for', country)
         procs= [query_per_plant]    
         crawler.bulkDownload(plant_countries,procs,start,delta=delta,times=times)
 
@@ -254,14 +246,21 @@ if __name__ == "__main__":
     #crawler.bulkDownload(countries,[client.query_installed_generation_capacity_per_unit],start,delta=timedelta(days=360*6),times=1)
     
     # Crossborder Data
-    start = pd.Timestamp('20181211', tz='Europe/Berlin')
+    #s tart = pd.Timestamp('20181211', tz='Europe/Berlin')
     # 2018-12-11 00:00:00+01:00 fehlt 1 mal, database locked
     #crawler.pullCrossborders(start,delta,1,client.query_crossborder_flows)    
     
     # per plant generation
-    #client.query_generation_per_plant('DE_50HZ',start=start+timedelta(days=4),end=start+timedelta(days=8)) 
-    #crawler.bulkDownloadPlantData(countries,client,start,delta,times)
-    
+    plant_countries=[]
+    st = pd.Timestamp('20180101', tz='Europe/Berlin')
+    for country in countries:
+        try:
+            client.query_generation_per_plant(country,start=st,end=st+timedelta(days=1)) 
+            plant_countries.append(country)
+            print('found data for', country)
+        except:
+            continue
+     
     # create indices if not existing
     with closing(sql.connect(db)) as conn:
         for proc in procs:

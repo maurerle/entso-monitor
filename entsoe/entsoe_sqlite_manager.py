@@ -31,6 +31,7 @@ class EntsoeSQLite(EntsoeDataManager):
         return cap
 
     def load(self, country: str, filt: Filter):
+        # average is correct here as some countries have quarter hour data and others 
         whereString=f'country="{country}" and "{filt.begin.strftime("%Y-%m-%d")}" < "index" and "index" < "{filt.end.strftime("%Y-%m-%d")}"'
         selectString=f'strftime("{ftime[filt.groupby]}", "index") as time, avg("0") as value'
         groupString=f'strftime("{ftime[filt.groupby]}", "time")'

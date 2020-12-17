@@ -99,21 +99,44 @@ class EntsogSQLite(EntsogDataManager):
 
         with closing(sql.connect(self.database)) as conn:
             query = f'select {selectString} from {table} t {joinString} where {whereString} group by {groupString}'
-            print('op', query)
             flow = pd.read_sql_query(query, conn,index_col='time')
         return flow
     
-    def operationaldataByPoints(self, points: List[str], filt: Filter,group_by='directionKey',table='operationaldata'):
+    def operationaldata2(self, pointKeys: List[str], filt: Filter,group_by: List[str]=['directionKey'], table='operationaldata'):
+        whereString='"{}" < periodFrom and periodFrom < "{}"'.format(filt.begin.strftime("%Y-%m-%d"),filt.end.strftime("%Y-%m-%d"))
+        inString = '("'+'","'.join(operatorKeys)+'")'
+        whereString+=f'and t.operatorKey in {inString}'
+        
+        if table == 'operationaldata':
+            joinString =' left join (select distinct pointKey, isDoubleReporting, operatorKey, pipeInPipeWithTsoKey from operatorpointdirections) opd on t.pointKey = opd.pointKey and t.operatorKey = opd.operatorKey'
+            whereString+= ' and pipeInPipeWithTsoKey is null and isDoubleReporting is null'
+        else:
+            joinString = ''
+                
+        
+        selectString = f'strftime("{ftime[filt.groupby]}", "periodFrom") as time, '
+        selectString+= 't.operatorKey, t.operatorLabel, t.directionKey, sum(value) as value'
+        group_by =', '.join(list(map(lambda x: 't.'+x,group_by)))
+        groupString=f'strftime("{ftime[filt.groupby]}", "time"), {group_by}'
+        
+
+        with closing(sql.connect(self.database)) as conn:
+            query = f'select {selectString} from {table} t {joinString} where {whereString} group by {groupString}'
+            flow = pd.read_sql_query(query, conn,index_col='time')
+        return flow    
+    
+    def operationaldataByPoints(self, points: List[str], filt: Filter,group_by: List[str]=['directionKey'],table='operationaldata'):
         whereString='"{}" < periodFrom and periodFrom < "{}"'.format(filt.begin.strftime("%Y-%m-%d"),filt.end.strftime("%Y-%m-%d"))
         inString = '("'+'","'.join(points)+'")'
         whereString+=f'and pointKey in {inString}'
         selectString = f'strftime("{ftime[filt.groupby]}", "periodFrom") as time, '
         selectString+= 'pointKey, pointLabel, operatorKey, operatorLabel, directionKey, sum(value) as value, indicator'
+        
+        group_by =', '.join(group_by)
         groupString=f'strftime("{ftime[filt.groupby]}", "time"), {group_by}'
 
         with closing(sql.connect(self.database)) as conn:
             query = f'select {selectString} from {table} where {whereString} group by {groupString}'
-            print(query)
             flow = pd.read_sql_query(query, conn,index_col='time')
         return flow
     
@@ -128,7 +151,7 @@ class EntsogSQLite(EntsogDataManager):
         whereString+=f'and operatorKey in {inString}'
         
         selectString = f'strftime("{ftime[filt.groupby]}", "periodFrom") as time, '
-        selectString+= 'infrastructureKey, directionKey, sum(value) as value'
+        selectString+= 'infrastructureLabel, directionKey, sum(value) as value'
         groupString=f'strftime("{ftime[filt.groupby]}", "time")'
 
         with closing(sql.connect(self.database)) as conn:
@@ -139,50 +162,61 @@ class EntsogSQLite(EntsogDataManager):
         
     
     def diffHelper(self,df):
+        '''
+        gets difference for each pair of entry and exit direction index column
+        '''
         l = []
         p = pd.DataFrame()
         for col in df.columns:
-            if col[2] not in l:
+            if col[0] not in l:
                 for col2 in df.columns:
-                    if col[2]==str(col2[2]) and col!=col2:
+                    if col[0]==str(col2[0]) and col!=col2:
                         # same category
-                        l.append(str(col[2]))
+                        l.append(str(col[0]))
                         if col[1]=='entry':
-                            print(col,col2)
-                            p[str(col[2])]=df[col]-df[col2]
+                            p[str(col[0])]=df[col]-df[col2]
                         else: # entry - exit
-                            p[str(col[2])]=df[col2]-df[col]
+                            p[str(col[0])]=df[col2]-df[col]
                     
-                if str(col[2]) not in l:
+                if str(col[0]) not in l:
                     if col[1]=='entry':
-                        p[str(col[2])]=df[col]
+                        p[str(col[0])]=df[col]
                     else:
-                        p[str(col[2])]=-df[col]
+                        p[str(col[0])]=-df[col]
         return p
                     
         
+    def crossborder(self, bz: str, filt: Filter,group_by: List[str]=['t.directionKey','opd.adjacentZones','opd.adjacentCountry'], table='operationaldata'):
+        whereString='"{}" < periodFrom and periodFrom < "{}"'.format(filt.begin.strftime("%Y-%m-%d"),filt.end.strftime("%Y-%m-%d"))
         
-    
-    
-    
-    def crossborderFlows(self, bz: str, filt: Filter,group_by='directionKey'):
         with closing(sql.connect(self.database)) as conn:
             query = f'select distinct fromOperatorKey from Interconnections where "{bz}"=fromBzLabel'
-            operatorKeys=pd.read_sql_query(query, conn).dropna().unique()
+            operatorKeys=pd.read_sql_query(query, conn).dropna()['fromOperatorKey'].unique()
         inString = '("'+'","'.join(operatorKeys)+'")'
+        whereString+=f'and t.operatorKey in {inString}'
         
-        whereString=f'"{filt.begin.strftime("%Y-%m-%d")}" < time and time < "{filt.end.strftime("%Y-%m-%d")}"'
-        whereString+=f'and operatorKey in {inString}'
+        if table == 'operationaldata':
+            joinString =' left join (select distinct pointKey, isDoubleReporting, operatorKey, pipeInPipeWithTsoKey, adjacentZones, adjacentCountry from operatorpointdirections) opd on t.pointKey = opd.pointKey and t.operatorKey = opd.operatorKey'
+            whereString+= ' and pipeInPipeWithTsoKey is null and isDoubleReporting is null'
+        else:
+            joinString =' left join (select distinct pointKey, isDoubleReporting, operatorKey, pipeInPipeWithTsoKey, adjacentZones, adjacentCountry from operatorpointdirections) opd on t.pointKey = opd.pointKey and t.operatorKey = opd.operatorKey'
+                
         
         selectString = f'strftime("{ftime[filt.groupby]}", "periodFrom") as time, '
-        selectString+= 'pointKey, pointLabel, operatorKey, operatorLabel, directionKey, sum(value) as value, indicator'
+        selectString+= 't.directionKey, adjacentCountry, adjacentZones, sum(value) as value'
+        group_by =', '.join(list(map(lambda x: ''+x,group_by)))
         groupString=f'strftime("{ftime[filt.groupby]}", "time"), {group_by}'
-        # TODO
+
         with closing(sql.connect(self.database)) as conn:
-            query = f'select {selectString} from operationaldata where {whereString} group by {groupString}'
-            print(query)
+            query = f'select {selectString} from {table} t {joinString} where {whereString} group by {groupString}'
             flow = pd.read_sql_query(query, conn,index_col='time')
-        return flow
+            
+        flow['name']=flow['adjacentCountry'].apply(lambda x: str(x) if x else '-')+':'+flow['adjacentZones'].apply(lambda x: str(x) if x else '-')
+        del flow['adjacentCountry']
+        del flow['adjacentZones']
+    
+        pivoted = flow.pivot(columns=['name','directionKey'],values='value')
+        return self.diffHelper(pivoted)
     
 if __name__ == "__main__":  
 
@@ -202,12 +236,25 @@ if __name__ == "__main__":
     phy = entsog.operationaldata(operatorKeys,filt,group_by=['operatorKey', 'directionKey'])
     piv  = phy.pivot(columns=['operatorKey','directionKey'],values='value')
     
-    bil = entsog.bilanz('Greece', filt)
-    bb_ncg = bil.pivot(columns=['directionKey','infrastructureKey'])
+    point = entsog.operationaldataByPoints(['ITP-00043','ITP-00111'],Filter(start,end,group),['pointKey', 'directionKey'])
+    point['point']=point['pointLabel']+' '+point['directionKey']+' '+point['indicator']
+    point['value']=point['value']/1e6
+    piv2 = point.pivot(columns=['point'],values='value')
+    
+    bil = entsog.bilanz('NCG', filt)
+    bb_ncg = bil.pivot(columns=['infrastructureLabel','directionKey'])
     
     bb_ncg.plot(rot=45)
+    bb_ncg.columns = bb_ncg.columns.droplevel(None)
     
     p = entsog.diffHelper(bb_ncg)
-
     p.plot(rot=45)
     
+    filt = Filter(start,end,'day')
+    c = entsog.crossborder('GASPOOL', filt)
+    c.plot(rot=45)
+    
+    # 55 mrd Nm^3 sind 60 GWh
+    # 55 000 000 000 = 60 000 000 000 Wh pro Jahr
+    # taeglich circa 160 000 000 Wh also 160 MWh
+    # tatsaechlich 1 131 141 436 kWh pro Tag?? laut entsog

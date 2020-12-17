@@ -190,8 +190,9 @@ layout = html.Div(
         ),
         html.Div(
             dcc.Tabs([
-                dcc.Tab(label='Sum for Region', children=[dcc.Graph(id="points_graph")]),
-                dcc.Tab(label='Point Data', children=[dcc.Graph(id="points_label_graph")]),      
+                dcc.Tab(label='Sum for Region', children=[dcc.Graph(id="points_graph", config={"displaylogo": False})]),
+                dcc.Tab(label='Crossborder Zone', children=[dcc.Graph(id="crossborder_graph", config={"displaylogo": False})]),
+                dcc.Tab(label='Selected Points', children=[dcc.Graph(id="points_label_graph", config={"displaylogo": False})]),
             ]),
             id="graphTabContainer",
             className="pretty_container",
@@ -240,11 +241,15 @@ def updateFlowGraph(operator, bz, start_date, end_date, group):
         inter = incons[incons['fromBzLabel']==bz]
         operator = list(inter['fromOperatorKey'].dropna().unique())
         desc = bz
+    else:
+        # TODO show usage for single pipeline
+        operator = ['Nord Stream']
+        desc = operator[0]
     
     if operator != None and len(operator)>0:
         p = dm.operationaldata(operator,Filter(start,end,group))
         a = dm.operationaldata(operator,Filter(start,end,group),table='Allocation')
-
+        
     if p.empty and a.empty:
         return {'data': [], 'layout': dict(title=f"No Data Found for {desc} from {start_date} to {end_date}")}
     
@@ -261,6 +266,8 @@ def updateFlowGraph(operator, bz, start_date, end_date, group):
     a.columns = list(map(lambda x: 'alloc_'+x, a.columns))
     p.columns = list(map(lambda x: 'physical_'+x, p.columns))
         
+    a = a/1e6
+    p = p/1e6
     figure=go.Figure()
     for column in p.columns:
         figure.add_trace(go.Scatter(x=p.index, y=p[column], mode='lines', name=column))
@@ -268,11 +275,12 @@ def updateFlowGraph(operator, bz, start_date, end_date, group):
     for column in a.columns:
         figure.add_trace(go.Scatter(x=a.index, y=a[column], mode='lines', name=column))
         
-    figure.update_layout(title=f"Physical Flow in kWh/h for {desc} from {start_date} to {end_date}",
+    figure.update_layout(title=f"Flow in GWh/{group} for {desc} from {start_date} to {end_date}",
                    xaxis_title=group,
-                   yaxis_title='Physical Flow in kWh/h',
+                   yaxis_title=f'Transferred Energy in GWh/{group}',
                    hovermode="closest",
-                   legend=dict(font=dict(size=10), orientation="h"),)
+                   legend=dict(font=dict(size=10), orientation="v"),)
+    figure.update_yaxes(ticksuffix=" GWh")
     return figure
 
 
@@ -309,19 +317,14 @@ def updateSelectedPoints(clickData,selectedData):
         points = clickData
     else:
         return []
-    print(points['points'])
+    
     pointKeys = []
     for point in points['points']:
         if 'customdata' in point:
             pointKeys.append(point['customdata'][1])
     
-    return pointKeys
+    return list(set(pointKeys))
     
-
-
-
-
-
 @app.callback(
     Output("operator_control", "options"),
     [
@@ -384,7 +387,7 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
     start =datetime.strptime(start_date, '%Y-%m-%d').date()
     end =datetime.strptime(end_date, '%Y-%m-%d').date()
 
-    desc = 'invalid'
+    desc = 'no valid points'
     
     if points != None and len(points)>0:
         #include with toPointKey:
@@ -392,37 +395,82 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
         
         # select both from and to points here
         points = list(set(points)|set(inter['toPointKey'].unique()))
-        
-        desc= str(points)
+
         valid_points = [x for x in points if x is not None]
+        
+        if len(valid_points) < 5:
+            desc= ', '.join(valid_points)
+        else:
+            desc= str(len(valid_points))+ ' points'
     else:
         valid_points=[]
         #valid_points = list(map(lambda x: x['value'],options))
 
     g = pd.DataFrame()
     if len(valid_points) > 0:
-        p = dm.operationaldataByPoints(valid_points,Filter(start,end,group),'pointKey, directionKey')
-        a = dm.operationaldataByPoints(valid_points,Filter(start,end,group),'pointKey, directionKey', table='Allocation')
+        p = dm.operationaldataByPoints(valid_points,Filter(start,end,group),['pointKey', 'directionKey'])
+        a = dm.operationaldataByPoints(valid_points,Filter(start,end,group),['pointKey', 'directionKey'], table='Allocation')
         p['indicator']='phys'
         a['indicator']='alloc'
         
-        g = pd.concat([p,a])
+        g = pd.concat([a,p])
     if g.empty:
         return {'data': [], 'layout': dict(title=f"No Data Found for {desc} from {start_date} to {end_date}")}
     
-    g['point']=g['pointLabel']+' '+g['directionKey']+' '+g['indicator']
-    #g = g[g.columns.sort_values()]
-    figure = px.line(g, x=g.index, y="value", color='point',line_group="point", custom_data=['operatorLabel', 'pointKey'])
+    g['point']=g['directionKey']+' '+g['pointLabel']+' '+g['indicator']
+    g['value']=g['value']/1e6 # show in GW 
+    
+    # sort values alphabetically for better visualization
+    ordered = g['point'].unique()
+    ordered.sort()
+
+    figure = px.line(g, x=g.index, y="value", color='point',line_group="point", custom_data=['operatorLabel', 'pointKey'], category_orders={'point': list(ordered)})
     figure.update_traces(hovertemplate='<b>%{y}</b>, %{customdata[0]}, %{customdata[1]}') #
-    figure.update_layout(title=f"Physical Flow in kWh/h for {desc} from {start_date} to {end_date}",
+    figure.update_layout(title=f"Flow in GWh/{group} {desc} from {start_date} to {end_date}",
                    xaxis_title=group,
-                   yaxis_title='Physical Flow in kWh/h',
+                   yaxis_title=f'Transferred Energy in GWh/{group}',
                    hovermode="x unified",
                    legend=dict(font=dict(size=10), orientation="v"),)
+    figure.update_yaxes(ticksuffix=" GWh")
     return figure
 
+@app.callback(
+    Output("crossborder_graph", "figure"),
+    [
+        Input("bz_control", "value"), 
+        Input("date_picker", "start_date"),
+        Input("date_picker", "end_date"),
+        Input("group_by_control", "value"),        
+    ],
+)
+def updateCrossborderGraph(bz, start_date, end_date, group):
+    start =datetime.strptime(start_date, '%Y-%m-%d').date()
+    end =datetime.strptime(end_date, '%Y-%m-%d').date()
+    c = pd.DataFrame()
 
+    
+    if bz == None or len(bz)<1:
+        return {'data': [], 'layout': dict(title='No zone selected')}
 
+    c = dm.crossborder(bz, Filter(start,end,group))        
+        
+    if c.empty:
+        return {'data': [], 'layout': dict(title=f"No Data Found for {bz} from {start_date} to {end_date}")}
+    
+    c = c/1e6
+    
+    figure=go.Figure()
+    for column in c.columns:
+        figure.add_trace(go.Scatter(x=c.index, y=c[column], mode='lines', name=column))
+
+    figure.update_layout(title=f"Crossborder Flow in GWh/{group} for {bz} from {start_date} to {end_date}",
+                   xaxis_title=group,
+                   yaxis_title=f'Imported Energy in GWh/{group}',
+                   hovermode="x unified",
+                   legend=dict(font=dict(size=10), orientation="v"),)
+    figure.update_yaxes(ticksuffix=" GWh")
+    
+    return figure
 
 if __name__ == "__main__":  
     app.layout = layout
