@@ -344,7 +344,7 @@ def make_capacity_figure(country_control):
     del capacity['country']
 
     capacity.fillna(0, inplace=True)
-    capacity /= 1000
+    capacity /= 1e3
     capacity = capacity.loc[:, (capacity != 0).any(axis=0)]
     g = capacity.melt(var_name='kind', value_name='value', ignore_index=False)
 
@@ -357,7 +357,7 @@ def make_capacity_figure(country_control):
                          xaxis_title='years',
                          yaxis_title='Capacity by Production kind',)
     figure.update_traces(texttemplate='%{text:.2s}', textposition='inside')
-    figure.update_yaxes(ticksuffix="GW")
+    figure.update_yaxes(ticksuffix=" GW")
     return figure
 
 ############## Load Graph ##############################
@@ -376,7 +376,7 @@ def make_load_figure(country_control, start_date, end_date, group):
     start = datetime.strptime(start_date, '%Y-%m-%d').date()
     end = datetime.strptime(end_date, '%Y-%m-%d').date()
     g = dm.load(country_control, Filter(start, end, group))
-    g /= 1000
+    g /= 1e3
     figure = px.line(g, x=g.index, y="value")
     figure.update_layout(title="Load for {} from {} to {}".format(country_control, start_date, end_date),
                          xaxis_title=group,
@@ -384,7 +384,7 @@ def make_load_figure(country_control, start_date, end_date, group):
                          autosize=True,
                          hovermode="x unified",
                          legend=dict(font=dict(size=10), orientation="h"),)
-    figure.update_yaxes(ticksuffix="GW")
+    figure.update_yaxes(ticksuffix=" GW")
     return figure
 
 ############ Generation Graph   ##############
@@ -411,7 +411,7 @@ def make_generation_figure(country_control, start_date, end_date, group, e_type,
     desc = 'energy generation by production kind in GW'
 
     unit = 'GW'
-    generation /= 1000
+    generation /= 1e3
     if climate_sel != None:
         generation = generation*climate[climate_sel]
         unit = 'tons'
@@ -464,11 +464,11 @@ def make_neighbour_figure(country_control, start_date, end_date, group_by_contro
 
     fig.update_layout(title=f"Netto Export for {country_control} from {start_date} to {end_date}",
                       xaxis_title=group_by_control,
-                      yaxis_title='Exported to neighbour - imported in MWh',
+                      yaxis_title='Exported to neighbour - imported in GWh',
                       hovermode="closest",
                       showlegend=True,
                       legend=dict(font=dict(size=10), orientation="h"),)
-    fig.update_yaxes(ticksuffix=' MWh')
+    fig.update_yaxes(ticksuffix=' GW')
     return fig
 
 
