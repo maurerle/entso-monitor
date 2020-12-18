@@ -207,7 +207,7 @@ class EntsoeCrawler:
             return pp
         
         procs= [query_per_plant]    
-        crawler.bulkDownload(plant_countries,procs,start,delta=delta,times=times)
+        self.bulkDownload(countries,procs,start,delta=delta,times=times)
 
 if __name__ == "__main__":  
     # Create a spark session
@@ -227,7 +227,7 @@ if __name__ == "__main__":
     entsoe_path='hdfs://149.201.206.53:9000/user/fmaurer/entsoe'
     db='data/entsoe.db'
     
-    crawler = EntsoeCrawler(folder='data/spark',spark=None,database=db)
+    crawler = EntsoeCrawler(folder='data/spark',spark=spark,database=db)
     procs= [client.query_day_ahead_prices,
         client.query_load,
         client.query_load_forecast,
@@ -260,6 +260,11 @@ if __name__ == "__main__":
             print('found data for', country)
         except:
             continue
+    
+    db='data/entsoe-plant.db'
+    crawler = EntsoeCrawler(folder='data/spark',spark=spark,database=db)
+    
+    crawler.bulkDownloadPlantData(plant_countries[4:],client,start,delta,times)
      
     # create indices if not existing
     with closing(sql.connect(db)) as conn:

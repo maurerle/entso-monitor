@@ -13,6 +13,7 @@ from contextlib import closing
 
 from datetime import datetime, date
 import pandas as pd
+from typing import List
 
 ftime={'day': '%Y-%m-%d',
        'month': '%Y-%m-01',
@@ -71,7 +72,7 @@ class EntsoeSQLite(EntsoeDataManager):
             fr =x.split('-')[0]
             to =x.split('-')[1]
             # export - import
-            res += f'sum("{fr}-{to}"-"{to}-{fr}") as diff_{to}'
+            res += f'avg("{fr}-{to}"-"{to}-{fr}") as diff_{to}'
             res += ','
         return res
         
@@ -123,6 +124,20 @@ class EntsoeSQLite(EntsoeDataManager):
     def climateImpact(self):
         climate = pd.read_csv('CO2_factors_energy_carrier.CSV', sep=';',index_col=0)
         return climate
+    
+class EntsoePlantSQLite(EntsoeDataManager):
+    def __init__(self, database: str):
+        self.database=database
+        
+    def plantGen(self, names: List[str], filt: Filter):
+        # average is correct here as some countries have quarter hour data and others 
+        whereString=f'name in "{set(names)}" and "{filt.begin.strftime("%Y-%m-%d")}" < "index" and "index" < "{filt.end.strftime("%Y-%m-%d")}"'
+        selectString=f'strftime("{ftime[filt.groupby]}", "index") as time, avg("value") as value, country, type, name'
+        groupString=f'strftime("{ftime[filt.groupby]}", "time")'
+        with closing(sql.connect(self.database)) as conn:
+            query = f"select {selectString} from query_per_plan where {whereString} group by {groupString}"
+            generation = pd.read_sql_query(query,conn,index_col='time')
+        return generation
         
     
     
@@ -146,6 +161,9 @@ if __name__ == "__main__":
     generation.fillna(0,inplace=True)
     nox = generation*climate['Summe NOX']
     
+    g=generation
+    g.fillna(0,inplace=True)
+    g = g.loc[:, (g != 0).any(axis=0)]
     # from entsoe_data_manager import EntsoeDataManager
     # issubclass(par.__class__,EntsoeDataManager)
         

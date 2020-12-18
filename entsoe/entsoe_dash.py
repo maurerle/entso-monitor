@@ -28,7 +28,10 @@ else:
 
 if True:
     from entsoe_sqlite_manager import EntsoeSQLite
+    # data manager
     dm = EntsoeSQLite('data/entsoe.db')
+    # plant data manager
+    pdm = EntsoeSQLite('data/entsoe-plant.db')
 else:
     from entsoe_parquet_manager import EntsoeParquet
     import findspark
@@ -44,37 +47,41 @@ else:
         conf = SparkConf().setAppName('entsoe').setMaster('local')
         spark = SparkSession.builder.config(conf=conf).getOrCreate()
     dm = EntsoeParquet('data', spark)
+    # TODO update SPARK
+    pdm = EntsoeSQLite('data/entsoe-plant.db')
 
 powersys = dm.powersystems('')
 climate = dm.climateImpact()
 climate.columns
 appname = 'Entsoe Monitor'
 
-color_map={
-            "Biomass": "red",
-            "Fossil Brown coal/Lignite": "darkred",
-            "Fossil Gas": "lightskyblue",
-            "Fossil Hard coal": "darkslategrey",
-            "Fossil Oil": "magenta",
-            "Geothermal" : "goldenrod",
-            "Hydro Pumped Storage" : "lightblue",
-            "Hydro Run-of-river and poundage" : "aqua",
-            "Other" : "grey",
-            "Other renewable" : "white",
-            "Solar" : "yellow",
-            "Waste" : "black",
-            "Wind Offshore" : "gainsboro",
-            "Wind Onshore" : "white",
-            "Fossil Coal-derived gas" : "cyan",
-            "Nuclear" : "violet",
-            "Hydro Water Reservoir" : "fuchsia",
-            "Marine" : "blue",
-            "Fossil Oil shale" : "maroon",
-            "Fossil Peat" : "brown",
-          }
+color_map = {
+    "Biomass": "DarkGreen",
+    "Fossil Brown coal/Lignite": "SaddleBrown",
+    "Fossil Gas": "blue",
+    "Fossil Hard coal": "DimGrey",
+    "Fossil Oil": "black",
+    "Geothermal": "FireBrick",
+    "Hydro Pumped Storage": "DodgerBlue",
+    "Hydro Run-of-river and poundage": "LightSeaGreen",
+    "Other": "Violet",
+    "Other renewable": "Thistle",
+    "Solar": "yellow",
+    "Waste": "Tan",
+    "Wind Offshore": "Steelblue",
+    "Wind Onshore": "DeepSkyBlue",
+    "Fossil Coal-derived gas": "RosyBrown",
+    "Nuclear": "purple",
+    "Hydro Water Reservoir": "DarkKhaki",
+    "Marine": "DarkBlue",
+    "Fossil Oil shale": "DarkGoldenRod",
+    "Fossil Peat": "Coral",
+}
+
 
 def cmap(index):
-    return list(map(lambda x: color_map[x],index))
+    return list(map(lambda x: color_map[x], index))
+
 
 layout = html.Div(
     [
@@ -117,12 +124,11 @@ layout = html.Div(
             className="row flex-display",
             style={"margin-bottom": "25px"},
         ),
-        html.P(
-            "Country map including location of traditional energy sources",
-            className="control_label",
-        ),
         html.Div(
-            [dcc.Graph(id='choro-graph', config={"displaylogo": False})],
+            [html.P(
+                "Country map including location of traditional energy sources",
+                className="control_label",
+            ), dcc.Graph(id='choro-graph', config={"displaylogo": False})],
             id="locationMapContainer",
             className="pretty_container",
         ),
@@ -169,7 +175,7 @@ layout = html.Div(
                                 {"label": "Month", "value": "month"},
                                 {"label": "Day ", "value": "day"},
                                 {"label": "Hour", "value": "hour"},
-                                {"label": "Minute", "value": "minute"},
+                                {"label": "1/4 hour", "value": "minute"},
                             ],
                             value="day",
                             labelStyle={"display": "inline-block"},
@@ -218,6 +224,10 @@ layout = html.Div(
                     id="neighbour_graph", config={"displaylogo": False})]),
             ]),
             id="graphTabContainer",
+            className="pretty_container",
+        ),
+        html.Div(
+            [html.P("Units are average values over the selected time period")],
             className="pretty_container",
         ),
     ])
@@ -306,7 +316,7 @@ def update_figure(climate_sel):
                                  hovertext=d[['name', 'capacity', 'country']],
                                  hoverinfo=['text'],
                                  below='',
-                                 marker=dict( size=6, color =color_map[val])
+                                 marker=dict(size=6, color=color_map[val])
                                  )
         data.append(scatt)
     layout = go.Layout(title_text='Europe mapbox choropleth', title_x=0.5,  # width=750, height=700,
@@ -332,15 +342,15 @@ def update_figure(climate_sel):
 def make_capacity_figure(country_control):
     capacity = dm.capacity(country_control)
     del capacity['country']
-    
-    capacity.fillna(0,inplace=True)
+
+    capacity.fillna(0, inplace=True)
     capacity /= 1000
     capacity = capacity.loc[:, (capacity != 0).any(axis=0)]
     g = capacity.melt(var_name='kind', value_name='value', ignore_index=False)
 
     if g.empty:
         return {'data': [], 'layout': dict(title="No Data Found for current interval")}
-    
+
     figure = px.bar(g, x=g.index, y="value", color='kind', color_discrete_map=color_map,
                     text='value')  # bar_group="kind")
     figure.update_layout(title="Generation capacity for {} per year".format(country_control),
@@ -407,16 +417,17 @@ def make_generation_figure(country_control, start_date, end_date, group, e_type,
         unit = 'tons'
         desc = climate_sel+' in '+unit
 
-    generation.fillna(0,inplace=True)
+    generation.fillna(0, inplace=True)
     generation = generation.loc[:, (generation != 0).any(axis=0)]
     g = generation.melt(
         var_name='kind', value_name='value', ignore_index=False)
-    
+
     if g.empty:
         return dict(data=[], layout=dict(title="No Data Found for current interval"))
-    figure = px.area(g, x=g.index, y="value", color='kind',color_discrete_map=color_map, line_group="kind")
+    figure = px.area(g, x=g.index, y="value", color='kind',
+                     color_discrete_map=color_map, line_group="kind")
     figure.update_layout(title=desc+" for {} from {} to {}".format(country_control, start_date, end_date),
-                         #xaxis_title=group,
+                         # xaxis_title=group,
                          yaxis_title=desc,
                          hovermode="closest",
                          legend=dict(font=dict(size=10), orientation="h"),)
@@ -447,16 +458,17 @@ def make_neighbour_figure(country_control, start_date, end_date, group_by_contro
         return dict(data=[], layout=dict(title=f"No Data for {country_control} from {start_date} to {end_date}"))
     fig = go.Figure()
     for col in g.columns:
-        fig.add_trace(go.Scatter(x=g.index, y=g[col],
+        fig.add_trace(go.Scatter(x=g.index, y=g[col]/1e3,
                                  mode='lines',
                                  name=col))
 
     fig.update_layout(title=f"Netto Export for {country_control} from {start_date} to {end_date}",
                       xaxis_title=group_by_control,
-                      yaxis_title='Exported to neighbour - imported in kWh',
+                      yaxis_title='Exported to neighbour - imported in MWh',
                       hovermode="closest",
                       showlegend=True,
                       legend=dict(font=dict(size=10), orientation="h"),)
+    fig.update_yaxes(ticksuffix=' MWh')
     return fig
 
 
