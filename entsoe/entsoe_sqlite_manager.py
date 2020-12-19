@@ -131,14 +131,22 @@ class EntsoePlantSQLite(EntsoeDataManager):
         
     def plantGen(self, names: List[str], filt: Filter):
         # average is correct here as some countries have quarter hour data and others 
-        whereString=f'name in "{set(names)}" and "{filt.begin.strftime("%Y-%m-%d")}" < "index" and "index" < "{filt.end.strftime("%Y-%m-%d")}"'
+        inString = '("'+'","'.join(names)+'")'
+        whereString=f'name in {inString} and "{filt.begin.strftime("%Y-%m-%d")}" < "index" and "index" < "{filt.end.strftime("%Y-%m-%d")}"'
         selectString=f'strftime("{ftime[filt.groupby]}", "index") as time, avg("value") as value, country, type, name'
-        groupString=f'strftime("{ftime[filt.groupby]}", "time")'
+        groupString=f'strftime("{ftime[filt.groupby]}", "time"), name, type'
         with closing(sql.connect(self.database)) as conn:
-            query = f"select {selectString} from query_per_plan where {whereString} group by {groupString}"
+            query = f"select {selectString} from query_per_plant where {whereString} group by {groupString}"
+            print(query)
             generation = pd.read_sql_query(query,conn,index_col='time')
         return generation
-        
+    
+    def getNames(self):
+        with closing(sql.connect(self.database)) as conn:
+            # TODO add type 
+            query = f"select name,country from plant_names"
+            names = pd.read_sql_query(query,conn)
+        return names
     
     
 if __name__ == "__main__":  
@@ -171,3 +179,8 @@ if __name__ == "__main__":
     #     columns = pd.read_sql_query(f'select * from DE_query_generation where 1=0',conn).columns
     #         query = "select * from DE_query_generation"
     #         gen = pd.read_sql_query(query,conn)
+    filt = Filter(datetime(2018,2,1),datetime(2018,2,2),'hour')
+    ep = EntsoePlantSQLite('data/entsoe-plant.db')
+    names = ep.getNames()
+    nossener = ep.plantGen(['GTHKW Nossener Bruecke'],filt)
+    doel2 = ep.plantGen(['DOEL 2'],filt)    

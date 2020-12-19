@@ -14,6 +14,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objects as go
 import plotly.express as px
+import dash_table
 
 from entsoe_data_manager import Filter
 import json
@@ -27,11 +28,11 @@ else:
     from app import app
 
 if True:
-    from entsoe_sqlite_manager import EntsoeSQLite
+    from entsoe_sqlite_manager import EntsoeSQLite, EntsoePlantSQLite
     # data manager
     dm = EntsoeSQLite('data/entsoe.db')
     # plant data manager
-    pdm = EntsoeSQLite('data/entsoe-plant.db')
+    pdm = EntsoePlantSQLite('data/entsoe-plant.db')
 else:
     from entsoe_parquet_manager import EntsoeParquet
     import findspark
@@ -48,7 +49,7 @@ else:
         spark = SparkSession.builder.config(conf=conf).getOrCreate()
     dm = EntsoeParquet('data', spark)
     # TODO update SPARK
-    pdm = EntsoeSQLite('data/entsoe-plant.db')
+    pdm = EntsoePlantSQLite('data/entsoe-plant.db')
 
 powersys = dm.powersystems('')
 climate = dm.climateImpact()
@@ -77,7 +78,6 @@ color_map = {
     "Fossil Oil shale": "DarkGoldenRod",
     "Fossil Peat": "Coral",
 }
-
 
 def cmap(index):
     return list(map(lambda x: color_map[x], index))
@@ -126,7 +126,7 @@ layout = html.Div(
         ),
         html.Div(
             [html.P(
-                "Country map including location of traditional energy sources",
+                "Country map including location of conventional energy sources",
                 className="control_label",
             ), dcc.Graph(id='choro-graph', config={"displaylogo": False})],
             id="locationMapContainer",
@@ -152,11 +152,11 @@ layout = html.Div(
                         dcc.DatePickerRange(
                             id='date_picker',
                             min_date_allowed=date(2015, 1, 1),
-                            max_date_allowed=date(2020, 10, 19),
-                            start_date=date(2020, 8, 21),
-                            end_date=date(2020, 9, 4),
+                            max_date_allowed=date(2020, 12, 19),
+                            start_date=date(2015, 8, 21),
+                            end_date=date(2015, 9, 4),
                             display_format='DD.MM.YY',
-                            initial_visible_month='2020-08-01',
+                            # initial_visible_month='2020-08-01',
                             show_outside_days=True,
                             start_date_placeholder_text='MMMM Y, DD'
                         ),
@@ -230,6 +230,34 @@ layout = html.Div(
             [html.P("Units are average values over the selected time period")],
             className="pretty_container",
         ),
+        html.Div(
+            [html.P("Show Generation per energy plant"),
+             dcc.Dropdown(id="plant_control",
+                          options=[{'label': x, 'value': x}
+                                   for x in pdm.getNames()['name']],
+                          value=['DOEL 2'],
+                          multi=True,
+                          className="dcc_control",),
+             dcc.Graph(id="per_plant", config={"displaylogo": False})],
+            className="pretty_container",
+        ),
+        html.Div(
+            [html.P("Power plants:", className="control_label"),
+             dash_table.DataTable(
+                id='plantTable',
+                columns=[{"name": i, "id": i} for i in powersys.columns],
+                data=powersys.to_dict('records'),
+                filter_action="native",
+                sort_action="native",
+                sort_mode="multi",
+                page_action="native",
+                page_current=0,
+                page_size=25,
+                style_table={'overflowX': 'auto'},
+            )],
+            id="tableContainer",
+            className="pretty_container",
+        ),
     ])
 
 app.clientside_callback(
@@ -264,6 +292,36 @@ def update_dropdown(clickData, prev):
             # TODO click on energy plant
 
     return location
+
+############ Plant Graph ############
+
+
+@app.callback(
+    Output("per_plant", "figure"),
+    [
+        Input("plant_control", "value"),
+        Input("date_picker", "start_date"),
+        Input("date_picker", "end_date"),
+        Input("group_by_control", "value"),
+    ],
+)
+def make_load_figure(plants, start_date, end_date, group):
+    start = datetime.strptime(start_date, '%Y-%m-%d').date()
+    end = datetime.strptime(end_date, '%Y-%m-%d').date()
+    g = pdm.plantGen(plants, Filter(start, end, group))
+    if g.empty:
+        return {'data': [], 'layout': dict(title="No Data Found for current interval")}
+    g['value'] /= 1e3
+    figure = px.line(g, x=g.index, y="value", color='name')
+    figure.update_layout(title=f"Generation for {plants} from {start_date} to {end_date}",
+                         xaxis_title=group,
+                         yaxis_title='Generation in GW for each interval',
+                         autosize=True,
+                         hovermode="x unified",
+                         legend=dict(font=dict(size=10), orientation="h"),)
+    figure.update_yaxes(ticksuffix=" GW")
+    return figure
+
 
 ############ Map   ##############
 
