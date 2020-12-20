@@ -281,19 +281,17 @@ if __name__ == "__main__":
             conn.execute(query)
 
     db = 'data/entsoe-plant.db'
-    crawler = EntsoeCrawler(folder='data/spark', spark=spark, database=db)
+    crawler = EntsoeCrawler(folder='data/spark', spark=None, database=db)
 
     crawler.bulkDownloadPlantData(
         plant_countries[12:], client, start, delta, times)
 
     # create indices if not existing
     with closing(sql.connect(db)) as conn:
-        query = (
-            f'CREATE INDEX IF NOT EXISTS "idx_name_query_per_plant" ON "query_per_plant" ("name", "index", "country");')
+        query = 'CREATE INDEX IF NOT EXISTS "idx_name_query_per_plant" ON "query_per_plant" ("name", "index", "country");'
         conn.execute(query)
 
     with closing(sql.connect(db)) as conn:
         query = ('select distinct name, country,type from query_per_plant')
         names = pd.read_sql_query(query, conn)
-        names.to_sql()
         names.to_sql('plant_names', conn, if_exists='replace')

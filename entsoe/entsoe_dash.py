@@ -79,6 +79,7 @@ color_map = {
     "Fossil Peat": "Coral",
 }
 
+
 def cmap(index):
     return list(map(lambda x: color_map[x], index))
 
