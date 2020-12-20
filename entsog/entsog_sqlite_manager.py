@@ -151,14 +151,15 @@ class EntsogSQLite(EntsogDataManager):
         whereString+=f'and operatorKey in {inString}'
         
         selectString = f'strftime("{ftime[filt.groupby]}", "periodFrom") as time, '
-        selectString+= 'infrastructureLabel, directionKey, sum(value) as value'
-        groupString=f'strftime("{ftime[filt.groupby]}", "time")'
+        selectString+= 'c.infrastructureKey, directionKey, sum(value) as value'
+        groupString=f'strftime("{ftime[filt.groupby]}", "time"), directionKey, c.infrastructureKey'
 
         with closing(sql.connect(self.database)) as conn:
-            query = f'select {selectString} from operationaldata o left join connectionpoints c on o.pointKey=c.pointKey where {whereString} group by {groupString}, directionKey, c.infrastructureKey'
-            print(query)
+            query = f'select {selectString} from operationaldata o left join connectionpoints c on o.pointKey=c.pointKey where {whereString} group by {groupString}'
             bil = pd.read_sql_query(query, conn,index_col='time')
-        return bil
+        bilanz = bil.pivot(columns=['infrastructureKey','directionKey'])
+        bilanz.columns = bilanz.columns.droplevel(None)
+        return self.diffHelper(bilanz)
         
     
     def diffHelper(self,df):
@@ -220,7 +221,7 @@ class EntsogSQLite(EntsogDataManager):
     
 if __name__ == "__main__":  
 
-    entsog = EntsogSQLite('entsog.db')
+    entsog = EntsogSQLite('data/entsog.db')
     operators = entsog.operators()
     
     start=datetime(2018,7,1)
@@ -242,13 +243,7 @@ if __name__ == "__main__":
     piv2 = point.pivot(columns=['point'],values='value')
     
     bil = entsog.bilanz('NCG', filt)
-    bb_ncg = bil.pivot(columns=['infrastructureLabel','directionKey'])
-    
-    bb_ncg.plot(rot=45)
-    bb_ncg.columns = bb_ncg.columns.droplevel(None)
-    
-    p = entsog.diffHelper(bb_ncg)
-    p.plot(rot=45)
+    bil.plot(rot=45)
     
     filt = Filter(start,end,'day')
     c = entsog.crossborder('GASPOOL', filt)

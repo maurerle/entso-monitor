@@ -27,7 +27,7 @@ else:
 
 if True:
     from entsog_sqlite_manager import EntsogSQLite
-    dm = EntsogSQLite('data/entsog.db')
+    dm = EntsogSQLite('entsog.db')
 else:
     #from entsoe_parquet_manager import EntsogParquet
     import findspark
@@ -203,6 +203,8 @@ layout = html.Div(
                     id="crossborder_graph", config={"displaylogo": False})]),
                 dcc.Tab(label='Selected Points', children=[dcc.Graph(
                     id="points_label_graph", config={"displaylogo": False})]),
+                dcc.Tab(label='Sum per Infrastructure', children=[dcc.Graph(
+                    id="infrastructure_graph", config={"displaylogo": False})]),
             ]),
             id="graphTabContainer",
             className="pretty_container",
@@ -497,6 +499,47 @@ def updateCrossborderGraph(bz, start_date, end_date, group):
     figure.update_layout(title=f"Crossborder Flow in GWh/{group} for {bz} from {start_date} to {end_date}",
                          xaxis_title=group,
                          yaxis_title=f'Imported Energy in GWh/{group}',
+                         hovermode="x unified",
+                         legend=dict(font=dict(size=10), orientation="v"),)
+    figure.update_yaxes(ticksuffix=" GWh")
+
+    return figure
+
+# Infrastructure Graph ###########3
+
+
+@app.callback(
+    Output("infrastructure_graph", "figure"),
+    [
+        Input("bz_control", "value"),
+        Input("date_picker", "start_date"),
+        Input("date_picker", "end_date"),
+        Input("group_by_control", "value"),
+    ],
+)
+def updateInfrastructureGraph(bz, start_date, end_date, group):
+    start = datetime.strptime(start_date, '%Y-%m-%d').date()
+    end = datetime.strptime(end_date, '%Y-%m-%d').date()
+    c = pd.DataFrame()
+
+    if bz == None or len(bz) < 1:
+        return {'data': [], 'layout': dict(title='No zone selected')}
+
+    c = dm.bilanz(bz, Filter(start, end, group))
+
+    if c.empty:
+        return {'data': [], 'layout': dict(title=f"No Data Found for {bz} from {start_date} to {end_date}")}
+
+    c = c/1e6
+
+    figure = go.Figure()
+    for column in c.columns:
+        figure.add_trace(go.Scatter(
+            x=c.index, y=c[column], mode='lines', name=column))
+
+    figure.update_layout(title=f"Flow per Infrastructure type in GWh/{group} for {bz} from {start_date} to {end_date}",
+                         # xaxis_title=group,
+                         yaxis_title=f'Energy added to {bz} in GWh/{group}',
                          hovermode="x unified",
                          legend=dict(font=dict(size=10), orientation="v"),)
     figure.update_yaxes(ticksuffix=" GWh")
