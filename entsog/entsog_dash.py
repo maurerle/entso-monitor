@@ -16,8 +16,6 @@ import plotly.express as px
 import plotly.graph_objects as go
 import dash_table
 from entsog_data_manager import Filter
-
-print(__name__)
 if __name__ == "__main__":
     app = dash.Dash(__name__, meta_tags=[
                     {"name": "viewport", "content": "width=device-width"}])
@@ -27,7 +25,7 @@ else:
 
 if True:
     from entsog_sqlite_manager import EntsogSQLite
-    dm = EntsogSQLite('entsog.db')
+    dm = EntsogSQLite('data/entsog.db')
 else:
     #from entsoe_parquet_manager import EntsogParquet
     import findspark
@@ -201,10 +199,10 @@ layout = html.Div(
                     id="points_graph", config={"displaylogo": False})]),
                 dcc.Tab(label='Crossborder Zone', children=[dcc.Graph(
                     id="crossborder_graph", config={"displaylogo": False})]),
-                dcc.Tab(label='Selected Points', children=[dcc.Graph(
-                    id="points_label_graph", config={"displaylogo": False})]),
                 dcc.Tab(label='Sum per Infrastructure', children=[dcc.Graph(
                     id="infrastructure_graph", config={"displaylogo": False})]),
+                dcc.Tab(label='Selected Points', children=[dcc.Graph(
+                    id="points_label_graph", config={"displaylogo": False})]),
             ]),
             id="graphTabContainer",
             className="pretty_container",
