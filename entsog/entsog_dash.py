@@ -70,6 +70,8 @@ appname = 'ENTSOG Monitor'
 
 
 def addTraces(figure, data, stackgroup=None, legendgroup=None):
+    data.sort_index(inplace=True)
+    data.fillna(0, inplace=True)
     for column in data.columns:
         figure.add_trace(go.Scatter(
             x=data.index, y=data[column]/1e6, mode='lines', name=column, stackgroup=stackgroup, legendgroup=legendgroup))
@@ -382,7 +384,6 @@ def updateFlowGraph(operators: List[str], bz: str, start_date, end_date, group):
 
     a = a.pivot(columns=['directionKey'], values='value')
     p = p.pivot(columns=['directionKey'], values='value')
-
     if 'entry' in a.columns and 'exit' in a.columns:
         a['usage'] = a['entry']-a['exit']
 
@@ -392,7 +393,6 @@ def updateFlowGraph(operators: List[str], bz: str, start_date, end_date, group):
     a.columns = list(map(lambda x: 'alloc_'+str(x), a.columns))
     p.columns = list(map(lambda x: 'physical_'+str(x), p.columns))
     ap = pd.concat([a, p], axis=1)
-    ap.fillna(0, inplace=True)
 
     figure = go.Figure()
     addTraces(figure, ap)
@@ -449,7 +449,7 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
                                    'pointKey', 'directionKey'], table='Allocation')
     p['indicator'] = 'phys'
     a['indicator'] = 'alloc'
-    
+
     g = pd.concat([p, a], axis=0)
     if g.empty:
         return {'data': [], 'layout': dict(title=f"No Data Found for {desc} from {start_date} to {end_date}")}
@@ -461,8 +461,7 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
     g['pip'] = g.apply(lambda c: ' PIP' if (
         c['pipeInPipeWithTsoKey'] != '' and c['indicator'] == 'phys') else '', axis=1)
     g['indicator'] = g['indicator']+g['pip']
-    
-    
+
     # sort values alphabetically for better visualization
     ordered = g['point'].unique()
     ordered.sort()
@@ -508,11 +507,11 @@ def updateCrossborderGraph(operators, bz, start_date, end_date, group):
     a.columns = list(map(lambda x: x+' alloc', a.columns))
     p.columns = list(map(lambda x: x+' phy', p.columns))
 
-    g = pd.concat([p, a], axis=1)    
+    g = pd.concat([p, a], axis=1)
     if g.empty:
         return {'data': [], 'layout': dict(title=f"No Data Found for {bz} from {start_date} to {end_date}")}
     g = g[g.columns.sort_values()]
-    
+
     figure = go.Figure()
     addTraces(figure, p, legendgroup='phy', stackgroup='phy')
     addTraces(figure, a, legendgroup='alloc', stackgroup='alloc')
