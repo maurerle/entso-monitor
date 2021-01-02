@@ -8,6 +8,7 @@ Created on Mon Nov 30 00:57:00 2020
 
 import dash
 from datetime import datetime, date
+from typing import List
 import pandas as pd
 from dash.dependencies import Input, Output, State
 import dash_core_components as dcc
@@ -66,6 +67,13 @@ available_maplayers = ['countries_zones', 'pipelines_small_medium_large', 'pipel
                        'pipelines_large', 'drilling_platforms', 'gasfields', 'projects', 'country_names']
 standard_layers = ['countries_zones', 'pipelines_small_medium_large']
 appname = 'ENTSOG Monitor'
+
+
+def addTraces(figure, data, stackgroup=None, legendgroup=None):
+    for column in data.columns:
+        figure.add_trace(go.Scatter(
+            x=data.index, y=data[column]/1e6, mode='lines', name=column, stackgroup=stackgroup, legendgroup=legendgroup))
+
 
 # initialize layout
 layout = html.Div(
@@ -329,6 +337,23 @@ def makePointMap(layer_control, options):
 ############ Graphs   ##############
 
 
+def handleBzOperator(bz, operators):
+    desc = 'no valid points'
+    if operators != None and len(operators) > 0:
+        inter = incons[incons['fromOperatorKey'].apply(
+            lambda x: x in operators)]
+        desc = ', '.join(inter['fromOperatorLabel'].unique())
+    elif bz != None:
+        inter = incons[incons['fromBzLabel'] == bz]
+        operators = list(inter['fromOperatorKey'].dropna().unique())
+        desc = bz
+    else:
+        # TODO show usage for single pipeline
+        operators = None
+
+    return desc, operators
+
+
 @app.callback(
     Output("points_graph", "figure"),
     [
@@ -339,30 +364,18 @@ def makePointMap(layer_control, options):
         Input("group_by_control", "value")
     ],
 )
-def updateFlowGraph(operator, bz, start_date, end_date, group):
+def updateFlowGraph(operators: List[str], bz: str, start_date, end_date, group):
     start = datetime.strptime(start_date, '%Y-%m-%d').date()
     end = datetime.strptime(end_date, '%Y-%m-%d').date()
-    p = pd.DataFrame()
-    a = pd.DataFrame()
+    filt = Filter(start, end, group)
 
-    desc = 'no valid points'
-    if operator != None and len(operator) > 0:
-        inter = incons[incons['fromOperatorKey'].apply(
-            lambda x: x in operator)]
-        desc = ', '.join(inter['fromOperatorLabel'].unique())
-    elif bz != None:
-        inter = incons[incons['fromBzLabel'] == bz]
-        operator = list(inter['fromOperatorKey'].dropna().unique())
-        desc = bz
-    else:
-        # TODO show usage for single pipeline
-        operator = ['Nord Stream']
-        desc = operator[0]
+    desc, operators = handleBzOperator(bz, operators)
 
-    if operator != None and len(operator) > 0:
-        p = dm.operationaldata(operator, Filter(start, end, group))
-        a = dm.operationaldata(operator, Filter(
-            start, end, group), table='Allocation')
+    if operators == None or len(operators) == 0:
+        return {'data': [], 'layout': dict(title="No Operators or Zone selected")}
+
+    p = dm.operationaldata(operators, filt)
+    a = dm.operationaldata(operators, filt, table='Allocation')
 
     if p.empty and a.empty:
         return {'data': [], 'layout': dict(title=f"No Data Found for {desc} from {start_date} to {end_date}")}
@@ -376,19 +389,13 @@ def updateFlowGraph(operator, bz, start_date, end_date, group):
     if 'entry' in p.columns and 'exit' in p.columns:
         p['usage'] = p['entry']-p['exit']
 
-    a.columns = list(map(lambda x: 'alloc_'+x, a.columns))
-    p.columns = list(map(lambda x: 'physical_'+x, p.columns))
+    a.columns = list(map(lambda x: 'alloc_'+str(x), a.columns))
+    p.columns = list(map(lambda x: 'physical_'+str(x), p.columns))
+    ap = pd.concat([a, p], axis=1)
+    ap.fillna(0, inplace=True)
 
-    a = a/1e6
-    p = p/1e6
     figure = go.Figure()
-    for column in p.columns:
-        figure.add_trace(go.Scatter(
-            x=p.index, y=p[column], mode='lines', name=column))
-
-    for column in a.columns:
-        figure.add_trace(go.Scatter(
-            x=a.index, y=a[column], mode='lines', name=column))
+    addTraces(figure, ap)
 
     figure.update_layout(title=f"Flow in GWh/{group} for {desc} from {start_date} to {end_date}",
                          xaxis_title=group,
@@ -432,35 +439,46 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
         valid_points = []
         #valid_points = list(map(lambda x: x['value'],options))
 
-    g = pd.DataFrame()
-    if len(valid_points) > 0:
-        p = dm.operationaldataByPoints(valid_points, Filter(
-            start, end, group), ['pointKey', 'directionKey'])
-        a = dm.operationaldataByPoints(valid_points, Filter(start, end, group), [
-                                       'pointKey', 'directionKey'], table='Allocation')
-        p['indicator'] = 'phys'
-        a['indicator'] = 'alloc'
+    if len(valid_points) == 0:
+        return {'data': [], 'layout': dict(title="No Points selected")}
 
-        g = pd.concat([a, p])
+    filt = Filter(start, end, group)
+    p = dm.operationaldataByPoints(
+        valid_points, filt, ['pointKey', 'directionKey'])
+    a = dm.operationaldataByPoints(valid_points, filt, [
+                                   'pointKey', 'directionKey'], table='Allocation')
+    p['indicator'] = 'phys'
+    a['indicator'] = 'alloc'
+    
+    g = pd.concat([p, a], axis=0)
     if g.empty:
         return {'data': [], 'layout': dict(title=f"No Data Found for {desc} from {start_date} to {end_date}")}
 
-    g['point'] = g['directionKey']+' '+g['pointLabel']+' '+g['indicator']
+    g['point'] = g['directionKey']+' '+g['pointLabel']
+    g['value'].fillna(0, inplace=True)
     g['value'] = g['value']/1e6  # show in GW
-
+    g.fillna('', inplace=True)
+    g['pip'] = g.apply(lambda c: ' PIP' if (
+        c['pipeInPipeWithTsoKey'] != '' and c['indicator'] == 'phys') else '', axis=1)
+    g['indicator'] = g['indicator']+g['pip']
+    
+    
     # sort values alphabetically for better visualization
     ordered = g['point'].unique()
     ordered.sort()
+    # TODO remove phys flow with PiP
 
-    figure = px.line(g, x=g.index, y="value", color='point', line_group="point", custom_data=[
-                     'operatorLabel', 'pointKey'], category_orders={'point': list(ordered)})
+    figure = px.line(g, x=g.index, y="value", color='point', line_group="point",
+                     line_dash='indicator', custom_data=[
+                         'operatorLabel', 'pointKey', 'pipeInPipeWithTsoKey'], category_orders={'point': list(ordered)})
     figure.update_traces(
-        hovertemplate='<b>%{y}</b>, %{customdata[0]}, %{customdata[1]}')
+        hovertemplate='<b>%{y}</b>, %{customdata[0]}, %{customdata[1]}, %{customdata[2]}')
     figure.update_layout(title=f"Flow in GWh/{group} {desc} from {start_date} to {end_date}",
                          xaxis_title=group,
                          yaxis_title=f'Transferred Energy in GWh/{group}',
                          hovermode="x unified",
-                         legend=dict(font=dict(size=10), orientation="v"),)
+                         legend=dict(font=dict(size=10), orientation="v"),
+                         height=700,)
     figure.update_yaxes(ticksuffix=" GWh")
     return figure
 
@@ -468,37 +486,43 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
 @app.callback(
     Output("crossborder_graph", "figure"),
     [
+        Input("operator_control", "value"),
         Input("bz_control", "value"),
         Input("date_picker", "start_date"),
         Input("date_picker", "end_date"),
         Input("group_by_control", "value"),
     ],
 )
-def updateCrossborderGraph(bz, start_date, end_date, group):
+def updateCrossborderGraph(operators, bz, start_date, end_date, group):
     start = datetime.strptime(start_date, '%Y-%m-%d').date()
     end = datetime.strptime(end_date, '%Y-%m-%d').date()
-    c = pd.DataFrame()
+    filt = Filter(start, end, group)
 
-    if bz == None or len(bz) < 1:
-        return {'data': [], 'layout': dict(title='No zone selected')}
+    desc, operators = handleBzOperator(bz, operators)
 
-    c = dm.crossborder(bz, Filter(start, end, group))
+    if operators == None or len(operators) == 0:
+        return {'data': [], 'layout': dict(title="No Operators or Zone selected")}
 
-    if c.empty:
+    p = dm.crossborder(operators, filt)
+    a = dm.crossborder(operators, filt, table='Allocation')
+    a.columns = list(map(lambda x: x+' alloc', a.columns))
+    p.columns = list(map(lambda x: x+' phy', p.columns))
+
+    g = pd.concat([p, a], axis=1)    
+    if g.empty:
         return {'data': [], 'layout': dict(title=f"No Data Found for {bz} from {start_date} to {end_date}")}
-
-    c = c/1e6
-
+    g = g[g.columns.sort_values()]
+    
     figure = go.Figure()
-    for column in c.columns:
-        figure.add_trace(go.Scatter(
-            x=c.index, y=c[column], mode='lines', name=column))
+    addTraces(figure, p, legendgroup='phy', stackgroup='phy')
+    addTraces(figure, a, legendgroup='alloc', stackgroup='alloc')
 
-    figure.update_layout(title=f"Crossborder Flow in GWh/{group} for {bz} from {start_date} to {end_date}",
+    figure.update_layout(title=f"Crossborder Flow in GWh/{group} for {desc} from {start_date} to {end_date}",
                          xaxis_title=group,
                          yaxis_title=f'Imported Energy in GWh/{group}',
                          hovermode="x unified",
-                         legend=dict(font=dict(size=10), orientation="v"),)
+                         legend=dict(font=dict(size=10), orientation="v"),
+                         height=700,)
     figure.update_yaxes(ticksuffix=" GWh")
 
     return figure
@@ -509,37 +533,50 @@ def updateCrossborderGraph(bz, start_date, end_date, group):
 @app.callback(
     Output("infrastructure_graph", "figure"),
     [
+        Input("operator_control", "value"),
         Input("bz_control", "value"),
         Input("date_picker", "start_date"),
         Input("date_picker", "end_date"),
         Input("group_by_control", "value"),
     ],
 )
-def updateInfrastructureGraph(bz, start_date, end_date, group):
-    start = datetime.strptime(start_date, '%Y-%m-%d').date()
-    end = datetime.strptime(end_date, '%Y-%m-%d').date()
-    c = pd.DataFrame()
-
+def updateInfrastructureGraph(operators, bz, start_date, end_date, group):
     if bz == None or len(bz) < 1:
         return {'data': [], 'layout': dict(title='No zone selected')}
 
-    c = dm.bilanz(bz, Filter(start, end, group))
+    start = datetime.strptime(start_date, '%Y-%m-%d').date()
+    end = datetime.strptime(end_date, '%Y-%m-%d').date()
+    filt = Filter(start, end, group)
 
-    if c.empty:
+    desc, operators = handleBzOperator(bz, operators)
+
+    if operators == None or len(operators) == 0:
+        return {'data': [], 'layout': dict(title="No Operators or Zone selected")}
+
+    p = dm.bilanz(operators, filt)
+    a = dm.bilanz(operators, filt, table='Allocation')
+    # if len(p.columns) > 1:
+    #     p['sum']=p.sum(axis=1)
+    # if len(a.columns) > 1:
+    #     a['sum']=a.sum(axis=1)
+    a.columns = list(map(lambda x: x+' alloc', a.columns))
+    p.columns = list(map(lambda x: x+' phy', p.columns))
+    pa = pd.concat([a, p], axis=1)
+    if pa.empty:
         return {'data': [], 'layout': dict(title=f"No Data Found for {bz} from {start_date} to {end_date}")}
 
-    c = c/1e6
-
     figure = go.Figure()
-    for column in c.columns:
-        figure.add_trace(go.Scatter(
-            x=c.index, y=c[column], mode='lines', name=column))
+    addTraces(figure, p, legendgroup='phy', stackgroup='phy')
+    addTraces(figure, a, legendgroup='alloc', stackgroup='alloc')
 
-    figure.update_layout(title=f"Flow per Infrastructure type in GWh/{group} for {bz} from {start_date} to {end_date}",
+    figure.update_layout(title=f"Flow per Infrastructure type in GWh/{group} for {desc} from {start_date} to {end_date}",
                          # xaxis_title=group,
-                         yaxis_title=f'Energy added to {bz} in GWh/{group}',
+                         yaxis_title=f'Energy added to {desc} in GWh/{group}',
                          hovermode="x unified",
-                         legend=dict(font=dict(size=10), orientation="v"),)
+                         showlegend=True,
+                         legend=dict(font=dict(size=10), orientation="v"),
+                         height=700,
+                         legend_title_text='System kind')
     figure.update_yaxes(ticksuffix=" GWh")
 
     return figure
