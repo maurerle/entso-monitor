@@ -48,6 +48,8 @@ class EntsogCrawler:
                     response = requests.get(
                         api_endpoint+name+'.json'+params_str)
                     data = pd.DataFrame(response.json()[name])
+                    # replace empty string with None
+                    data.replace([''], [None], inplace=True)
                 else:
                     data = pd.read_csv(api_endpoint+name+'.csv' +
                                        params_str, index_col=False)
@@ -63,14 +65,14 @@ class EntsogCrawler:
             raise Exception('could not get any data for params:', params_str)
         return data
 
-    def yieldData(self, name, indicator='Physical%20Flow', bulks=365*3, begin=date(2017, 7, 10)):
+    def yieldData(self, name, indicator='Physical Flow', bulks=365*3, begin=date(2017, 7, 10)):
         delta = timedelta(days=1)
         end = begin+delta
 
         for i in range(int(bulks)):
             beg1 = begin+i*delta
             end1 = end + i*delta
-            params = ['limit=-1', 'indicator='+indicator, 'from=' +
+            params = ['limit=-1', 'indicator='+urllib.parse.quote(indicator), 'from=' +
                       str(beg1), 'to='+str(end1), 'periodType=hour']
             time.sleep(5)
             # impact is quite small in comparison to 50s query length
@@ -138,12 +140,15 @@ if __name__ == "__main__":
     if not os.path.exists(sparkfolder):
         os.makedirs(sparkfolder)
 
-    if False:
+    if True:
         for name in pbar:
             try:
                 pbar.set_description(name)
                 t = time.time()
                 # use Json as connectionpoints have weird csv
+                # TODO Json somehow has different data
+                # connectionpoints count differ
+                # and tpTSO column are named tSO in connpointdirections
                 data = craw.getDataFrame(name, useJson=True)
                 data.to_parquet(f'{sparkfolder}/{name}.parquet')
                 with closing(sql.connect(database)) as conn:
@@ -169,61 +174,59 @@ if __name__ == "__main__":
             print('finished', span[0], span[1], time.time()-tt)
             tt = time.time()
 
-    if True:
+    if False:
         name = 'operationaldata'
         print('getting values from', name)
         tt = time.time()
         bulks = 365*3+4*30
         begin = date(2017, 7, 1)
+        # bulks = 8*30
+        # begin = date(2020, 2, 11)
 
-        bulks = 8*30
-        begin = date(2020, 2, 11)
-
-        indicators = ['Physical%20Flow', 'Allocation']
+        indicators = ['Physical Flow', 'Allocation', 'Firm Technical']
         indicator = 'Allocation'
 
-        pbar = tqdm(craw.yieldData(name, indicator, bulks, begin))
-        for span, phys in pbar:
+        for indicator in indicators:
+            pbar = tqdm(craw.yieldData(name, indicator, bulks, begin))
+            for span, phys in pbar:
 
-            pbar.set_description(f'op {span[0]} to {span[1]}')
-            with closing(sql.connect(database)) as conn:
-                phys.to_sql(indicator, conn, if_exists='append')
+                pbar.set_description(f'op {span[0]} to {span[1]}')
+                with closing(sql.connect(database)) as conn:
+                    phys.to_sql(indicator, conn, if_exists='append')
 
-            phys.to_parquet(f'{sparkfolder}/temp{indicator}.parquet')
-            spark_data = spark.read.parquet(
-                f'{sparkfolder}/temp{indicator}.parquet')
-            spark_data = (spark_data
-                          .withColumn('year', year('periodFrom'))
-                          .withColumn('month', month('periodFrom'))
-                          # .withColumn("day", dayofmonth("periodFrom"))
-                          .withColumn("time", to_timestamp("periodFrom"))
-                          # .withColumn("hour", hour("periodFrom"))
-                          )
-            spark_data.write.mode('append').parquet(
-                f'{sparkfolder}/{indicator}')
-            # print('finished',span[0],span[1],time.time()-tt)
-            tt = time.time()
+                phys.to_parquet(f'{sparkfolder}/temp{indicator}.parquet')
+                spark_data = spark.read.parquet(
+                    f'{sparkfolder}/temp{indicator}.parquet')
+                spark_data = (spark_data
+                              .withColumn('year', year('periodFrom'))
+                              .withColumn('month', month('periodFrom'))
+                              # .withColumn("day", dayofmonth("periodFrom"))
+                              .withColumn("time", to_timestamp("periodFrom"))
+                              # .withColumn("hour", hour("periodFrom"))
+                              )
+                spark_data.write.mode('append').parquet(
+                    f'{sparkfolder}/{indicator}')
 
-        database = 'data/entsog.db'
+        database = 'entsog.db'
 
         # sqlite will only use one index. EXPLAIN QUERY PLAIN shows if index is used
         # ref: https://www.sqlite.org/optoverview.html#or_optimizations
         # reference https://stackoverflow.com/questions/31031561/sqlite-query-to-get-the-closest-datetime
         with closing(sql.connect(database)) as conn:
             query = (
-                'CREATE INDEX IF NOT EXISTS "idx_opdata" ON "operationaldata" ("operatorKey","periodFrom");')
+                'CREATE INDEX IF NOT EXISTS "idx_opdata" ON "Allocation" ("operatorKey","periodFrom");')
             conn.execute(query)
 
             query = (
-                'CREATE INDEX IF NOT EXISTS "idx_pointKey" ON "operationaldata" ("pointKey","periodFrom");')
+                'CREATE INDEX IF NOT EXISTS "idx_pointKey" ON "Allocation" ("pointKey","periodFrom");')
             conn.execute(query)
 
             query = (
-                'CREATE INDEX IF NOT EXISTS "idx_alloc_operator" ON "allocation" ("operatorKey","periodFrom");')
+                'CREATE INDEX IF NOT EXISTS "idx_phys_operator" ON "Physical Flow" ("operatorKey","periodFrom");')
             conn.execute(query)
 
             query = (
-                'CREATE INDEX IF NOT EXISTS "idx_alloc_point" ON "operationaldata" ("pointKey","periodFrom");')
+                'CREATE INDEX IF NOT EXISTS "idx_phys_point" ON "Physical Flow" ("pointKey","periodFrom");')
             conn.execute(query)
         with closing(sql.connect(database)) as conn:
             query = (

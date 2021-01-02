@@ -21,6 +21,14 @@ ftime = {'day': '%Y-%m-%d',
          'minute': '%Y-%m-%d %H:%M:00'}
 
 
+checkPipeInPipe="pipeInPipeWithTsoKey is NULL"
+checkDoubleReporting="isDoubleReporting is not 1"
+def timeFilter(filt):
+    return f'"{filt.begin.strftime("%Y-%m-%d")}" < periodFrom and periodFrom < "{filt.end.strftime("%Y-%m-%d")}"'
+
+physFlowTableName='"Physical Flow"'
+
+
 class EntsogSQLite(EntsogDataManager):
     def __init__(self, database: str):
         self.database = database
@@ -77,7 +85,8 @@ class EntsogSQLite(EntsogDataManager):
         return operators
 
     def operatorpointdirections(self):
-        selectString = 'pointKey, pointLabel, operatorLabel, directionKey, tpTsoItemLabel, tpTsoBalancingZone, tpTsoCountry, '
+        selectString = 'pointKey, pointLabel, operatorLabel, directionKey, '
+        selectString += 'tpTsoItemLabel, tSOBalancingZone, tSOCountry, pipeInPipeWithTsoKey, isDoubleReporting,'
         selectString += 'adjacentCountry, connectedOperators, adjacentOperatorKey, adjacentZones'
 
         with closing(sql.connect(self.database)) as conn:
@@ -85,17 +94,14 @@ class EntsogSQLite(EntsogDataManager):
                 f'select {selectString} from operatorpointdirections', conn)
         return opd
 
-    def operationaldata(self, operatorKeys: List[str], filt: Filter, group_by: List[str] = ['directionKey'], table='operationaldata'):
-        whereString = '"{}" < periodFrom and periodFrom < "{}"'.format(
-            filt.begin.strftime("%Y-%m-%d"), filt.end.strftime("%Y-%m-%d"))
+    def operationaldata(self, operatorKeys: List[str], filt: Filter, group_by: List[str] = ['directionKey'], table=physFlowTableName):
+        whereString = timeFilter(filt)
         inString = '("'+'","'.join(operatorKeys)+'")'
-        whereString += f'and t.operatorKey in {inString}'
-
-        if table == 'operationaldata':
-            joinString = ' left join (select distinct pointKey, isDoubleReporting, operatorKey, pipeInPipeWithTsoKey from operatorpointdirections) opd on t.pointKey = opd.pointKey and t.operatorKey = opd.operatorKey'
-            whereString += ' and pipeInPipeWithTsoKey is null and isDoubleReporting is null'
-        else:
-            joinString = ''
+        whereString += f'and t.operatorKey in {inString} and {checkDoubleReporting}'
+        joinString = ' left join (select distinct pointKey, isDoubleReporting, operatorKey, pipeInPipeWithTsoKey from operatorpointdirections) opd on t.pointKey = opd.pointKey and t.operatorKey = opd.operatorKey'
+        
+        if table == physFlowTableName:
+            whereString += f' and {checkPipeInPipe}'
 
         selectString = f'strftime("{ftime[filt.groupby]}", "periodFrom") as time, '
         selectString += 't.operatorKey, t.operatorLabel, t.directionKey, sum(value) as value'
@@ -107,51 +113,50 @@ class EntsogSQLite(EntsogDataManager):
             flow = pd.read_sql_query(query, conn, index_col='time')
         return flow
 
-    def operationaldataByPoints(self, points: List[str], filt: Filter, group_by: List[str] = ['directionKey'], table='operationaldata'):
-        whereString = '"{}" < periodFrom and periodFrom < "{}"'.format(
-            filt.begin.strftime("%Y-%m-%d"), filt.end.strftime("%Y-%m-%d"))
+    def operationaldataByPoints(self, points: List[str], filt: Filter, group_by: List[str] = ['directionKey'], table=physFlowTableName):
+        whereString = timeFilter(filt)
         inString = '("'+'","'.join(points)+'")'
         whereString += f'and pointKey in {inString}'
         selectString = f'strftime("{ftime[filt.groupby]}", "periodFrom") as time, '
-        selectString += 'pointKey, pointLabel, operatorKey, operatorLabel, directionKey, sum(value) as value, indicator'
+        selectString += 'pointKey, pointLabel, operatorKey, operatorLabel, '
+        selectString += 'directionKey, sum(value) as value, indicator, pipeInPipeWithTsoKey'
+        joinString = ' left join (select distinct pointKey as pk, isDoubleReporting, operatorKey as ok, pipeInPipeWithTsoKey from operatorpointdirections) opd on t.pointKey = opd.pk and t.operatorKey = opd.ok'
 
         group_by = ', '.join(group_by)
         groupString = f'strftime("{ftime[filt.groupby]}", "time"), {group_by}'
 
         with closing(sql.connect(self.database)) as conn:
-            query = f'select {selectString} from {table} where {whereString} group by {groupString}'
+            query = f'select {selectString} from {table} t {joinString} where {whereString} group by {groupString}'
             flow = pd.read_sql_query(query, conn, index_col='time')
         return flow
 
-    def _operatorByBZ(self, bz: str):
+    def operatorsByBZ(self, bz: str):
         with closing(sql.connect(self.database)) as conn:
             query = f'select distinct fromOperatorKey from Interconnections where "{bz}"=fromBzLabel'
             operatorKeys = pd.read_sql_query(query, conn).dropna()[
                 'fromOperatorKey'].unique()
         return operatorKeys
 
-    def bilanz(self, bz: str, filt: Filter, table='operationaldata'):
-        operatorKeys = self._operatorByBZ(bz)
+    def bilanz(self, operatorKeys: List[str], filt: Filter, table=physFlowTableName):
         inString = '("'+'","'.join(operatorKeys)+'")'
 
-        whereString = '"{}" < periodFrom and periodFrom < "{}"'.format(
-            filt.begin.strftime("%Y-%m-%d"), filt.end.strftime("%Y-%m-%d"))
-        whereString += f' and o.operatorKey in {inString}'
+        whereString = timeFilter(filt)
+        whereString += f' and o.operatorKey in {inString} and {checkDoubleReporting}'
 
         selectString = f'strftime("{ftime[filt.groupby]}", "periodFrom") as time, '
-        selectString += 'c.infrastructureKey, directionKey, sum(value) as value'
-        groupString = f'strftime("{ftime[filt.groupby]}", "time"), directionKey, c.infrastructureKey'
-
-        if table == 'operationaldata':
-            joinString = ' left join (select distinct pointKey, isDoubleReporting, operatorKey, pipeInPipeWithTsoKey from operatorpointdirections) opd on o.pointKey = opd.pointKey and o.operatorKey = opd.operatorKey'
-            whereString += ' and pipeInPipeWithTsoKey is null and isDoubleReporting is null'
-        else:
-            joinString = ''
+        # TODO if connectionpoints would not have missing data, remove this hack
+        # this is using that the pointKeys first 3 chars are generelly indicating
+        # the infrastructureKey
+        selectString += 'coalesce(c.infrastructureKey, substr(o.pointKey,0,4)) as infra, directionKey, sum(value) as value'
+        groupString = f'strftime("{ftime[filt.groupby]}", "time"), directionKey, infra'
+        joinString = ' left join (select distinct pointKey, isDoubleReporting, operatorKey, pipeInPipeWithTsoKey from operatorpointdirections) opd on o.pointKey = opd.pointKey and o.operatorKey = opd.operatorKey'
+        if table == physFlowTableName:
+            whereString += f' and {checkPipeInPipe}'
 
         with closing(sql.connect(self.database)) as conn:
-            query = f'select {selectString} from operationaldata o {joinString} left join connectionpoints c on o.pointKey=c.pointKey where {whereString} group by {groupString}'
-            bil = pd.read_sql_query(query, conn, index_col='time')
-        bilanz = bil.pivot(columns=['infrastructureKey', 'directionKey'])
+            query = f'select {selectString} from {table} o {joinString} left join connectionpoints c on o.pointKey=c.pointKey where {whereString} group by {groupString}'
+            bil = pd.read_sql_query(query, conn, index_col='time')            
+        bilanz = bil.pivot(columns=['infra', 'directionKey'])
         bilanz.columns = bilanz.columns.droplevel(None)
         return self._diffHelper(bilanz)
 
@@ -161,6 +166,7 @@ class EntsogSQLite(EntsogDataManager):
         '''
         l = []
         p = pd.DataFrame()
+        df.fillna(0,inplace=True)
         for col in df.columns:
             if col[0] not in l:
                 for col2 in df.columns:
@@ -179,31 +185,34 @@ class EntsogSQLite(EntsogDataManager):
                         p[str(col[0])] = -df[col]
         return p
 
-    def crossborder(self, bz: str, filt: Filter, group_by: List[str] = ['t.directionKey', 'opd.adjacentZones', 'opd.adjacentCountry'], table='operationaldata'):
-        whereString = '"{}" < periodFrom and periodFrom < "{}"'.format(
-            filt.begin.strftime("%Y-%m-%d"), filt.end.strftime("%Y-%m-%d"))
-
-        operatorKeys = self._operatorByBZ(bz)
+    def crossborder(self, operatorKeys: List[str], filt: Filter, group_by: List[str] = ['t.directionKey', 'opd.adjacentZones', 'opd.adjacentCountry'], table=physFlowTableName):
+        whereString = timeFilter(filt)
         inString = '("'+'","'.join(operatorKeys)+'")'
-        whereString += f'and t.operatorKey in {inString}'
+        whereString += f'and t.operatorKey in {inString} and {checkDoubleReporting}'
 
-        if table == 'operationaldata':
-            joinString = ' left join (select distinct pointKey, isDoubleReporting, operatorKey, pipeInPipeWithTsoKey, adjacentZones, adjacentCountry from operatorpointdirections) opd on t.pointKey = opd.pointKey and t.operatorKey = opd.operatorKey'
-            whereString += ' and pipeInPipeWithTsoKey is null and isDoubleReporting is null'
-        else:
-            joinString = ' left join (select distinct pointKey, isDoubleReporting, operatorKey, pipeInPipeWithTsoKey, adjacentZones, adjacentCountry from operatorpointdirections) opd on t.pointKey = opd.pointKey and t.operatorKey = opd.operatorKey'
+        joinString = ' left join (select distinct pointKey, isDoubleReporting, operatorKey, pipeInPipeWithTsoKey, adjacentZones, adjacentCountry from operatorpointdirections) opd on t.pointKey = opd.pointKey and t.operatorKey = opd.operatorKey'
+        if table == physFlowTableName:
+            whereString += f' and {checkPipeInPipe}'
 
         selectString = f'strftime("{ftime[filt.groupby]}", "periodFrom") as time, '
-        selectString += 't.directionKey, adjacentCountry, adjacentZones, sum(value) as value'
+        selectString += 't.directionKey, adjacentCountry, coalesce(adjacentZones, substr(t.pointKey,0,4)) as adjacentZones, sum(value) as value'
         group_by = ', '.join(list(map(lambda x: ''+x, group_by)))
         groupString = f'strftime("{ftime[filt.groupby]}", "time"), {group_by}'
 
         with closing(sql.connect(self.database)) as conn:
             query = f'select {selectString} from {table} t {joinString} where {whereString} group by {groupString}'
             flow = pd.read_sql_query(query, conn, index_col='time')
+            print(query)
+            print()
 
+        def nameFunc(d):
+            country = d['adjacentCountry'] if d['adjacentCountry'] else '-'
+            zone = d['adjacentZones'] if d['adjacentZones'] else '-'
+            return str(country)+':'+str(zone)
+        #flow['name'] = flow.apply(nameFunc,axis=1)
         flow['name'] = flow['adjacentCountry'].apply(lambda x: str(
             x) if x else '-')+':'+flow['adjacentZones'].apply(lambda x: str(x) if x else '-')
+        
         del flow['adjacentCountry']
         del flow['adjacentZones']
 
@@ -229,6 +238,7 @@ if __name__ == "__main__":
     phy = entsog.operationaldata(operatorKeys, filt, group_by=[
                                  'operatorKey', 'directionKey'])
     piv = phy.pivot(columns=['operatorKey', 'directionKey'], values='value')
+    piv.plot()
 
     point = entsog.operationaldataByPoints(
         ['ITP-00043', 'ITP-00111'], Filter(start, end, group), ['pointKey', 'directionKey'])
@@ -236,13 +246,18 @@ if __name__ == "__main__":
         point['directionKey']+' '+point['indicator']
     point['value'] = point['value']/1e6
     piv2 = point.pivot(columns=['point'], values='value')
+    piv2.plot()
 
     end = datetime(2018, 7, 2)
     filt = Filter(start, end, 'hour')
-    bil = entsog.bilanz('Austria', filt)
+    operatorKeys = entsog.operatorsByBZ('Italy')
+    
+    operatorKeys = entsog.operatorsByBZ('Portugal')
+    bil = entsog.bilanz(operatorKeys, filt)
     bil.plot(rot=45)
 
-    c = entsog.crossborder('Austria', filt)
+    operatorKeys = entsog.operatorsByBZ('GASPOOL')
+    c = entsog.crossborder(operatorKeys, filt)
     c.plot(rot=45)
 
     # 55 mrd Nm^3 sind 60 GWh
