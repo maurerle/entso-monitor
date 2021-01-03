@@ -12,6 +12,7 @@ from pyspark.sql import SparkSession
 from pyspark import SparkConf
 import pandas as pd
 from datetime import timedelta
+import time
 
 from entsoe import EntsoePandasClient
 from entsoe.mappings import PSRTYPE_MAPPINGS, NEIGHBOURS, Area
@@ -90,7 +91,17 @@ class EntsoeCrawler:
 
     def persist(self, country, proc, start, end):
         try:
-            data = self.pullData(proc, country, start, end)
+            try:
+                data = self.pullData(proc, country, start, end)
+            except NoMatchingDataError as e:
+                raise e
+            except Exception as e:
+                print('retrying:', type(e), start, end)
+                time.sleep(10)
+                data = self.pullData(proc, country, start, end)
+                
+                
+            
             # replace spaces and invalid chars in column names
             data.columns = list(map(replaceStr, map(str, data.columns)))
             data.fillna(0, inplace=True)
@@ -127,7 +138,7 @@ class EntsoeCrawler:
         except NoMatchingDataError:
             print('no data found for ', proc.__name__, start, end)
         except Exception as e:
-            print('Error:', e)
+            print('Error:', e, start, end)
 
     def bulkDownload(self, countries, procs, start, delta, times):
         end = start+delta
@@ -143,6 +154,7 @@ class EntsoeCrawler:
 
                     pbar.set_description(
                         f"{country} {start1:%Y-%m-%d} to {end1:%Y-%m-%d}")
+                    
                     self.persist(country, proc, start1, end1)
 
     def pullCrossborders(self, start, delta, times, proc, allZones=True):
@@ -212,7 +224,8 @@ class EntsoeCrawler:
             ppp = client.query_generation_per_plant(
                 country, start=start, end=end)
             # convert multiindex into second column
-            pp = ppp.melt(var_name=['name','type'], value_name='value', ignore_index=False)
+            pp = ppp.melt(var_name=['name', 'type'],
+                          value_name='value', ignore_index=False)
             return pp
 
         procs = [query_per_plant]
@@ -229,10 +242,10 @@ if __name__ == "__main__":
     client = EntsoePandasClient(api_key='ae2ed060-c25c-4eea-8ae4-007712f95375')
 
     start = pd.Timestamp('20150101', tz='Europe/Berlin')
-    delta = timedelta(days=90)
+    delta = timedelta(days=30)
     end = start+delta
 
-    times = 6*4  # bis 2020
+    times = 6*12  # bis 2021
 
     entsoe_path = 'hdfs://149.201.206.53:9000/user/fmaurer/entsoe'
     db = 'data/entsoe.db'
@@ -259,11 +272,13 @@ if __name__ == "__main__":
     # Crossborder Data
     # s tart = pd.Timestamp('20181211', tz='Europe/Berlin')
     # 2018-12-11 00:00:00+01:00 fehlt 1 mal, database locked
+        
     # crawler.pullCrossborders(start,delta,1,client.query_crossborder_flows)
 
     # per plant generation
     plant_countries = []
     st = pd.Timestamp('20180101', tz='Europe/Berlin')
+    
     for country in countries:
         try:
             test_data = client.query_generation_per_plant(
@@ -282,9 +297,10 @@ if __name__ == "__main__":
 
     db = 'data/entsoe-plant.db'
     crawler = EntsoeCrawler(folder='data/spark', spark=None, database=db)
-
+    
+    # 2017-12-16 bis 2018-03-15 runterladen
     crawler.bulkDownloadPlantData(
-        plant_countries[12:], client, start, delta, times)
+        plant_countries[:], client, start, delta, times)
 
     # create indices if not existing
     with closing(sql.connect(db)) as conn:

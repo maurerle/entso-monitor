@@ -238,7 +238,7 @@ layout = html.Div(
             ],
             id="graphTabContainer",
             className="pretty_container",
-        ),        
+        ),
         html.Div(
             [html.P("Power plants:", className="control_label"),
              dash_table.DataTable(

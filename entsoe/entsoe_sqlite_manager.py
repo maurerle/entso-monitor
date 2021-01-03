@@ -28,11 +28,11 @@ class EntsoeSQLite(EntsoeDataManager):
 
     def capacity(self, country: str):
         with closing(sql.connect(self.database)) as conn:
-            cap = pd.read_sql_query(
-                f'select distinct * from query_installed_generation_capacity where country="{country}"', conn, index_col='index')
+            query = f'select distinct * from query_installed_generation_capacity where country="{country}"'
+            cap = pd.read_sql_query(query, conn, index_col='index')
         cap.columns = cap.columns.map(revReplaceStr)
         return cap
-    
+
     def capacityPerPlant(self, country=''):
         selectString = 'Name,country,"Installed_Capacity_[MW]" as capacity,Production_Type'
         if country == '':
@@ -40,9 +40,9 @@ class EntsoeSQLite(EntsoeDataManager):
         else:
             whereString = f'where country="{country}"'
         with closing(sql.connect(self.database)) as conn:
-            df = pd.read_sql(
-                f'select {selectString} from query_installed_generation_capacity_per_unit {whereString}', conn)
-        return df    
+            query = f'select {selectString} from query_installed_generation_capacity_per_unit {whereString}'
+            df = pd.read_sql(query, conn)
+        return df
 
     def load(self, country: str, filt: Filter):
         # average is correct here as some countries have quarter hour data and others
@@ -206,5 +206,5 @@ if __name__ == "__main__":
 
     # oft falsch, nuklear richtig
     aa = par.capacityPerPlant('FR')
-    aa['capacity']=aa['capacity'].astype(float)
+    aa['capacity'] = aa['capacity'].astype(float)
     aaa = aa.groupby('Production_Type').sum()['capacity']
