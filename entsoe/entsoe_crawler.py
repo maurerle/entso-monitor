@@ -226,6 +226,8 @@ class EntsoeCrawler:
             # convert multiindex into second column
             pp = ppp.melt(var_name=['name', 'type'],
                           value_name='value', ignore_index=False)
+            # modify encoding to utf-8, upstream fix contributed
+            pp['name'] = pp['name'].str.encode('latin-1').str.decode('utf-8')
             return pp
 
         procs = [query_per_plant]
@@ -263,8 +265,18 @@ if __name__ == "__main__":
     # crawler.bulkDownload(countries,procs,start,delta,times)
 
     # Capacities
+    
+    # respect utf-8 encoded data
+    def downloadCapPerUnit(country, start, end):
+           pp = client.query_installed_generation_capacity_per_unit(
+               country, start=start, end=end)
+           # modify encoding to utf-8, upstream fix contributed
+           pp['Name'] = pp['Name'].str.encode('latin-1').str.decode('utf-8')
+           return pp
+       
     procs = [client.query_installed_generation_capacity,
              client.query_installed_generation_capacity_per_unit]
+
     # crawler.bulkDownload(countries,procs,start,delta=timedelta(days=365*6),times=1)
     # crawler.pullPowerSystemData()
     # crawler.bulkDownload(countries,[client.query_installed_generation_capacity_per_unit],start,delta=timedelta(days=360*6),times=1)
