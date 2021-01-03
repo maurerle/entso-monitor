@@ -32,6 +32,17 @@ class EntsoeSQLite(EntsoeDataManager):
                 f'select distinct * from query_installed_generation_capacity where country="{country}"', conn, index_col='index')
         cap.columns = cap.columns.map(revReplaceStr)
         return cap
+    
+    def capacityPerPlant(self, country=''):
+        selectString = 'Name,country,"Installed_Capacity_[MW]" as capacity,Production_Type'
+        if country == '':
+            whereString = ''
+        else:
+            whereString = f'where country="{country}"'
+        with closing(sql.connect(self.database)) as conn:
+            df = pd.read_sql(
+                f'select {selectString} from query_installed_generation_capacity_per_unit {whereString}', conn)
+        return df    
 
     def load(self, country: str, filt: Filter):
         # average is correct here as some countries have quarter hour data and others
@@ -133,8 +144,8 @@ class EntsoeSQLite(EntsoeDataManager):
 
 
 class EntsoePlantSQLite(EntsoeDataManager):
-    def __init__(self, database: str):
-        self.database = database
+    def __init__(self, plantdatabase: str):
+        self.plantdatabase = plantdatabase
 
     def plantGen(self, names: List[str], filt: Filter):
         # average is correct here as some countries have quarter hour data and others
@@ -142,14 +153,14 @@ class EntsoePlantSQLite(EntsoeDataManager):
         whereString = f'name in {inString} and "{filt.begin.strftime("%Y-%m-%d")}" < "index" and "index" < "{filt.end.strftime("%Y-%m-%d")}"'
         selectString = f'strftime("{ftime[filt.groupby]}", "index") as time, avg("value") as value, country, type, name'
         groupString = f'strftime("{ftime[filt.groupby]}", "time"), name, type'
-        with closing(sql.connect(self.database)) as conn:
+        with closing(sql.connect(self.plantdatabase)) as conn:
             query = f"select {selectString} from query_per_plant where {whereString} group by {groupString}"
             print(query)
             generation = pd.read_sql_query(query, conn, index_col='time')
         return generation
 
     def getNames(self):
-        with closing(sql.connect(self.database)) as conn:
+        with closing(sql.connect(self.plantdatabase)) as conn:
             # TODO add type
             query = f"select name,country from plant_names"
             names = pd.read_sql_query(query, conn)
@@ -187,8 +198,13 @@ if __name__ == "__main__":
     #     columns = pd.read_sql_query(f'select * from DE_query_generation where 1=0',conn).columns
     #         query = "select * from DE_query_generation"
     #         gen = pd.read_sql_query(query,conn)
-    filt = Filter(datetime(2018, 2, 1), datetime(2018, 2, 2), 'hour')
+    filt = Filter(datetime(2018, 2, 1), datetime(2019, 2, 2), 'hour')
     ep = EntsoePlantSQLite('data/entsoe-plant.db')
     names = ep.getNames()
     nossener = ep.plantGen(['GTHKW Nossener Bruecke'], filt)
     doel2 = ep.plantGen(['DOEL 2'], filt)
+
+    # oft falsch, nuklear richtig
+    aa = par.capacityPerPlant('FR')
+    aa['capacity']=aa['capacity'].astype(float)
+    aaa = aa.groupby('Production_Type').sum()['capacity']

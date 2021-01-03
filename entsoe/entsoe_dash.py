@@ -52,8 +52,11 @@ else:
     pdm = EntsoePlantSQLite('data/entsoe-plant.db')
 
 powersys = dm.powersystems('')
+powersys['capacityName'] = powersys['capacity'].apply(lambda x: str(x)+' MW')
+
 climate = dm.climateImpact()
-climate.columns
+climateList = list(climate.columns)
+climateList.append('Keine')
 appname = 'Entsoe Monitor'
 
 color_map = {
@@ -125,14 +128,7 @@ layout = html.Div(
             className="row flex-display",
             style={"margin-bottom": "25px"},
         ),
-        html.Div(
-            [html.P(
-                "Country map including location of conventional energy sources",
-                className="control_label",
-            ), dcc.Graph(id='choro-graph', config={"displaylogo": False})],
-            id="locationMapContainer",
-            className="pretty_container",
-        ),
+
         html.Div(
             [
                 html.Div(
@@ -143,8 +139,19 @@ layout = html.Div(
                         ),
                         dcc.Dropdown(id='climate_picker',
                                      options=[{'label': x, 'value': x}
-                                              for x in list(climate.columns)],
-                                     value='CO2 mit VK'),
+                                              for x in climateList],
+                                     value='Keine',
+                                     clearable=False,),
+                        html.P("Map Data:", className="control_label"),
+                        dcc.Dropdown(id="map_control",
+                                     options=[{'label': 'Countries', 'value': 'countries'},
+                                              {'label': 'Plants',
+                                                  'value': 'plants'},
+                                              {'label': 'Both', 'value': 'plants,countries'}],
+                                     value='countries',
+                                     className="dcc_control",
+                                     clearable=False,
+                                     ),
                         html.P(
                             "Select Time Filter:",
                             className="control_label",
@@ -167,7 +174,9 @@ layout = html.Div(
                                               for x in dm.countries()],
                                      value='FR',
                                      className="dcc_control",
+                                     clearable=False,
                                      ),
+
                         html.P("Group by:", className="control_label"),
                         dcc.RadioItems(
                             id="group_by_control",
@@ -182,33 +191,21 @@ layout = html.Div(
                             labelStyle={"display": "inline-block"},
                             className="dcc_control",
                         ),
-                        html.P("Energy generation type:",
-                               className="control_label"),
-                        dcc.Dropdown(
-                            id="energy_type_selector",
-                            options=[
-                                {"label": "Renewable ", "value": "renewable"},
-                                {"label": "Traditional", "value": "traditional"},
-                                {"label": "Nuclear", "value": "nuclear"},
-                            ],
-                            multi=True,
-                            value=['renewable'],
-                            className="dcc_control",
-                        ),
                     ],
-                    className="pretty_container four columns",
+                    className="pretty_container three columns",
                     id="cross-filter-options",
                 ),
                 html.Div(
                     [
-                        html.Div(
-                            [dcc.Graph(id="capacity_graph")],
-                            id="capacityGraphContainer",
-                            className="pretty_container",
+                        html.P(
+                            "Country map including location of conventional energy sources",
+                            className="control_label",
                         ),
+                        dcc.Graph(id='choro-graph',
+                                  config={"displaylogo": False}),
                     ],
-                    id="right-column",
-                    className="eight columns",
+                    id="locationMapContainer",
+                    className="pretty_container nine columns",
                 ),
             ],
             className="row flex-display",
@@ -216,32 +213,32 @@ layout = html.Div(
         # empty Div to trigger javascript file for graph resizing
         html.Div(id="output-clientside"),
         html.Div(
-            dcc.Tabs([
+            [dcc.Tabs([
                 dcc.Tab(label='Energy Generation', children=[dcc.Graph(
                     id="generation_graph", config={"displaylogo": False})]),
                 dcc.Tab(label='Energy Load', children=[dcc.Graph(
                     id="load_graph", config={"displaylogo": False})]),
                 dcc.Tab(label='Crossborder Flows', children=[dcc.Graph(
                     id="neighbour_graph", config={"displaylogo": False})]),
+                dcc.Tab(label='Generation Capacity', children=[dcc.Graph(
+                    id="capacity_graph", config={"displaylogo": False})]),
+                dcc.Tab(label='Generation per Plant', children=[
+                    dcc.Dropdown(id="plant_control",
+
+                                 options=[{'label': x.encode('latin-1').decode('utf-8'), 'value': x}
+                                          for x in pdm.getNames()['name']],
+                                 value=[
+                                     'DOEL 2'],
+                                 multi=True,
+                                 className="dcc_control",),
+                    dcc.Graph(id="per_plant", config={"displaylogo": False})
+                ]),
             ]),
+                html.P("Units are average values over the selected time period"),
+            ],
             id="graphTabContainer",
             className="pretty_container",
-        ),
-        html.Div(
-            [html.P("Units are average values over the selected time period")],
-            className="pretty_container",
-        ),
-        html.Div(
-            [html.P("Show Generation per energy plant"),
-             dcc.Dropdown(id="plant_control",
-                          options=[{'label': x, 'value': x}
-                                   for x in pdm.getNames()['name']],
-                          value=['DOEL 2'],
-                          multi=True,
-                          className="dcc_control",),
-             dcc.Graph(id="per_plant", config={"displaylogo": False})],
-            className="pretty_container",
-        ),
+        ),        
         html.Div(
             [html.P("Power plants:", className="control_label"),
              dash_table.DataTable(
@@ -313,8 +310,10 @@ def make_load_figure(plants, start_date, end_date, group):
     if g.empty:
         return {'data': [], 'layout': dict(title="No Data Found for current interval")}
     g['value'] /= 1e3
+    plantNames = list(map(lambda x: x.encode(
+        'latin-1').decode('utf-8'), plants))
     figure = px.line(g, x=g.index, y="value", color='name')
-    figure.update_layout(title=f"Generation for {plants} from {start_date} to {end_date}",
+    figure.update_layout(title=f"Generation for {', '.join(plantNames)} from {start_date} to {end_date}",
                          xaxis_title=group,
                          yaxis_title='Generation in GW for each interval',
                          autosize=True,
@@ -329,55 +328,58 @@ def make_load_figure(plants, start_date, end_date, group):
 
 @app.callback(
     Output('choro-graph', 'figure'),
-    [Input("climate_picker", "value")])
-def update_figure(climate_sel):
+    [Input("climate_picker", "value"),
+     Input("map_control", "value"), ])
+def update_figure(climate_sel, mapSelection):
 
     countries = dm.countries()
-
-    if climate_sel == None:
-        values = list(map(lambda x: len(x), dm.countries()))
-    else:
-        values = []
-        for country in countries:
-            capacity = dm.capacity(country)
-            del capacity['country']
-            da = capacity*climate[climate_sel]
-
-            if da.empty:
-                values.append(0)
-            else:
-                gramSum = da.iloc[-1].sum()
-                values.append(gramSum/capacity.iloc[-1].sum())
-
-    choro = go.Choroplethmapbox(z=values,
-                                locations=countries,
-                                colorscale='algae',  # carto
-                                colorbar=dict(
-                                    thickness=25, ticklen=3, title='Austoß in g/kWh'),
-                                geojson=geo,
-                                featureidkey="properties.iso_a2",
-                                text=countries,
-                                # below=True,
-                                hovertemplate='<b>Country</b>: <b>%{text}</b>' +
-                                '<br><b>Austoß pro kWh </b>: %{z} g<br>',
-                                marker_line_width=0.1, marker_opacity=0.8,
-                                )
-
-    vals = powersys['Production_Type'].unique()
     data = []
-    data.append(choro)
-    for val in vals:
-        d = powersys[powersys['Production_Type'] == val]
-        scatt = go.Scattermapbox(lat=d['lat'], name=val,
-                                 lon=d['lon'],
-                                 mode='markers',
-                                 text=d["name"],
-                                 hovertext=d[['name', 'capacity', 'country']],
-                                 hoverinfo=['text'],
-                                 below='',
-                                 marker=dict(size=6, color=color_map[val])
-                                 )
-        data.append(scatt)
+    if 'countries' in mapSelection:
+
+        if not climate_sel in climate.columns:
+            values = list(map(lambda x: len(x), dm.countries()))
+        else:
+            values = []
+            for country in countries:
+                capacity = dm.capacity(country)
+                del capacity['country']
+                da = capacity*climate[climate_sel]
+
+                if da.empty:
+                    values.append(0)
+                else:
+                    gramSum = da.iloc[-1].sum()
+                    values.append(gramSum/capacity.iloc[-1].sum())
+        choro = go.Choroplethmapbox(z=values,
+                                    locations=countries,
+                                    colorscale='algae',  # carto
+                                    colorbar=dict(
+                                        thickness=25, ticklen=3, title='Austoß in g/kWh'),
+                                    geojson=geo,
+                                    featureidkey="properties.iso_a2",
+                                    text=countries,
+                                    # below=True,
+                                    hovertemplate='<b>Country</b>: <b>%{text}</b>' +
+                                    '<br><b>Austoß pro kWh </b>: %{z} g<br>',
+                                    marker_line_width=0.1, marker_opacity=0.8,
+                                    )
+        data.append(choro)
+
+    if 'plants' in mapSelection:
+        vals = powersys['Production_Type'].unique()
+        for val in vals:
+            d = powersys[powersys['Production_Type'] == val]
+            scatt = go.Scattermapbox(lat=d['lat'], name=val,
+                                     lon=d['lon'],
+                                     mode='markers',
+                                     text=d["name"],
+                                     hovertext=d[[
+                                         'name', 'capacityName', 'country']],
+                                     hoverinfo=['text'],
+                                     below='',
+                                     marker=dict(size=6, color=color_map[val])
+                                     )
+            data.append(scatt)
     layout = go.Layout(title_text='Europe mapbox choropleth', title_x=0.5,  # width=750, height=700,
                        showlegend=True,
                        mapbox=dict(center={"lat": 50, "lon": 10},
@@ -456,11 +458,10 @@ def make_load_figure(country_control, start_date, end_date, group):
         Input("date_picker", "start_date"),
         Input("date_picker", "end_date"),
         Input("group_by_control", "value"),
-        Input("energy_type_selector", "value"),
         Input("climate_picker", "value"),
     ],
 )
-def make_generation_figure(country_control, start_date, end_date, group, e_type, climate_sel):
+def make_generation_figure(country_control, start_date, end_date, group, climate_sel):
     start = datetime.strptime(start_date, '%Y-%m-%d').date()
     end = datetime.strptime(end_date, '%Y-%m-%d').date()
 
@@ -471,7 +472,7 @@ def make_generation_figure(country_control, start_date, end_date, group, e_type,
 
     unit = 'GW'
     generation /= 1e3
-    if climate_sel != None:
+    if climate_sel in climate.columns:
         generation = generation*climate[climate_sel]
         unit = 'tons'
         desc = climate_sel+' in '+unit
@@ -503,10 +504,9 @@ def make_generation_figure(country_control, start_date, end_date, group, e_type,
         Input("date_picker", "start_date"),
         Input("date_picker", "end_date"),
         Input("group_by_control", "value"),
-        Input("energy_type_selector", "value"),
     ],
 )
-def make_neighbour_figure(country_control, start_date, end_date, group_by_control, energy_type_selector):
+def make_neighbour_figure(country_control, start_date, end_date, group_by_control):
     start = datetime.strptime(start_date, '%Y-%m-%d').date()
     end = datetime.strptime(end_date, '%Y-%m-%d').date()
 
