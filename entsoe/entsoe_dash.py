@@ -158,7 +158,7 @@ layout = html.Div(
                             "Select Time Filter:",
                             className="control_label",
                         ),
-                        #dcc.Dropdown(options=[{'label':x, 'value': x} for x in range(2015, 2020)]),
+                        # dcc.Dropdown(options=[{'label':x, 'value': x} for x in range(2015, 2020)]),
                         dcc.DatePickerRange(
                             id='date_picker',
                             min_date_allowed=date(2015, 1, 1),
@@ -278,23 +278,33 @@ df['values'] = list(map(lambda x: len(x), dm.countries()))
 
 @app.callback(
     Output('country_control', 'value'),
+    Output('plant_control', 'value'),
     [Input('choro_graph', 'clickData'),
-     State('country_control', 'value')])
-def update_dropdown(clickData, prev):
+     Input('url', 'href')])
+def update_dropdown(clickData, href):
     # zur initialisierung
-    location = prev
-    if clickData is not None:
+    if clickData is None:
+        if href:
+            state = parse_state(href)
+            if all(element in state for element in ['country_control', 'plant_control']):
+                plants = state['plant_control'].strip(
+                    "][").replace("'", '').split(',')
+                return state['country_control'], plants
+    else:
         print(clickData['points'][0])
         if 'location' in clickData['points'][0]:
-            location = clickData['points'][0]['location']
+            country = clickData['points'][0]['location']
+            return country, dash.no_update
+
         elif 'text' in clickData['points'][0]:
-            print(clickData['points'][0]['text'])
-            # TODO click on energy plant
+            plant = clickData['points'][0]['text']
+            return dash.no_update, [plant]
 
-    return location
+    raise PreventUpdate
 
 
-component_ids = ['start_date', 'end_date', 'group_by_control','country_control','climate_picker','plant_control']
+component_ids = ['start_date', 'end_date', 'group_by_control',
+    'country_control', 'climate_picker', 'plant_control']
 
 
 def parse_state(url):
@@ -309,8 +319,6 @@ def parse_state(url):
     Output("date_picker", "end_date"),
     Output("group_by_control", "value"),
     Output("climate_picker", "value"),
-    Output("plant_control", "value"),
-    #Output("country_control", "value"),
    ],
     inputs=[Input('url', 'href')])
 def page_load(href):
@@ -319,10 +327,8 @@ def page_load(href):
     state = parse_state(href)
     print(href)
     # for element in elements
-    if all(element in state for element in component_ids):
-        plants = state['plant_control'].strip("][").replace("'",'').split(',')
-        print(plants[1].encode('latin-1'))
-        return state['start_date'], state['end_date'], state['group_by_control'], state['climate_picker'], plants #, state['country_control']
+    if all(element in state for element in ['start_date', 'end_date', 'group_by_control', 'climate_picker']):
+        return state['start_date'], state['end_date'], state['group_by_control'], state['climate_picker']
     else:
         raise PreventUpdate
 
@@ -337,7 +343,7 @@ def page_load(href):
     Input("plant_control", "value"),
 ])
 def update_url_state(*values):
-    state = urlencode(dict(zip(component_ids, values)))
+    state=urlencode(dict(zip(component_ids, values)))
     return f'?{state}'
 
 ############ Plant Graph ############
@@ -351,24 +357,26 @@ def update_url_state(*values):
         Input("date_picker", "end_date"),
         Input("group_by_control", "value"),
     ],
+
+
 )
 def make_load_figure(plants, start_date, end_date, group):
-    start = datetime.strptime(start_date, '%Y-%m-%d').date()
-    end = datetime.strptime(end_date, '%Y-%m-%d').date()
-    g = pdm.plantGen(plants, Filter(start, end, group))
+    start=datetime.strptime(start_date, '%Y-%m-%d').date()
+    end=datetime.strptime(end_date, '%Y-%m-%d').date()
+    g=pdm.plantGen(plants, Filter(start, end, group))
     if g.empty:
-        return {'data': [], 'layout': dict(title="No Data Found for current interval")}
+        return {'data': [], 'layout': dict(title = "No Data Found for current interval")}
     g['value'] /= 1e3
-    plantNames = list(map(lambda x: x.encode(
+    plantNames=list(map(lambda x: x.encode(
         'latin-1').decode('utf-8'), plants))
     figure = px.line(g, x=g.index, y="value", color='name')
     figure.update_layout(title=f"Generation for {', '.join(plantNames)} from {start_date} to {end_date}",
-                         #xaxis_title=group,
-                         yaxis_title='Generation in GW for each interval',
-                         autosize=True,
-                         hovermode="x unified",
-                         legend=dict(font=dict(size=10), orientation="h"),)
-    figure.update_yaxes(ticksuffix=" GW")
+                         # xaxis_title=group,
+                         yaxis_title = 'Generation in GW for each interval',
+                         autosize = True,
+                         hovermode = "x unified",
+                         legend = dict(font=dict(size=10), orientation="h"),)
+    figure.update_yaxes(ticksuffix = " GW")
     return figure
 
 
@@ -421,9 +429,9 @@ def update_figure(climate_sel, mapSelection):
             scatt = go.Scattermapbox(lat=d['lat'], name=val,
                                      lon=d['lon'],
                                      mode='markers',
-                                     text=d["name"],
+                                     text=d["entsoe_name"],
                                      hovertext=d[[
-                                         'name', 'capacityName', 'country']],
+                                         'entsoe_name', 'capacityName', 'country']],
                                      hoverinfo=['text'],
                                      below='',
                                      marker=dict(size=6, color=color_map[val])
@@ -571,7 +579,7 @@ def make_neighbour_figure(country_control, start_date, end_date, group_by_contro
                                  name=col))
 
     fig.update_layout(title=f"Netto Export for {country_control} from {start_date} to {end_date}",
-                      #xaxis_title=group,
+                      # xaxis_title=group,
                       yaxis_title='Exported to neighbour - imported in GWh',
                       hovermode="closest",
                       showlegend=True,

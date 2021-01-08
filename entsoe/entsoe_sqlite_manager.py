@@ -121,7 +121,7 @@ class EntsoeSQLite(EntsoeDataManager):
         # return crossborder.select(columns).groupby(['group']).sum().toPandas()
 
     def powersystems(self, country=''):
-        selectString = 'eic_code,p.name,company,p.country,q.country as area,lat,lon,capacity,Production_Type'
+        selectString = 'eic_code,p.name,q.name as entsoe_name, company,p.country,q.country as area,lat,lon,capacity,Production_Type'
         if country == '':
             whereString = ''
         else:
