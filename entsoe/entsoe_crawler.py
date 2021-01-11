@@ -32,12 +32,6 @@ for n1 in NEIGHBOURS:
         to_n.append(n2)
 neighbours = pd.DataFrame({'from': from_n, 'to': to_n})
 
-psrtype = pd.DataFrame.from_dict(PSRTYPE_MAPPINGS, orient='index')
-areas = pd.DataFrame([[e.name, e.value, e._tz, e._meaning] for e in Area])
-
-#areas = [e.name for e in Area]
-countries = list(filter(lambda x: len(x) <= 2, areas[0]))
-
 
 def replaceStr(string):
     '''
@@ -251,6 +245,12 @@ if __name__ == "__main__":
 
     entsoe_path = 'hdfs://149.201.206.53:9000/user/fmaurer/entsoe'
     db = 'data/entsoe.db'
+    
+    psrtype = pd.DataFrame.from_dict(PSRTYPE_MAPPINGS, orient='index', columns=['prod_type'])
+    areas = pd.DataFrame([[e.name, e.value, e.tz, e.meaning] for e in Area],columns=['name','value','tz','meaning'])
+    with closing(sql.connect(db)) as conn:
+        areas.to_sql('areas', conn, if_exists='replace')
+        psrtype.to_sql('psrtype', conn, if_exists='replace')
 
     crawler = EntsoeCrawler(folder='data/spark', spark=spark, database=db)
     procs = [client.query_day_ahead_prices,

@@ -84,40 +84,36 @@ layout = html.Div(
             [
                 html.Div(
                     [
+                        html.H1(
+                            appname,
+                            style={"margin-bottom": "0px"},
+                        ),
+                        html.H5(
+                            "Transmission Overview", style={"margin-top": "70px"},
+                        ),
+                    ],
+                    className="eleven columns",
+                    id="title",
+                ),
+                html.Div(
+                    [
                         html.Img(
                             src=app.get_asset_url("fh-aachen.png"),
                             id="plotly-image",
                             style={
-                                "height": "60px",
-                                "width": "auto",
-                                "marginBottom": "25px",
+                                "height": "200px",
+                                "width": "60px",
+                                "margin-bottom": "0px",
                                 "backgroundColor": 'white',
                             },
                         )
                     ],
-                    className="one-third column",
-                ),
-                html.Div(
-                    [
-                        html.Div(
-                            [
-                                html.H3(
-                                    appname,
-                                    style={"marginBottom": "0px"},
-                                ),
-                                html.H5(
-                                    "Transmission Overview", style={"marginTop": "0px"}
-                                ),
-                            ]
-                        )
-                    ],
-                    className="one-half column",
-                    id="title",
+                    className="one columns",
                 ),
             ],
             id="header",
-            className="row flex-display",
-            style={"marginBottom": "25px"},
+            className="row flex-display pretty_container",
+            style={"margin-bottom": "25px"},
         ),
         html.Div(
             [

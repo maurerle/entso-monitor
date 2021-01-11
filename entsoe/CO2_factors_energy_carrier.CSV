@@ -1,4 +1,4 @@
-Typ;CO2 ohne VK;CO2 mit VK;Summe SO2;Summe NOX;Summe Staub;Eigenverbrauch
+Typ;CO2 w/o upstream;CO2 with upstream;Sum of SO2;Sum of NOX;Sum of Dust;Ownconsumption
 Biomass;4.4;162.0;3.4;0.9;0.0;8.0
 Fossil Brown coal/Lignite;1031.0;1058.3;0.0;0.6;0.0;7.1
 Fossil Gas;507.5;556.8;0.4;0.5;0.7;2.9

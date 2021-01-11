@@ -58,7 +58,7 @@ powersys['capacityName'] = powersys['capacity'].apply(lambda x: str(x)+' MW')
 
 climate = dm.climateImpact()
 climateList = list(climate.columns)
-climateList.append('Keine')
+climateList.append('None')
 appname = 'Entsoe Monitor'
 
 color_map = {
@@ -95,39 +95,35 @@ layout = html.Div(
             [
                 html.Div(
                     [
+                        html.H1(
+                            appname,
+                            style={"margin-bottom": "0px"},
+                        ),
+                        html.H5(
+                            "Production Overview", style={"margin-top": "70px"},
+                        ),
+                    ],
+                    className="eleven columns",
+                    id="title",
+                ),
+                html.Div(
+                    [
                         html.Img(
                             src=app.get_asset_url("fh-aachen.png"),
                             id="plotly-image",
                             style={
-                                "height": "60px",
-                                "width": "auto",
-                                "margin-bottom": "25px",
+                                "height": "200px",
+                                "width": "60px",
+                                "margin-bottom": "0px",
                                 "backgroundColor": 'white',
                             },
                         )
                     ],
-                    className="one-third column pretty_container",
-                ),
-                html.Div(
-                    [
-                        html.Div(
-                            [
-                                html.H3(
-                                    appname,
-                                    style={"margin-bottom": "0px"},
-                                ),
-                                html.H5(
-                                    "Production Overview", style={"margin-top": "0px"}
-                                ),
-                            ]
-                        )
-                    ],
-                    className="one-half column",
-                    id="title",
+                    className="one columns",
                 ),
             ],
             id="header",
-            className="row flex-display",
+            className="row flex-display pretty_container",
             style={"margin-bottom": "25px"},
     ),
 
@@ -142,7 +138,7 @@ layout = html.Div(
                         dcc.Dropdown(id='climate_picker',
                                      options=[{'label': x, 'value': x}
                                               for x in climateList],
-                                     value='Keine',
+                                     value='None',
                                      clearable=False,),
                         html.P("Map Data:", className="control_label"),
                         dcc.Dropdown(id="map_control",
@@ -178,8 +174,10 @@ layout = html.Div(
                                      className="dcc_control",
                                      clearable=False,
                                      ),
-
-                        html.P("Group by:", className="control_label"),
+                        dcc.Link(
+                            'Meaning of Zone names', href='https://transparency.entsoe.eu/content/static_content/Static content/web api/Guide.html#_areas'),
+                        html.P("Aggregation Intervall:",
+                               className="control_label"),
                         dcc.RadioItems(
                             id="group_by_control",
                             options=[
@@ -222,8 +220,6 @@ layout = html.Div(
                     id="load_graph", config={"displaylogo": False})]),
                 dcc.Tab(label='Crossborder Flows', children=[dcc.Graph(
                     id="neighbour_graph", config={"displaylogo": False})]),
-                dcc.Tab(label='Generation Capacity', children=[dcc.Graph(
-                    id="capacity_graph", config={"displaylogo": False})]),
                 dcc.Tab(label='Generation per Plant', children=[
                     dcc.Dropdown(id="plant_control",
 
@@ -235,6 +231,8 @@ layout = html.Div(
                                  className="dcc_control",),
                     dcc.Graph(id="per_plant", config={"displaylogo": False})
                 ]),
+                dcc.Tab(label='Generation Capacity', children=[dcc.Graph(
+                    id="capacity_graph", config={"displaylogo": False})]),
             ]),
                 html.P("Units are average values over the selected time period"),
             ],
@@ -257,6 +255,14 @@ layout = html.Div(
             )],
             id="tableContainer",
             className="pretty_container",
+    ),
+        html.Div([
+        dcc.Link('Data comes from ENTSO-E Transparency Platform',
+                 href='https://transparency.entsoe.eu/'),
+        html.Br(),
+        dcc.Link('Legal Notice', href='https://datensch.eu/legal-notice/'),
+        ],
+        className="pretty_container",
     ),
     ])
 
@@ -304,7 +310,7 @@ def update_dropdown(clickData, href):
 
 
 component_ids = ['start_date', 'end_date', 'group_by_control',
-    'country_control', 'climate_picker', 'plant_control']
+                 'country_control', 'climate_picker', 'plant_control']
 
 
 def parse_state(url):
@@ -319,7 +325,7 @@ def parse_state(url):
     Output("date_picker", "end_date"),
     Output("group_by_control", "value"),
     Output("climate_picker", "value"),
-   ],
+],
     inputs=[Input('url', 'href')])
 def page_load(href):
     if not href:
@@ -343,7 +349,7 @@ def page_load(href):
     Input("plant_control", "value"),
 ])
 def update_url_state(*values):
-    state=urlencode(dict(zip(component_ids, values)))
+    state = urlencode(dict(zip(component_ids, values)))
     return f'?{state}'
 
 ############ Plant Graph ############
@@ -361,22 +367,22 @@ def update_url_state(*values):
 
 )
 def make_load_figure(plants, start_date, end_date, group):
-    start=datetime.strptime(start_date, '%Y-%m-%d').date()
-    end=datetime.strptime(end_date, '%Y-%m-%d').date()
-    g=pdm.plantGen(plants, Filter(start, end, group))
+    start = datetime.strptime(start_date, '%Y-%m-%d').date()
+    end = datetime.strptime(end_date, '%Y-%m-%d').date()
+    g = pdm.plantGen(plants, Filter(start, end, group))
     if g.empty:
-        return {'data': [], 'layout': dict(title = "No Data Found for current interval")}
+        return {'data': [], 'layout': dict(title="No Data Found for current interval")}
     g['value'] /= 1e3
-    plantNames=list(map(lambda x: x.encode(
+    plantNames = list(map(lambda x: x.encode(
         'latin-1').decode('utf-8'), plants))
     figure = px.line(g, x=g.index, y="value", color='name')
     figure.update_layout(title=f"Generation for {', '.join(plantNames)} from {start_date} to {end_date}",
                          # xaxis_title=group,
-                         yaxis_title = 'Generation in GW for each interval',
-                         autosize = True,
-                         hovermode = "x unified",
-                         legend = dict(font=dict(size=10), orientation="h"),)
-    figure.update_yaxes(ticksuffix = " GW")
+                         yaxis_title='Generation in GW for each interval',
+                         autosize=True,
+                         hovermode="x unified",
+                         legend=dict(font=dict(size=10), orientation="h"),)
+    figure.update_yaxes(ticksuffix=" GW")
     return figure
 
 
@@ -392,10 +398,21 @@ def update_figure(climate_sel, mapSelection):
     countries = dm.countries()
     data = []
     if 'countries' in mapSelection:
+        showScale = True
+        legend_title='Exhaust in g/kWh'
+        hover_title = 'Exhaust per kWh' 
+        unit='g'
 
         if not climate_sel in climate.columns:
-            values = list(map(lambda x: len(x), dm.countries()))
+            values = list(map(lambda x: 1, dm.countries()))
+            showScale = False
         else:
+            # last element is ownconsumption
+            if climate_sel ==climate.columns[-1]:
+                legend_title='Consumption in Wh/kWh'
+                hover_title = 'Consumption per gen. kWh' 
+                unit='Wh'
+
             values = []
             for country in countries:
                 capacity = dm.capacity(country)
@@ -411,13 +428,14 @@ def update_figure(climate_sel, mapSelection):
                                     locations=countries,
                                     colorscale='algae',  # carto
                                     colorbar=dict(
-                                        thickness=25, ticklen=3, title='Austoß in g/kWh'),
+                                        thickness=25, ticklen=3, title=legend_title),
                                     geojson=geo,
                                     featureidkey="properties.iso_a2",
                                     text=countries,
                                     # below=True,
+                                    showscale = showScale,
                                     hovertemplate='<b>Country</b>: <b>%{text}</b>' +
-                                    '<br><b>Austoß pro kWh </b>: %{z} g<br>',
+                                    '<br><b>'+hover_title+'</b>: %{z} '+unit,
                                     marker_line_width=0.1, marker_opacity=0.8,
                                     )
         data.append(choro)
@@ -433,12 +451,12 @@ def update_figure(climate_sel, mapSelection):
                                      hovertext=d[[
                                          'entsoe_name', 'capacityName', 'country']],
                                      hoverinfo=['text'],
+                                     showlegend=True,                                     
                                      below='',
                                      marker=dict(size=6, color=color_map[val])
                                      )
             data.append(scatt)
     layout = go.Layout(title_text='Europe mapbox choropleth', title_x=0.5,  # width=750, height=700,
-                       showlegend=True,
                        mapbox=dict(center={"lat": 50, "lon": 10},
                                    zoom=3,
                                    style="carto-positron"
