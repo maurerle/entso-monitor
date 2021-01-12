@@ -101,9 +101,9 @@ layout = html.Div(
                             src=app.get_asset_url("fh-aachen.png"),
                             id="plotly-image",
                             style={
-                                "height": "200px",
+                                "height": "auto",
                                 "width": "60px",
-                                "margin-bottom": "0px",
+                                # "margin-bottom": "0px",
                                 "backgroundColor": 'white',
                             },
                         )
@@ -167,7 +167,7 @@ layout = html.Div(
                                      multi=True,
                                      className="dcc_control",
                                      ),
-                        html.P("Group by:", className="control_label"),
+                        html.P("Aggregation Intervall:", className="control_label"),
                         dcc.RadioItems(
                             id="group_by_control",
                             options=[
@@ -200,16 +200,24 @@ layout = html.Div(
             className="row flex-display",
         ),
         html.Div(
-            dcc.Tabs([
-                dcc.Tab(label='Sum for Region', children=[dcc.Graph(
-                    id="points_graph", config={"displaylogo": False})]),
-                dcc.Tab(label='Crossborder Zone', children=[dcc.Graph(
-                    id="crossborder_graph", config={"displaylogo": False})]),
-                dcc.Tab(label='Sum per Infrastructure', children=[dcc.Graph(
-                    id="infrastructure_graph", config={"displaylogo": False})]),
-                dcc.Tab(label='Selected Points', children=[dcc.Graph(
-                    id="points_label_graph", config={"displaylogo": False})]),
-            ]),
+            [dcc.Dropdown(id="cumulative_control",
+                          options=[
+                              {"label": "Cumulative", "value": "cumulative"},
+                              {"label": "None", "value": "none"},
+                          ],
+                          value='none',
+                          className="dcc_control",
+                          ),
+             dcc.Tabs([
+                 dcc.Tab(label='Sum for Region', children=[dcc.Graph(
+                     id="points_graph", config={"displaylogo": False})]),
+                 dcc.Tab(label='Crossborder Zone', children=[dcc.Graph(
+                     id="crossborder_graph", config={"displaylogo": False})]),
+                 dcc.Tab(label='Sum per Infrastructure', children=[dcc.Graph(
+                     id="infrastructure_graph", config={"displaylogo": False})]),
+                 dcc.Tab(label='Selected Points', children=[dcc.Graph(
+                     id="points_label_graph", config={"displaylogo": False})]),
+             ])],
             id="graphTabContainer",
             className="pretty_container",
         ),
@@ -228,6 +236,14 @@ layout = html.Div(
                 style_table={'overflowX': 'auto'},
             )],
             id="tableContainer",
+            className="pretty_container",
+        ),
+        html.Div([
+            dcc.Link('Data comes from ENTSO-G Transparency Platform',
+                     href='https://transparency.entsog.eu/'),
+            html.Br(),
+            dcc.Link('Legal Notice', href='https://datensch.eu/legal-notice/'),
+            ],
             className="pretty_container",
         ),
     ])
@@ -329,6 +345,8 @@ def makePointMap(layer_control, options):
         hovertemplate='</br><b>%{customdata[0]}</b> - %{customdata[1]}</br> from: %{customdata[2]}, %{customdata[3]} </br> to:     %{customdata[4]}, %{customdata[5]}')
 
     fig.update_layout(mapbox_style="white-bg", mapbox_layers=layers,
+                      legend=dict(font=dict(size=10),
+                                  orientation="v", title='From Country'),
                       margin={"r": 0, "t": 0, "l": 0, "b": 0})
     return fig
 
@@ -386,15 +404,15 @@ def updateFlowGraph(operators: List[str], bz: str, start_date, end_date, group):
     if 'entry' in p.columns and 'exit' in p.columns:
         p['usage'] = p['entry']-p['exit']
 
-    a.columns = list(map(lambda x: 'alloc_'+str(x), a.columns))
-    p.columns = list(map(lambda x: 'physical_'+str(x), p.columns))
+    a.columns = list(map(lambda x: 'allocation '+str(x), a.columns))
+    p.columns = list(map(lambda x: 'physical '+str(x), p.columns))
     ap = pd.concat([a, p], axis=1)
 
     figure = go.Figure()
     addTraces(figure, ap)
 
     figure.update_layout(title=f"Flow in GWh/{group} for {desc} from {start_date} to {end_date}",
-                         xaxis_title=group,
+                         xaxis_title='',
                          yaxis_title=f'Transferred Energy in GWh/{group}',
                          hovermode="closest",
                          legend=dict(font=dict(size=10), orientation="v"),)
@@ -469,7 +487,7 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
     figure.update_traces(
         hovertemplate='<b>%{y}</b>, %{customdata[0]}, %{customdata[1]}, %{customdata[2]}')
     figure.update_layout(title=f"Flow in GWh/{group} {desc} from {start_date} to {end_date}",
-                         xaxis_title=group,
+                         xaxis_title='',
                          yaxis_title=f'Transferred Energy in GWh/{group}',
                          hovermode="x unified",
                          legend=dict(font=dict(size=10), orientation="v"),
@@ -486,9 +504,10 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
         Input("date_picker", "start_date"),
         Input("date_picker", "end_date"),
         Input("group_by_control", "value"),
+        Input('cumulative_control', 'value')
     ],
 )
-def updateCrossborderGraph(operators, bz, start_date, end_date, group):
+def updateCrossborderGraph(operators, bz, start_date, end_date, group, cumulative):
     start = datetime.strptime(start_date, '%Y-%m-%d').date()
     end = datetime.strptime(end_date, '%Y-%m-%d').date()
     filt = Filter(start, end, group)
@@ -509,11 +528,15 @@ def updateCrossborderGraph(operators, bz, start_date, end_date, group):
     g = g[g.columns.sort_values()]
 
     figure = go.Figure()
-    addTraces(figure, p, legendgroup='phy', stackgroup='phy')
-    addTraces(figure, a, legendgroup='alloc', stackgroup='alloc')
+    if cumulative == 'none':
+        addTraces(figure, p)
+        addTraces(figure, a)
+    else:
+        addTraces(figure, p, legendgroup='phy', stackgroup='phy')
+        addTraces(figure, a, legendgroup='alloc', stackgroup='alloc')
 
     figure.update_layout(title=f"Crossborder Flow in GWh/{group} for {desc} from {start_date} to {end_date}",
-                         xaxis_title=group,
+                         xaxis_title='',
                          yaxis_title=f'Imported Energy in GWh/{group}',
                          hovermode="x unified",
                          legend=dict(font=dict(size=10), orientation="v"),
@@ -533,9 +556,10 @@ def updateCrossborderGraph(operators, bz, start_date, end_date, group):
         Input("date_picker", "start_date"),
         Input("date_picker", "end_date"),
         Input("group_by_control", "value"),
+        Input('cumulative_control', 'value')
     ],
 )
-def updateInfrastructureGraph(operators, bz, start_date, end_date, group):
+def updateInfrastructureGraph(operators, bz, start_date, end_date, group, cumulative):
     if bz == None or len(bz) < 1:
         return {'data': [], 'layout': dict(title='No zone selected')}
 
@@ -561,11 +585,15 @@ def updateInfrastructureGraph(operators, bz, start_date, end_date, group):
         return {'data': [], 'layout': dict(title=f"No Data Found for {bz} from {start_date} to {end_date}")}
 
     figure = go.Figure()
-    addTraces(figure, p, legendgroup='phy', stackgroup='phy')
-    addTraces(figure, a, legendgroup='alloc', stackgroup='alloc')
+    if cumulative == 'none':
+        addTraces(figure, p)
+        addTraces(figure, a)
+    else:
+        addTraces(figure, p, legendgroup='phy', stackgroup='phy')
+        addTraces(figure, a, legendgroup='alloc', stackgroup='alloc')
 
     figure.update_layout(title=f"Flow per Infrastructure type in GWh/{group} for {desc} from {start_date} to {end_date}",
-                         # xaxis_title=group,
+                         xaxis_title='',
                          yaxis_title=f'Energy added to {desc} in GWh/{group}',
                          hovermode="x unified",
                          showlegend=True,
