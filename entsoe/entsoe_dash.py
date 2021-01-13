@@ -169,7 +169,7 @@ layout = html.Div(
                         html.P("Country:", className="control_label"),
                         dcc.Dropdown(id="country_control",
                                      options=[{'label': x, 'value': x}
-                                              for x in dm.countries()],
+                                              for x in dm.countries()['name']],
                                      value='FR',
                                      className="dcc_control",
                                      clearable=False,
@@ -296,7 +296,7 @@ def update_dropdown(clickData, href):
             plant = clickData['points'][0]['text']
             return dash.no_update, [plant]
 
-    raise PreventUpdate
+    return 'FR', dash.no_update
 
 
 component_ids = ['start_date', 'end_date', 'group_by_control',

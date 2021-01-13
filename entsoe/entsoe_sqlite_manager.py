@@ -124,7 +124,6 @@ class EntsoePlantSQLite(EntsoeDataManager):
         groupString = f'strftime("{ftime[filt.groupby]}", "time"), name, type'
         with closing(sql.connect(self.plantdatabase)) as conn:
             query = f"select {selectString} from query_per_plant where {whereString} group by {groupString}"
-            print(query)
             generation = pd.read_sql_query(query, conn, index_col='time')
         return generation
 
