@@ -525,19 +525,18 @@ def updateCrossborderGraph(operators, bz, start_date, end_date, group, cumulativ
     g = pd.concat([p, a], axis=1)
     if g.empty:
         return {'data': [], 'layout': dict(title=f"No Data Found for {bz} from {start_date} to {end_date}")}
-    g = g[g.columns.sort_values()]
 
     figure = go.Figure()
     if cumulative == 'none':
-        addTraces(figure, p)
-        addTraces(figure, a)
+        g = g[g.columns.sort_values()]
+        addTraces(figure, g)
     else:
         addTraces(figure, p, legendgroup='phy', stackgroup='phy')
         addTraces(figure, a, legendgroup='alloc', stackgroup='alloc')
 
     figure.update_layout(title=f"Crossborder Flow in GWh/{group} for {desc} from {start_date} to {end_date}",
                          xaxis_title='',
-                         yaxis_title=f'Imported Energy in GWh/{group}',
+                         yaxis_title=f'Imported - Exported Energy in GWh/{group}',
                          hovermode="x unified",
                          legend=dict(font=dict(size=10), orientation="v"),
                          height=700,)
@@ -580,21 +579,21 @@ def updateInfrastructureGraph(operators, bz, start_date, end_date, group, cumula
     #     a['sum']=a.sum(axis=1)
     a.columns = list(map(lambda x: x+' alloc', a.columns))
     p.columns = list(map(lambda x: x+' phy', p.columns))
-    pa = pd.concat([a, p], axis=1)
-    if pa.empty:
+    g = pd.concat([a, p], axis=1)
+    if g.empty:
         return {'data': [], 'layout': dict(title=f"No Data Found for {bz} from {start_date} to {end_date}")}
 
     figure = go.Figure()
     if cumulative == 'none':
-        addTraces(figure, p)
-        addTraces(figure, a)
+        g = g[g.columns.sort_values()]
+        addTraces(figure, g)
     else:
         addTraces(figure, p, legendgroup='phy', stackgroup='phy')
         addTraces(figure, a, legendgroup='alloc', stackgroup='alloc')
 
     figure.update_layout(title=f"Flow per Infrastructure type in GWh/{group} for {desc} from {start_date} to {end_date}",
                          xaxis_title='',
-                         yaxis_title=f'Energy added to {desc} in GWh/{group}',
+                         yaxis_title=f'Energy transferred into {desc} in GWh/{group}',
                          hovermode="x unified",
                          showlegend=True,
                          legend=dict(font=dict(size=10), orientation="v"),

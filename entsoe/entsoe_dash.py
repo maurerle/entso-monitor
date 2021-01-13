@@ -257,30 +257,20 @@ layout = html.Div(
             className="pretty_container",
     ),
         html.Div([
-        dcc.Link('Data comes from ENTSO-E Transparency Platform',
-                 href='https://transparency.entsoe.eu/'),
-        html.Br(),
-        dcc.Link('Legal Notice', href='https://datensch.eu/legal-notice/'),
+            dcc.Link('Data comes from ENTSO-E Transparency Platform',
+                     href='https://transparency.entsoe.eu/'),
+            html.Br(),
+            dcc.Link('Legal Notice', href='https://datensch.eu/legal-notice/'),
         ],
         className="pretty_container",
     ),
     ])
 
-app.clientside_callback(
-    ClientsideFunction(namespace="clientside", function_name="resize"),
-    Output("output-clientside", "children"),
-    [Input("load_graph", "figure")],
-)
-
 with open("europe.geo.json", "r", encoding="utf-8") as f:
     geo = json.load(f)
 
-df = pd.DataFrame()
-df['countries'] = dm.countries()
-df['values'] = list(map(lambda x: len(x), dm.countries()))
-
-
 ############ Controls   ##############
+
 
 @app.callback(
     Output('country_control', 'value'),
@@ -395,23 +385,23 @@ def make_load_figure(plants, start_date, end_date, group):
      Input("map_control", "value"), ])
 def update_figure(climate_sel, mapSelection):
 
-    countries = dm.countries()
+    countries = list(dm.countries()['name'])
     data = []
     if 'countries' in mapSelection:
         showScale = True
-        legend_title='Exhaust in g/kWh'
-        hover_title = 'Exhaust per kWh' 
-        unit='g'
+        legend_title = 'Exhaust in g/kWh'
+        hover_title = 'Exhaust per kWh'
+        unit = 'g'
 
         if not climate_sel in climate.columns:
-            values = list(map(lambda x: 1, dm.countries()))
+            values = list(map(lambda x: 1, countries))
             showScale = False
         else:
             # last element is ownconsumption
-            if climate_sel ==climate.columns[-1]:
-                legend_title='Consumption in Wh/kWh'
-                hover_title = 'Consumption per gen. kWh' 
-                unit='Wh'
+            if climate_sel == climate.columns[-1]:
+                legend_title = 'Consumption in Wh/kWh'
+                hover_title = 'Consumption per gen. kWh'
+                unit = 'Wh'
 
             values = []
             for country in countries:
@@ -433,7 +423,7 @@ def update_figure(climate_sel, mapSelection):
                                     featureidkey="properties.iso_a2",
                                     text=countries,
                                     # below=True,
-                                    showscale = showScale,
+                                    showscale=showScale,
                                     hovertemplate='<b>Country</b>: <b>%{text}</b>' +
                                     '<br><b>'+hover_title+'</b>: %{z} '+unit,
                                     marker_line_width=0.1, marker_opacity=0.8,
@@ -451,7 +441,7 @@ def update_figure(climate_sel, mapSelection):
                                      hovertext=d[[
                                          'entsoe_name', 'capacityName', 'country']],
                                      hoverinfo=['text'],
-                                     showlegend=True,                                     
+                                     showlegend=True,
                                      below='',
                                      marker=dict(size=6, color=color_map[val])
                                      )

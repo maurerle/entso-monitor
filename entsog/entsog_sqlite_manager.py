@@ -202,14 +202,7 @@ class EntsogSQLite(EntsogDataManager):
         with closing(sql.connect(self.database)) as conn:
             query = f'select {selectString} from {table} t {joinString} where {whereString} group by {groupString}'
             flow = pd.read_sql_query(query, conn, index_col='time')
-            print(query)
-            print()
 
-        def nameFunc(d):
-            country = d['adjacentCountry'] if d['adjacentCountry'] else '-'
-            zone = d['adjacentZones'] if d['adjacentZones'] else '-'
-            return str(country)+':'+str(zone)
-        #flow['name'] = flow.apply(nameFunc,axis=1)
         flow['name'] = flow['adjacentCountry'].apply(lambda x: str(
             x) if x else '-')+':'+flow['adjacentZones'].apply(lambda x: str(x) if x else '-')
         

@@ -134,8 +134,8 @@ class EntsoeSQLite(EntsoeDataManager):
     def countries(self):
         with closing(sql.connect(self.database)) as conn:
             df = pd.read_sql(
-                'select distinct country from query_generation', conn)
-        return list(df['country'])
+                'select name, value, meaning from areas', conn)
+        return df
 
     def climateImpact(self):
         climate = pd.read_csv(
@@ -174,7 +174,7 @@ if __name__ == "__main__":
     neighbours = par.crossborderFlows(country, filt)
     cap = par.capacity(country)
     countries = par.countries()
-    country = countries[0]
+    country = countries['name'][0]
 
     df2 = par.powersystems()
     filt = Filter(datetime(2020, 2, 1), datetime(2020, 2, 2), 'hour')
