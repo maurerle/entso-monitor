@@ -53,7 +53,7 @@ else:
     # TODO update SPARK
     pdm = EntsoePlantSQLite('data/entsoe-plant.db')
 
-powersys = dm.powersystems('')
+powersys = pdm.powersystems('')
 powersys['capacityName'] = powersys['capacity'].apply(lambda x: str(x)+' MW')
 
 climate = dm.climateImpact()
@@ -223,7 +223,7 @@ layout = html.Div(
                 dcc.Tab(label='Generation per Plant', children=[
                     dcc.Dropdown(id="plant_control",
 
-                                 options=[{'label': x.encode('latin-1').decode('utf-8'), 'value': x}
+                                 options=[{'label': x, 'value': x}
                                           for x in pdm.getNames()['name']],
                                  value=[
                                      'DOEL 2'],
@@ -353,8 +353,6 @@ def update_url_state(*values):
         Input("date_picker", "end_date"),
         Input("group_by_control", "value"),
     ],
-
-
 )
 def make_load_figure(plants, start_date, end_date, group):
     start = datetime.strptime(start_date, '%Y-%m-%d').date()
@@ -363,8 +361,7 @@ def make_load_figure(plants, start_date, end_date, group):
     if g.empty:
         return {'data': [], 'layout': dict(title="No Data Found for current interval")}
     g['value'] /= 1e3
-    plantNames = list(map(lambda x: x.encode(
-        'latin-1').decode('utf-8'), plants))
+    plantNames = list(plants)
     figure = px.line(g, x=g.index, y="value", color='name')
     figure.update_layout(title=f"Generation for {', '.join(plantNames)} from {start_date} to {end_date}",
                          # xaxis_title=group,

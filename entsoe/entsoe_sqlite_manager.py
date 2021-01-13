@@ -33,17 +33,6 @@ class EntsoeSQLite(EntsoeDataManager):
         cap.columns = cap.columns.map(revReplaceStr)
         return cap
 
-    def capacityPerPlant(self, country=''):
-        selectString = 'Name,country,"Installed_Capacity_[MW]" as capacity,Production_Type'
-        if country == '':
-            whereString = ''
-        else:
-            whereString = f'where country="{country}"'
-        with closing(sql.connect(self.database)) as conn:
-            query = f'select {selectString} from query_installed_generation_capacity_per_unit {whereString}'
-            df = pd.read_sql(query, conn)
-        return df
-
     def load(self, country: str, filt: Filter):
         # average is correct here as some countries have quarter hour data and others
         whereString = f'country="{country}" and "{filt.begin.strftime("%Y-%m-%d")}" < "index" and "index" < "{filt.end.strftime("%Y-%m-%d")}"'
@@ -69,15 +58,6 @@ class EntsoeSQLite(EntsoeDataManager):
             query = f"select {selectString},{colNames} from query_generation where {whereString} group by {groupString}"
             gen = pd.read_sql_query(query, conn, index_col='time')
         gen.columns = gen.columns.map(''.join).map(revReplaceStr)
-        return gen
-
-    def genPerPlant(self, plant: str, filt: Filter):
-        whereString = f'plant="{plant}" and "{filt.begin.strftime("%Y-%m-%d")}" < "index" and "index" < "{filt.end.strftime("%Y-%m-%d")}"'
-        selectString = f'strftime("{ftime[filt.groupby]}", "index") as time, sum("generation") as value'
-        groupString = f'strftime("{ftime[filt.groupby]}", "time")'
-        with closing(sql.connect(self.database)) as conn:
-            query = f"select {selectString} from query_generation_per_plant where {whereString} group by {groupString}"
-            gen = pd.read_sql_query(query, conn, index_col='time')
         return gen
 
     def _selectBuilder(self, neighbours):
@@ -120,17 +100,6 @@ class EntsoeSQLite(EntsoeDataManager):
 
         # return crossborder.select(columns).groupby(['group']).sum().toPandas()
 
-    def powersystems(self, country=''):
-        selectString = 'eic_code,p.name,q.name as entsoe_name, company,p.country,q.country as area,lat,lon,capacity,Production_Type'
-        if country == '':
-            whereString = ''
-        else:
-            whereString = f'where p.country="{country}"'
-        with closing(sql.connect(self.database)) as conn:
-            df = pd.read_sql(
-                f'select {selectString} from powersystemdata p join query_installed_generation_capacity_per_unit q on q."index" = p.eic_code {whereString}', conn)
-        return df
-
     def countries(self):
         with closing(sql.connect(self.database)) as conn:
             df = pd.read_sql(
@@ -162,9 +131,32 @@ class EntsoePlantSQLite(EntsoeDataManager):
     def getNames(self):
         with closing(sql.connect(self.plantdatabase)) as conn:
             # TODO add type
-            query = f"select name,country from plant_names"
+            query = "select name,country from plant_names"
             names = pd.read_sql_query(query, conn)
-        return names
+        return names    
+    
+    def capacityPerPlant(self, country=''):
+        selectString = 'Name,country,"Installed_Capacity_[MW]" as capacity,Production_Type'
+        if country == '':
+            whereString = ''
+        else:
+            whereString = f'where country="{country}"'
+        with closing(sql.connect(self.plantdatabase)) as conn:
+            query = f'select {selectString} from query_installed_generation_capacity_per_unit {whereString}'
+            df = pd.read_sql(query, conn)
+        return df
+
+    def powersystems(self, country=''):
+        selectString = 'eic_code,p.name,q.name as entsoe_name, company,p.country,q.country as area,lat,lon,capacity,Production_Type'
+        if country == '':
+            whereString = ''
+        else:
+            whereString = f'where p.country="{country}"'
+        with closing(sql.connect(self.plantdatabase)) as conn:
+            df = pd.read_sql(
+                f'select {selectString} from powersystemdata p join query_installed_generation_capacity_per_unit q on q."index" = p.eic_code {whereString}', conn)
+        return df    
+    
 
 
 if __name__ == "__main__":
