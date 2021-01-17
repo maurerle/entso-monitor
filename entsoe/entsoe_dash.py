@@ -6,21 +6,20 @@ Created on Fri Nov 27 23:31:45 2020
 @author: maurer
 """
 
-from urllib.parse import urlparse, parse_qsl, urlencode
-from dash.exceptions import PreventUpdate
-import dash
 from datetime import datetime, date
-import pandas as pd
+from urllib.parse import urlparse, parse_qsl, urlencode
+import dash
+from dash.exceptions import PreventUpdate
 from dash.dependencies import Input, Output, State, ClientsideFunction
 import dash_core_components as dcc
 import dash_html_components as html
+import dash_table
 import plotly.graph_objects as go
 import plotly.express as px
-import dash_table
 
 from entsoe_data_manager import Filter
 import json
-import copy
+import pandas as pd
 
 if __name__ == "__main__":
     app = dash.Dash(__name__, meta_tags=[
@@ -296,7 +295,7 @@ def update_dropdown(clickData, href):
             plant = clickData['points'][0]['text']
             return dash.no_update, [plant]
 
-    return 'FR', dash.no_update
+    return 'FR', ['DOEL 2']
 
 
 component_ids = ['start_date', 'end_date', 'group_by_control',
@@ -365,7 +364,7 @@ def make_load_figure(plants, start_date, end_date, group):
     figure = px.line(g, x=g.index, y="value", color='name')
     figure.update_layout(title=f"Generation for {', '.join(plantNames)} from {start_date} to {end_date}",
                          # xaxis_title=group,
-                         yaxis_title='Generation in GW for each interval',
+                         yaxis_title='avg Generation in GW for each interval',
                          autosize=True,
                          hovermode="x unified",
                          legend=dict(font=dict(size=10), orientation="h"),)
@@ -503,7 +502,7 @@ def make_load_figure(country_control, start_date, end_date, group):
     figure = px.line(g, x=g.index, y="value")
     figure.update_layout(title="Load for {} from {} to {}".format(country_control, start_date, end_date),
                          xaxis_title='',
-                         yaxis_title='Load in GW for each interval',
+                         yaxis_title='avg Load in GW for each interval',
                          autosize=True,
                          hovermode="x unified",
                          legend=dict(font=dict(size=10), orientation="h"),)
@@ -530,7 +529,7 @@ def make_generation_figure(country_control, start_date, end_date, group, climate
     generation = dm.generation(country_control, Filter(start, end, group))
     del generation['country']
 
-    desc = 'energy generation by production kind in GW'
+    desc = 'avg energy generation by production kind in GW'
 
     unit = 'GW'
     generation /= 1e3
@@ -585,7 +584,7 @@ def make_neighbour_figure(country_control, start_date, end_date, group_by_contro
 
     fig.update_layout(title=f"Netto Export for {country_control} from {start_date} to {end_date}",
                       # xaxis_title=group,
-                      yaxis_title='Exported to neighbour - imported in GWh',
+                      yaxis_title='avg Exported to neighbour - imported in GWh',
                       hovermode="closest",
                       showlegend=True,
                       legend=dict(font=dict(size=10), orientation="h"),)

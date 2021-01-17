@@ -118,12 +118,12 @@ if __name__ == "__main__":
     craw = EntsogCrawler()
     names = ['cmpUnsuccessfulRequests',
              # 'operationaldata',
-             'cmpUnavailables',
-             'cmpAuctions',
+             #'cmpUnavailables',
+             #'cmpAuctions',
              # 'AggregatedData', # operationaldata aggregated for each zone
-             'tariffssimulations',
-             'tariffsfulls',
-             'urgentmarketmessages',
+             #'tariffssimulations',
+             #'tariffsfulls',
+             #'urgentmarketmessages',
              'connectionpoints',
              'operators',
              'balancingzones',
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     if not os.path.exists(sparkfolder):
         os.makedirs(sparkfolder)
 
-    if True:
+    if False:
         for name in pbar:
             try:
                 pbar.set_description(name)
@@ -187,6 +187,7 @@ if __name__ == "__main__":
         indicator = 'Allocation'
 
         for indicator in indicators:
+            database = indicator+'.db'
             pbar = tqdm(craw.yieldData(name, indicator, bulks, begin))
             for span, phys in pbar:
 
@@ -231,4 +232,22 @@ if __name__ == "__main__":
         with closing(sql.connect(database)) as conn:
             query = (
                 'CREATE INDEX IF NOT EXISTS "idx_opd" ON "operatorpointdirections" ("operatorKey", "pointKey","directionKey");')
+            conn.execute(query)
+
+
+    if False:
+        db='data/firm_technical.db'
+        with closing(sql.connect(db)) as conn:
+            dat= pd.read_sql('select * from "Firm Technical"',conn)
+            
+        with closing(sql.connect(database)) as conn:
+            dat.to_sql('FirmTechnical', conn)
+            
+        with closing(sql.connect(database)) as conn:
+            query = (
+                'CREATE INDEX IF NOT EXISTS "idx_ft_opdata" ON "FirmTechnical" ("operatorKey","periodFrom");')
+            conn.execute(query)
+
+            query = (
+                'CREATE INDEX IF NOT EXISTS "idx_ft_pointKey" ON "FirmTechnical" ("pointKey","periodFrom");')
             conn.execute(query)
