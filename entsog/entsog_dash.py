@@ -32,7 +32,7 @@ if True:
     from entsog_sqlite_manager import EntsogSQLite
     dm = EntsogSQLite('data/entsog.db')
 else:
-    #from entsoe_parquet_manager import EntsogParquet
+    #from entsog_parquet_manager import EntsogParquet
     import findspark
     from pyspark import SparkConf
     from pyspark.sql import SparkSession
@@ -47,7 +47,7 @@ else:
         spark = SparkSession.builder.config(conf=conf).getOrCreate()
     dm = EntsogParquet('data', spark)
 
-# initialize data
+# initialize static data
 incons = dm.interconnections()
 bzs = dm.balancingzones()
 connectionPoints = dm.connectionpoints()
@@ -57,7 +57,6 @@ operators = dm.operators()
 oppointdir = dm.operatorpointdirections()
 opd = oppointdir.copy()
 del opd['directionKey']
-
 opd = opd.drop_duplicates()
 
 defaultBZ = 'Austria'
@@ -595,7 +594,7 @@ def updateCrossborderGraph(operators, bz, start_date, end_date, group, cumulativ
 
     return figure
 
-# Infrastructure Graph ###########3
+#### Infrastructure Graph ###########
 
 
 @app.callback(

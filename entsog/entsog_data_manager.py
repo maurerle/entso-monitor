@@ -9,6 +9,8 @@ Created on Sun Nov 29 21:59:08 2020
 from datetime import datetime
 from typing import List
 
+physFlowTableName='"Physical Flow"'
+
 class Filter:
     def __init__(self, begin: datetime, end: datetime, groupby='day'):
         self.begin = begin
@@ -38,12 +40,17 @@ class EntsogDataManager:
 
     def operatorpointdirections(self):
         pass
+    
+    def operationaldata(self, operatorKeys: List[str], filt: Filter, group_by: List[str] = ['directionKey'], table=physFlowTableName):
+        pass
 
-    def physicalFlow(self, balancingZones: List[str], pointKey, filt: Filter):
+    def operationaldataByPoints(self, points: List[str], filt: Filter, group_by: List[str] = ['directionKey'], table=physFlowTableName):
+        pass
+    def operatorsByBZ(self, bz: str):
         pass
     
-    def physicalFlowByPoints(self, points: List[str], filt: Filter,group_by='directionKey'):
+    def bilanz(self, operatorKeys: List[str], filt: Filter, table=physFlowTableName):
         pass
-      
-    def crossborderFlows(self, bz: str, filt: Filter):
+    
+    def crossborder(self, operatorKeys: List[str], filt: Filter, group_by: List[str] = ['t.directionKey', 'opd.adjacentZones', 'opd.adjacentCountry'], table=physFlowTableName):
         pass
