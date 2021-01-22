@@ -6,17 +6,21 @@ Created on Mon Nov 30 00:57:00 2020
 @author: maurer
 """
 
-import dash
 from datetime import datetime, date
-from typing import List
-import pandas as pd
-from dash.dependencies import Input, Output, State
+from urllib.parse import urlparse, parse_qsl, urlencode
+import dash
+from dash.exceptions import PreventUpdate
+from dash.dependencies import Input, Output
 import dash_core_components as dcc
 import dash_html_components as html
-import plotly.express as px
-import plotly.graph_objects as go
 import dash_table
+import plotly.graph_objects as go
+import plotly.express as px
+
+from typing import List
+import pandas as pd
 from entsog_data_manager import Filter
+
 if __name__ == "__main__":
     app = dash.Dash(__name__, meta_tags=[
                     {"name": "viewport", "content": "width=device-width"}])
@@ -82,6 +86,7 @@ layout = html.Div(
     [
         html.Div(
             [
+                dcc.Location(id='url', refresh=False),
                 html.Div(
                     [
                         html.H1(
@@ -240,9 +245,9 @@ layout = html.Div(
         ),
         html.Div([
             dcc.Link('Data comes from ENTSO-G Transparency Platform',
-                     href='https://transparency.entsog.eu/'),
+                     href='https://transparency.entsog.eu/', refresh=True),
             html.Br(),
-            dcc.Link('Legal Notice', href='https://datensch.eu/legal-notice/'),
+            dcc.Link('Legal Notice', refresh=True, href='https://datensch.eu/legal-notice/', refresh=True),
             ],
             className="pretty_container",
         ),
@@ -308,6 +313,49 @@ def updateOperatorControl(bz):
     opt = inter['fromOperatorLabel'].dropna().unique()
     optKeys = inter['fromOperatorKey'].dropna().unique()
     return [{'label': opt[i], 'value': optKeys[i]} for i in range(len(opt))]
+
+component_ids = ['start_date', 'end_date', 'group_by_control',
+                 'bz_control', 'operator_control', 'point_control','map_layer_control']
+
+
+def parse_state(url):
+    parse_result = urlparse(url)
+    params = parse_qsl(parse_result.query)
+    state = dict(params)
+    return state
+
+
+@app.callback([
+    Output("date_picker", "start_date"),
+    Output("date_picker", "end_date"),
+    Output("group_by_control", "value"),
+],
+    inputs=[Input('url', 'href')])
+def page_load(href):
+    if not href:
+        return []
+    state = parse_state(href)
+    print(href)
+    # for element in elements
+    if all(element in state for element in ['start_date', 'end_date', 'group_by_control']):
+        return state['start_date'], state['end_date'], state['group_by_control']
+    else:
+        raise PreventUpdate
+
+
+@app.callback(Output('url', 'search'),
+              [
+    Input("date_picker", "start_date"),
+    Input("date_picker", "end_date"),
+    Input("group_by_control", "value"),
+    Input("bz_control", "value"),
+    Input("operator_control", "value"),
+    Input("point_control", "value"),
+    Input("map_layer_control", "value"),
+])
+def update_url_state(*values):
+    state = urlencode(dict(zip(component_ids, values)))
+    return f'?{state}'
 
 ############ Map       ##############
 
@@ -461,10 +509,13 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
         valid_points, filt, ['pointKey', 'directionKey'])
     a = dm.operationaldataByPoints(valid_points, filt, [
                                    'pointKey', 'directionKey'], table='Allocation')
+    t = dm.operationaldataByPoints(valid_points, filt, [
+                                   'pointKey', 'directionKey'], table='FirmTechnical')    
     p['indicator'] = 'phys'
     a['indicator'] = 'alloc'
+    t['indicator'] = 'firmTechnical'
 
-    g = pd.concat([p, a], axis=0)
+    g = pd.concat([p, a, t], axis=0)
     if g.empty:
         return {'data': [], 'layout': dict(title=f"No Data Found for {desc} from {start_date} to {end_date}")}
 

@@ -89,7 +89,7 @@ def cmap(index):
 
 
 layout = html.Div(
-    [dcc.Location(id='url', refresh=False),
+    [dcc.Location(id='url_entsoe', refresh=False),
         html.Div(
             [
                 html.Div(
@@ -155,7 +155,7 @@ layout = html.Div(
                         ),
                         # dcc.Dropdown(options=[{'label':x, 'value': x} for x in range(2015, 2020)]),
                         dcc.DatePickerRange(
-                            id='date_picker',
+                            id='datepicker',
                             min_date_allowed=date(2015, 1, 1),
                             max_date_allowed=date(2020, 12, 19),
                             start_date=date(2015, 8, 21),
@@ -174,11 +174,11 @@ layout = html.Div(
                                      clearable=False,
                                      ),
                         dcc.Link(
-                            'Meaning of Zone names', href='https://transparency.entsoe.eu/content/static_content/Static content/web api/Guide.html#_areas'),
+                            'Meaning of Zone names', href='https://transparency.entsoe.eu/content/static_content/Static content/web api/Guide.html#_areas', refresh=True),
                         html.P("Aggregation Intervall:",
                                className="control_label"),
                         dcc.RadioItems(
-                            id="group_by_control",
+                            id="groupby_control",
                             options=[
                                 {"label": "Year", "value": "year"},
                                 {"label": "Month", "value": "month"},
@@ -257,9 +257,9 @@ layout = html.Div(
     ),
         html.Div([
             dcc.Link('Data comes from ENTSO-E Transparency Platform',
-                     href='https://transparency.entsoe.eu/'),
+                     href='https://transparency.entsoe.eu/', refresh=True),
             html.Br(),
-            dcc.Link('Legal Notice', href='https://datensch.eu/legal-notice/'),
+            dcc.Link('Legal Notice', refresh=True, href='https://datensch.eu/legal-notice/', refresh=True),
         ],
         className="pretty_container",
     ),
@@ -275,7 +275,7 @@ with open("europe.geo.json", "r", encoding="utf-8") as f:
     Output('country_control', 'value'),
     Output('plant_control', 'value'),
     [Input('choro_graph', 'clickData'),
-     Input('url', 'href')])
+     Input('url_entsoe', 'href')])
 def update_dropdown(clickData, href):
     # zur initialisierung
     if clickData is None:
@@ -298,7 +298,7 @@ def update_dropdown(clickData, href):
     return 'FR', ['DOEL 2']
 
 
-component_ids = ['start_date', 'end_date', 'group_by_control',
+component_ids = ['start_date', 'end_date', 'groupby_control',
                  'country_control', 'climate_picker', 'plant_control']
 
 
@@ -310,29 +310,29 @@ def parse_state(url):
 
 
 @app.callback([
-    Output("date_picker", "start_date"),
-    Output("date_picker", "end_date"),
-    Output("group_by_control", "value"),
+    Output("datepicker", "start_date"),
+    Output("datepicker", "end_date"),
+    Output("groupby_control", "value"),
     Output("climate_picker", "value"),
 ],
-    inputs=[Input('url', 'href')])
+    inputs=[Input('url_entsoe', 'href')])
 def page_load(href):
     if not href:
         return []
     state = parse_state(href)
     print(href)
     # for element in elements
-    if all(element in state for element in ['start_date', 'end_date', 'group_by_control', 'climate_picker']):
-        return state['start_date'], state['end_date'], state['group_by_control'], state['climate_picker']
+    if all(element in state for element in ['start_date', 'end_date', 'groupby_control', 'climate_picker']):
+        return state['start_date'], state['end_date'], state['groupby_control'], state['climate_picker']
     else:
         raise PreventUpdate
 
 
-@app.callback(Output('url', 'search'),
+@app.callback(Output('url_entsoe', 'search'),
               [
-    Input("date_picker", "start_date"),
-    Input("date_picker", "end_date"),
-    Input("group_by_control", "value"),
+    Input("datepicker", "start_date"),
+    Input("datepicker", "end_date"),
+    Input("groupby_control", "value"),
     Input("country_control", "value"),
     Input("climate_picker", "value"),
     Input("plant_control", "value"),
@@ -348,9 +348,9 @@ def update_url_state(*values):
     Output("per_plant", "figure"),
     [
         Input("plant_control", "value"),
-        Input("date_picker", "start_date"),
-        Input("date_picker", "end_date"),
-        Input("group_by_control", "value"),
+        Input("datepicker", "start_date"),
+        Input("datepicker", "end_date"),
+        Input("groupby_control", "value"),
     ],
 )
 def make_load_figure(plants, start_date, end_date, group):
@@ -489,9 +489,9 @@ def make_capacity_figure(country_control):
     Output("load_graph", "figure"),
     [
         Input("country_control", "value"),
-        Input("date_picker", "start_date"),
-        Input("date_picker", "end_date"),
-        Input("group_by_control", "value"),
+        Input("datepicker", "start_date"),
+        Input("datepicker", "end_date"),
+        Input("groupby_control", "value"),
     ],
 )
 def make_load_figure(country_control, start_date, end_date, group):
@@ -516,9 +516,9 @@ def make_load_figure(country_control, start_date, end_date, group):
     Output("generation_graph", "figure"),
     [
         Input("country_control", "value"),
-        Input("date_picker", "start_date"),
-        Input("date_picker", "end_date"),
-        Input("group_by_control", "value"),
+        Input("datepicker", "start_date"),
+        Input("datepicker", "end_date"),
+        Input("groupby_control", "value"),
         Input("climate_picker", "value"),
     ],
 )
@@ -562,9 +562,9 @@ def make_generation_figure(country_control, start_date, end_date, group, climate
     Output("neighbour_graph", "figure"),
     [
         Input("country_control", "value"),
-        Input("date_picker", "start_date"),
-        Input("date_picker", "end_date"),
-        Input("group_by_control", "value"),
+        Input("datepicker", "start_date"),
+        Input("datepicker", "end_date"),
+        Input("groupby_control", "value"),
     ],
 )
 def make_neighbour_figure(country_control, start_date, end_date, group_by_control):
