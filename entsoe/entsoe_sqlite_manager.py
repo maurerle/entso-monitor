@@ -6,7 +6,7 @@ Created on Sun Nov 29 14:58:52 2020
 @author: maurer
 """
 
-from entsoe_data_manager import EntsoeDataManager, Filter, revReplaceStr
+from entsoe_data_manager import EntsoeDataManager, EntsoePlantDataManager, Filter, revReplaceStr
 
 import sqlite3 as sql
 from contextlib import closing
@@ -112,7 +112,7 @@ class EntsoeSQLite(EntsoeDataManager):
         return climate
 
 
-class EntsoePlantSQLite(EntsoeDataManager):
+class EntsoePlantSQLite(EntsoePlantDataManager):
     def __init__(self, plantdatabase: str):
         self.plantdatabase = plantdatabase
 
@@ -130,7 +130,7 @@ class EntsoePlantSQLite(EntsoeDataManager):
     def getNames(self):
         with closing(sql.connect(self.plantdatabase)) as conn:
             # TODO add type
-            query = "select name,country from plant_names"
+            query = "select distinct name,country from plant_names"
             names = pd.read_sql_query(query, conn)
         return names    
     
@@ -141,7 +141,7 @@ class EntsoePlantSQLite(EntsoeDataManager):
         else:
             whereString = f'where country="{country}"'
         with closing(sql.connect(self.plantdatabase)) as conn:
-            query = f'select {selectString} from query_installed_generation_capacity_per_unit {whereString}'
+            query = f'select distinct {selectString} from query_installed_generation_capacity_per_unit {whereString}'
             df = pd.read_sql(query, conn)
         return df
 

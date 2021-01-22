@@ -99,12 +99,18 @@ class EntsoeParquet(EntsoeDataManager):
         
         return crossborder.select(columns).groupby(['group']).sum().toPandas()
     
+    def countries(self):
+        raise Exception('not implemented')
+    
+    def climateImpact(self):
+        raise Exception('not implemented')
+    
 if __name__ == "__main__":  
     findspark.init()
     conf = SparkConf().setAppName('entsoe').setMaster('local')
     spark = SparkSession.builder.config(conf=conf).getOrCreate()
 
-    par = EntsoeParquet('entsoe',spark)
+    par = EntsoeParquet('data/spark',spark)
     cap = par.capacity('FR')
     
     load = par.load('DE', Filter(datetime(2019,1,1),datetime(2019,1,2),'hour'))

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+Defines abstract Datamanagers for ENTSO-E
 Created on Sat Nov 28 09:30:46 2020
 
 @author: maurer
 """
 from datetime import datetime
+from typing import List
 
 class Filter:
     def __init__(self, begin: datetime, end: datetime, groupby='day'):
@@ -27,10 +29,7 @@ class EntsoeDataManager:
         pass
     
     def generation(self, country: str, filt: Filter):
-        pass
-    
-    def genPerPlant(self, plant: str, filt: Filter):
-        pass
+        pass    
     
     def crossborderFlows(self, country: str, filt: Filter):
         pass
@@ -41,6 +40,36 @@ class EntsoeDataManager:
     def climateImpact(self):
         pass
     
+class EntsoePlantDataManager:
+    '''
+    Assumptions on the PlantDataManager:
+    
+    index is time series, everything else are values
+    '''
+    def plantGen(self, names: List[str], filt: Filter):
+        '''
+        generation data per power plant 
+        '''
+        pass
+
+    def getNames(self):
+        '''
+        returns a dataframe with all power plant names
+        '''
+        pass
+    
+    def capacityPerPlant(self, country=''):
+        '''
+        returns capacities for all plants of a country
+        or all if country is empty
+        '''
+        pass
+
+    def powersystems(self, country=''):
+        '''
+        returns location data and capacities of power plants
+        '''
+        pass    
 
 def revReplaceStr(string):
     '''
