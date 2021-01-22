@@ -9,7 +9,7 @@ Created on Sun Nov 29 21:59:08 2020
 from datetime import datetime
 from typing import List
 
-physFlowTableName='"Physical Flow"'
+physFlowTableName='Physical Flow'
 
 class Filter:
     def __init__(self, begin: datetime, end: datetime, groupby='day'):

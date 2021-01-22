@@ -24,9 +24,9 @@ ftime = {'day': '%Y-%m-%d',
 checkPipeInPipe="pipeInPipeWithTsoKey is NULL"
 checkDoubleReporting="isDoubleReporting is not 1"
 def timeFilter(filt):
-    return f'"{filt.begin.strftime("%Y-%m-%d")}" < periodFrom and periodFrom < "{filt.end.strftime("%Y-%m-%d")}"'
+    return f'"{filt.begin.strftime("%Y-%m-%d")}" < periodFrom and periodFrom < "{filt.end.strftime("%Y-%m-%d")}" '
 
-physFlowTableName='"Physical Flow"'
+physFlowTableName='Physical Flow'
 
 
 class EntsogSQLite(EntsogDataManager):
@@ -109,7 +109,7 @@ class EntsogSQLite(EntsogDataManager):
         groupString = f'strftime("{ftime[filt.groupby]}", "time"), {group_by}'
 
         with closing(sql.connect(self.database)) as conn:
-            query = f'select {selectString} from {table} t {joinString} where {whereString} group by {groupString}'
+            query = f'select {selectString} from "{table}" t {joinString} where {whereString} group by {groupString}'
             flow = pd.read_sql_query(query, conn, index_col='time')
         return flow
 
@@ -126,7 +126,7 @@ class EntsogSQLite(EntsogDataManager):
         groupString = f'strftime("{ftime[filt.groupby]}", "time"), {group_by}'
 
         with closing(sql.connect(self.database)) as conn:
-            query = f'select {selectString} from {table} t {joinString} where {whereString} group by {groupString}'
+            query = f'select {selectString} from "{table}" t {joinString} where {whereString} group by {groupString}'
             flow = pd.read_sql_query(query, conn, index_col='time')
         return flow
 
@@ -154,7 +154,7 @@ class EntsogSQLite(EntsogDataManager):
             whereString += f' and {checkPipeInPipe}'
 
         with closing(sql.connect(self.database)) as conn:
-            query = f'select {selectString} from {table} o {joinString} left join connectionpoints c on o.pointKey=c.pointKey where {whereString} group by {groupString}'
+            query = f'select {selectString} from "{table}" o {joinString} left join connectionpoints c on o.pointKey=c.pointKey where {whereString} group by {groupString}'
             bil = pd.read_sql_query(query, conn, index_col='time')            
         bilanz = bil.pivot(columns=['infra', 'directionKey'])
         bilanz.columns = bilanz.columns.droplevel(None)
@@ -200,7 +200,7 @@ class EntsogSQLite(EntsogDataManager):
         groupString = f'strftime("{ftime[filt.groupby]}", "time"), {group_by}'
 
         with closing(sql.connect(self.database)) as conn:
-            query = f'select {selectString} from {table} t {joinString} where {whereString} group by {groupString}'
+            query = f'select {selectString} from "{table}" t {joinString} where {whereString} group by {groupString}'
             flow = pd.read_sql_query(query, conn, index_col='time')
 
         flow['name'] = flow['adjacentCountry'].apply(lambda x: str(
