@@ -13,7 +13,7 @@ from dash.exceptions import PreventUpdate
 from dash.dependencies import Input, Output, State, ClientsideFunction
 from dash import dcc
 from dash import html
-import dash_table
+from dash import dash_table
 import plotly.graph_objects as go
 import plotly.express as px
 
