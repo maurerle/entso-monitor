@@ -11,8 +11,8 @@ from urllib.parse import urlparse, parse_qsl, urlencode
 import dash
 from dash.exceptions import PreventUpdate
 from dash.dependencies import Input, Output
-import dash_core_components as dcc
-import dash_html_components as html
+from dash import dcc
+from dash import html
 import dash_table
 import plotly.graph_objects as go
 import plotly.express as px
@@ -246,7 +246,7 @@ layout = html.Div(
             dcc.Link('Data comes from ENTSO-G Transparency Platform',
                      href='https://transparency.entsog.eu/', refresh=True),
             html.Br(),
-            dcc.Link('Legal Notice', refresh=True, href='https://datensch.eu/legal-notice/', refresh=True),
+            dcc.Link('Legal Notice', refresh=True, href='https://datensch.eu/legal-notice/'),
             ],
             className="pretty_container",
         ),
@@ -509,7 +509,7 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
     a = dm.operationaldataByPoints(valid_points, filt, [
                                    'pointKey', 'directionKey'], table='Allocation')
     t = dm.operationaldataByPoints(valid_points, filt, [
-                                   'pointKey', 'directionKey'], table='FirmTechnical')    
+                                   'pointKey', 'directionKey'], table='FirmTechnical')
     p['indicator'] = 'phys'
     a['indicator'] = 'alloc'
     t['indicator'] = 'firmTechnical'

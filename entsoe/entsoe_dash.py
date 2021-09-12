@@ -11,8 +11,8 @@ from urllib.parse import urlparse, parse_qsl, urlencode
 import dash
 from dash.exceptions import PreventUpdate
 from dash.dependencies import Input, Output, State, ClientsideFunction
-import dash_core_components as dcc
-import dash_html_components as html
+from dash import dcc
+from dash import html
 import dash_table
 import plotly.graph_objects as go
 import plotly.express as px
@@ -20,6 +20,8 @@ import plotly.express as px
 from entsoe_data_manager import Filter
 import json
 import pandas as pd
+
+ENTSOE_URL = 'https://transparency.entsoe.eu/content/static_content/Static content/web api/Guide.html#_areas'
 
 if __name__ == "__main__":
     app = dash.Dash(__name__, meta_tags=[
@@ -174,7 +176,7 @@ layout = html.Div(
                                      clearable=False,
                                      ),
                         dcc.Link(
-                            'Meaning of Zone names', href='https://transparency.entsoe.eu/content/static_content/Static content/web api/Guide.html#_areas', refresh=True),
+                            'Meaning of Zone names', href=ENTSOE_URL),
                         html.P("Aggregation Intervall:",
                                className="control_label"),
                         dcc.RadioItems(
@@ -259,7 +261,7 @@ layout = html.Div(
             dcc.Link('Data comes from ENTSO-E Transparency Platform',
                      href='https://transparency.entsoe.eu/', refresh=True),
             html.Br(),
-            dcc.Link('Legal Notice', refresh=True, href='https://datensch.eu/legal-notice/', refresh=True),
+            dcc.Link('Legal Notice', refresh=True, href='https://datensch.eu/legal-notice/'),
         ],
         className="pretty_container",
     ),

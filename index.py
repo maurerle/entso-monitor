@@ -6,8 +6,8 @@ Created on Sun Dec  6 01:58:15 2020
 @author: maurer
 """
 
-import dash_core_components as dcc
-import dash_html_components as html
+from dash import dcc
+from dash import html
 from dash.dependencies import Input, Output
 
 from app import app, server
@@ -25,8 +25,7 @@ app.layout = html.Div([
 def display_page(pathname):
     print(pathname)
     if pathname == '/entsoe':
-        pass
-        # return entsoe_dash.layout
+        return entsoe_dash.layout
     elif pathname == '/entsog':
         return entsog_dash.layout
     elif pathname == '/':

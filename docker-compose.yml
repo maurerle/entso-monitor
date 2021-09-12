@@ -1,8 +1,8 @@
 version: "3.8"
 services:
   dash:
-    build: docker
-    #image: maurer:dash
+    build: .
+    image: nowum-energy-entso:latest
     ports:
       - "8000:8000"
     #volumes:
