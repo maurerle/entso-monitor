@@ -509,7 +509,7 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
     a = dm.operationaldataByPoints(valid_points, filt, [
                                    'pointKey', 'directionKey'], table='Allocation')
     t = dm.operationaldataByPoints(valid_points, filt, [
-                                   'pointKey', 'directionKey'], table='FirmTechnical')
+                                   'pointKey', 'directionKey'], table='Firm Technical')
     p['indicator'] = 'phys'
     a['indicator'] = 'alloc'
     t['indicator'] = 'firmTechnical'

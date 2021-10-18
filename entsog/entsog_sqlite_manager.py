@@ -99,7 +99,7 @@ class EntsogSQLite(EntsogDataManager):
         inString = '("'+'","'.join(operatorKeys)+'")'
         whereString += f'and t.operatorKey in {inString} and {checkDoubleReporting}'
         joinString = ' left join (select distinct pointKey, isDoubleReporting, operatorKey, pipeInPipeWithTsoKey from operatorpointdirections) opd on t.pointKey = opd.pointKey and t.operatorKey = opd.operatorKey'
-        
+
         if table == physFlowTableName:
             whereString += f' and {checkPipeInPipe}'
 
@@ -155,7 +155,7 @@ class EntsogSQLite(EntsogDataManager):
 
         with closing(sql.connect(self.database)) as conn:
             query = f'select {selectString} from "{table}" o {joinString} left join connectionpoints c on o.pointKey=c.pointKey where {whereString} group by {groupString}'
-            bil = pd.read_sql_query(query, conn, index_col='time')            
+            bil = pd.read_sql_query(query, conn, index_col='time')
         bilanz = bil.pivot(columns=['infra', 'directionKey'])
         bilanz.columns = bilanz.columns.droplevel(None)
         return self._diffHelper(bilanz)
@@ -205,7 +205,7 @@ class EntsogSQLite(EntsogDataManager):
 
         flow['name'] = flow['adjacentCountry'].apply(lambda x: str(
             x) if x else '-')+':'+flow['adjacentZones'].apply(lambda x: str(x) if x else '-')
-        
+
         del flow['adjacentCountry']
         del flow['adjacentZones']
 
@@ -244,7 +244,7 @@ if __name__ == "__main__":
     end = datetime(2018, 7, 2)
     filt = Filter(start, end, 'hour')
     operatorKeys = entsog.operatorsByBZ('Italy')
-    
+
     operatorKeys = entsog.operatorsByBZ('Portugal')
     bil = entsog.bilanz(operatorKeys, filt)
     bil.plot(rot=45)

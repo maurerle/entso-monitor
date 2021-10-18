@@ -4,4 +4,5 @@ gunicorn>=19.7.1
 plotly
 Flask
 pandas
-#entsoe-py
+entsoe-py
+requests

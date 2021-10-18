@@ -35,7 +35,7 @@ if True:
     # data manager
     dm = EntsoeSQLite('data/entsoe.db')
     # plant data manager
-    pdm = EntsoePlantSQLite('data/entsoe-plant.db')
+    pdm = EntsoePlantSQLite('data/entsoe.db')
 else:
     from entsoe_parquet_manager import EntsoeParquet
     import findspark
@@ -52,7 +52,7 @@ else:
         spark = SparkSession.builder.config(conf=conf).getOrCreate()
     dm = EntsoeParquet('data', spark)
     # TODO update SPARK
-    pdm = EntsoePlantSQLite('data/entsoe-plant.db')
+    pdm = EntsoePlantSQLite('data/entsoe.db')
 
 powersys = pdm.powersystems('')
 powersys['capacityName'] = powersys['capacity'].apply(lambda x: str(x)+' MW')

@@ -7,7 +7,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 USER admin
 WORKDIR /app
-COPY entsoe/* /app/
+COPY entsoe_vis/* /app/
 COPY entsog/* /app/
 COPY . /app
 

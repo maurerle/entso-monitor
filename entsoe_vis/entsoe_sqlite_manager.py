@@ -132,8 +132,8 @@ class EntsoePlantSQLite(EntsoePlantDataManager):
             # TODO add type
             query = "select distinct name,country from plant_names"
             names = pd.read_sql_query(query, conn)
-        return names    
-    
+        return names
+
     def capacityPerPlant(self, country=''):
         selectString = 'Name,country,"Installed_Capacity_[MW]" as capacity,Production_Type'
         if country == '':
@@ -154,8 +154,8 @@ class EntsoePlantSQLite(EntsoePlantDataManager):
         with closing(sql.connect(self.plantdatabase)) as conn:
             df = pd.read_sql(
                 f'select {selectString} from powersystemdata p join query_installed_generation_capacity_per_unit q on q."index" = p.eic_code {whereString}', conn)
-        return df    
-    
+        return df
+
 
 
 if __name__ == "__main__":
@@ -190,7 +190,7 @@ if __name__ == "__main__":
     #         query = "select * from DE_query_generation"
     #         gen = pd.read_sql_query(query,conn)
     filt = Filter(datetime(2018, 2, 1), datetime(2019, 2, 2), 'hour')
-    ep = EntsoePlantSQLite('data/entsoe-plant.db')
+    ep = EntsoePlantSQLite('data/entsoe.db')
     names = ep.getNames()
     nossener = ep.plantGen(['GTHKW Nossener Bruecke'], filt)
     doel2 = ep.plantGen(['DOEL 2'], filt)
