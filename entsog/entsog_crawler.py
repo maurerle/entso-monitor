@@ -35,7 +35,7 @@ data = pd.DataFrame(response.json()['AggregatedData'])
 class EntsogCrawler:
 
     def __init__(self, database=None, sparkfolder=None):
-        self.database=database
+        self.database = database
         self.sparkfolder = sparkfolder
 
     def getDataFrame(self, name, params=['limit=10000'], useJson=False):
@@ -86,8 +86,7 @@ class EntsogCrawler:
             # rate limiting Gateway Timeo-outs
             yield (beg1, end1), self.getDataFrame(name, params)
 
-
-    def pullData(self,names):
+    def pullData(self, names):
         pbar = tqdm(names)
         for name in pbar:
             try:
@@ -130,7 +129,8 @@ class EntsogCrawler:
                 begin = date(2017, 7, 10)
 
         bulks = (end-begin).days
-        print(f'start: {begin}, end: {end}, days: {bulks}, indicators: {indicators}')
+        print(
+            f'start: {begin}, end: {end}, days: {bulks}, indicators: {indicators}')
 
         if bulks < 1:
             return
@@ -140,7 +140,8 @@ class EntsogCrawler:
 
         for indicator in indicators:
             #database = indicator+'.db'
-            pbar = tqdm(self.yieldData('operationaldata', indicator, bulks, begin))
+            pbar = tqdm(self.yieldData(
+                'operationaldata', indicator, bulks, begin))
             for span, phys in pbar:
                 pbar.set_description(f'op {span[0]} to {span[1]}')
 
@@ -149,7 +150,8 @@ class EntsogCrawler:
                         phys.to_sql(indicator, conn, if_exists='append')
 
                 if self.sparkfolder:
-                    phys.to_parquet(f'{self.sparkfolder}/temp{indicator}.parquet')
+                    phys.to_parquet(
+                        f'{self.sparkfolder}/temp{indicator}.parquet')
                     spark_data = spark.read.parquet(
                         f'{self.sparkfolder}/temp{indicator}.parquet')
                     spark_data = (spark_data
@@ -194,6 +196,7 @@ class EntsogCrawler:
                     'CREATE INDEX IF NOT EXISTS "idx_ft_pointKey" ON "Firm Technical" ("pointKey","periodFrom");')
                 conn.execute(query)
 
+
 if __name__ == "__main__":
     import findspark
     findspark.init()
@@ -233,12 +236,12 @@ if __name__ == "__main__":
 
     names = ['cmpUnsuccessfulRequests',
              # 'operationaldata',
-             #'cmpUnavailables',
-             #'cmpAuctions',
+             # 'cmpUnavailables',
+             # 'cmpAuctions',
              # 'AggregatedData', # operationaldata aggregated for each zone
-             #'tariffssimulations',
-             #'tariffsfulls',
-             #'urgentmarketmessages',
+             # 'tariffssimulations',
+             # 'tariffsfulls',
+             # 'urgentmarketmessages',
              'connectionpoints',
              'operators',
              'balancingzones',

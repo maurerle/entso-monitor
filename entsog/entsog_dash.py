@@ -171,7 +171,8 @@ layout = html.Div(
                                      multi=True,
                                      className="dcc_control",
                                      ),
-                        html.P("Aggregation Intervall:", className="control_label"),
+                        html.P("Aggregation Intervall:",
+                               className="control_label"),
                         dcc.RadioItems(
                             id="group_by_control",
                             options=[
@@ -246,8 +247,9 @@ layout = html.Div(
             dcc.Link('Data comes from ENTSO-G Transparency Platform',
                      href='https://transparency.entsog.eu/', refresh=True),
             html.Br(),
-            dcc.Link('Legal Notice', refresh=True, href='https://datensch.eu/legal-notice/'),
-            ],
+            dcc.Link('Legal Notice', refresh=True,
+                     href='https://datensch.eu/legal-notice/'),
+        ],
             className="pretty_container",
         ),
     ])
@@ -313,8 +315,9 @@ def updateOperatorControl(bz):
     optKeys = inter['fromOperatorKey'].dropna().unique()
     return [{'label': opt[i], 'value': optKeys[i]} for i in range(len(opt))]
 
+
 component_ids = ['start_date', 'end_date', 'group_by_control',
-                 'bz_control', 'operator_control', 'point_control','map_layer_control']
+                 'bz_control', 'operator_control', 'point_control', 'map_layer_control']
 
 
 def parse_state(url):

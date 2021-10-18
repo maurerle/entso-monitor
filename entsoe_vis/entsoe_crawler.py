@@ -66,6 +66,7 @@ def calcDiff(data, inplace=False):
         del dat[c]
     return dat
 
+
 class EntsoeCrawler:
     def __init__(self, folder, spark=None, database=None):
         self.spark = spark
@@ -73,12 +74,13 @@ class EntsoeCrawler:
         self.folder = folder
 
     def initBaseSql(self):
-        psrtype = pd.DataFrame.from_dict(PSRTYPE_MAPPINGS, orient='index', columns=['prod_type'])
-        areas = pd.DataFrame([[e.name, e.value, e.tz, e.meaning] for e in Area],columns=['name','value','tz','meaning'])
+        psrtype = pd.DataFrame.from_dict(
+            PSRTYPE_MAPPINGS, orient='index', columns=['prod_type'])
+        areas = pd.DataFrame([[e.name, e.value, e.tz, e.meaning]
+                             for e in Area], columns=['name', 'value', 'tz', 'meaning'])
         with closing(sql.connect(self.database)) as conn:
             areas.to_sql('areas', conn, if_exists='replace')
             psrtype.to_sql('psrtype', conn, if_exists='replace')
-
 
     def pullData(self, procedure, country_code, start, end):
         data = pd.DataFrame(procedure(country_code, start=start, end=end))
@@ -103,8 +105,6 @@ class EntsoeCrawler:
                 print('retrying:', repr(e), start, end)
                 time.sleep(10)
                 data = self.pullData(proc, country, start, end)
-
-
 
             # replace spaces and invalid chars in column names
             data.columns = list(map(replaceStr, map(str, data.columns)))
@@ -164,7 +164,7 @@ class EntsoeCrawler:
                     f'CREATE INDEX IF NOT EXISTS "country_idx_{proc.__name__}" ON "{proc.__name__}" ("country", "index");')
                 conn.execute(query)
                 #query = (f'CREATE INDEX IF NOT EXISTS "country_{proc.__name__}" ON "{proc.__name__}" ("country");')
-                #conn.execute(query)
+                # conn.execute(query)
                 print(f'created indexes country_idx_{proc.__name__}')
 
     def pullCrossborders(self, start, delta, times, proc, allZones=True):
@@ -261,7 +261,7 @@ class EntsoeCrawler:
                 continue
         return plant_countries
 
-    def updateDatabase(self, client, start = None, delta = None):
+    def updateDatabase(self, client, start=None, delta=None):
 
         if not (start and delta):
             import pytz
@@ -279,23 +279,24 @@ class EntsoeCrawler:
             end = start+delta
         countries = [e.name for e in Area]
 
-        if end.year-start.year >0:
+        if end.year-start.year > 0:
             gen_procs = [client.query_installed_generation_capacity,
-                 client.query_installed_generation_capacity_per_unit]
-            self.bulkDownload(countries,gen_procs,start,delta=delta,times=1)
+                         client.query_installed_generation_capacity_per_unit]
+            self.bulkDownload(countries, gen_procs,
+                              start, delta=delta, times=1)
 
         # timeseries
         ts_procs = [client.query_day_ahead_prices,
-                 client.query_load,
-                 client.query_load_forecast,
-                 client.query_generation_forecast,
-                 client.query_wind_and_solar_forecast,
-                 client.query_generation]
+                    client.query_load,
+                    client.query_load_forecast,
+                    client.query_generation_forecast,
+                    client.query_wind_and_solar_forecast,
+                    client.query_generation]
 
         # Download load and generation
-        self.bulkDownload(countries,ts_procs,start,delta,times=1)
+        self.bulkDownload(countries, ts_procs, start, delta, times=1)
 
-        self.pullCrossborders(start,delta,1,client.query_crossborder_flows)
+        self.pullCrossborders(start, delta, 1, client.query_crossborder_flows)
 
         plant_countries = self.plantCountries(client)
         self.bulkDownloadPlantData(
@@ -305,6 +306,7 @@ class EntsoeCrawler:
         self.initBaseSql()
         self.pullPowerSystemData()
         self.updateDatabase(client, start, delta)
+
 
 if __name__ == "__main__":
     # Create a spark session
@@ -329,7 +331,7 @@ if __name__ == "__main__":
     db = 'data/entsoe.db'
 
     crawler = EntsoeCrawler(folder='data/spark', spark=spark, database=db)
-    procs = [client.query_day_ahead_prices('BE', start=start,end=end),
+    procs = [client.query_day_ahead_prices('BE', start=start, end=end),
              client.query_load,
              client.query_load_forecast,
              client.query_generation_forecast,
@@ -338,16 +340,16 @@ if __name__ == "__main__":
 
     countries = [e.name for e in Area]
     # Download load and generation
-    crawler.bulkDownload(countries,procs,start,delta,times)
+    crawler.bulkDownload(countries, procs, start, delta, times)
 
     # Capacities
 
     def downloadCapPerUnit(country, start, end):
-           pp = client.query_installed_generation_capacity_per_unit(
-               country, start=start, end=end)
-           # modify encoding to utf-8, upstream fix contributed
-           #pp['Name'] = pp['Name'].str.encode('latin-1').str.decode('utf-8')
-           return pp
+        pp = client.query_installed_generation_capacity_per_unit(
+            country, start=start, end=end)
+        # modify encoding to utf-8, upstream fix contributed
+        #pp['Name'] = pp['Name'].str.encode('latin-1').str.decode('utf-8')
+        return pp
 
     procs = [client.query_installed_generation_capacity,
              client.query_installed_generation_capacity_per_unit]

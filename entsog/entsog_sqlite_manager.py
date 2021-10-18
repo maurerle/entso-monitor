@@ -21,12 +21,15 @@ ftime = {'day': '%Y-%m-%d',
          'minute': '%Y-%m-%d %H:%M:00'}
 
 
-checkPipeInPipe="pipeInPipeWithTsoKey is NULL"
-checkDoubleReporting="isDoubleReporting is not 1"
+checkPipeInPipe = "pipeInPipeWithTsoKey is NULL"
+checkDoubleReporting = "isDoubleReporting is not 1"
+
+
 def timeFilter(filt):
     return f'"{filt.begin.strftime("%Y-%m-%d")}" < periodFrom and periodFrom < "{filt.end.strftime("%Y-%m-%d")}" '
 
-physFlowTableName='Physical Flow'
+
+physFlowTableName = 'Physical Flow'
 
 
 class EntsogSQLite(EntsogDataManager):
@@ -166,7 +169,7 @@ class EntsogSQLite(EntsogDataManager):
         '''
         l = []
         p = pd.DataFrame()
-        df.fillna(0,inplace=True)
+        df.fillna(0, inplace=True)
         for col in df.columns:
             if col[0] not in l:
                 for col2 in df.columns:

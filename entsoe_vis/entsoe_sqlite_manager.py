@@ -157,7 +157,6 @@ class EntsoePlantSQLite(EntsoePlantDataManager):
         return df
 
 
-
 if __name__ == "__main__":
     country = 'NL'
     par = EntsoeSQLite('data/entsoe.db')
