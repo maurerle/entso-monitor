@@ -7,37 +7,35 @@ Created on Mon Oct 18 15:35:12 2021
 """
 
 from entsoe import EntsoePandasClient
-from datetime import timedelta
 import pandas as pd
 
 from entsoe_vis.entsoe_crawler import EntsoeCrawler
 from entsog.entsog_crawler import EntsogCrawler
 
 
-def updateEntsoe(first=False):
-    db = 'data/entsoe.db'
+def updateEntsoe(db, first=False):
     client = EntsoePandasClient(api_key='ae2ed060-c25c-4eea-8ae4-007712f95375')
     crawler = EntsoeCrawler(folder='data/spark', spark=None, database=db)
 
     if first:
         start = pd.Timestamp('20150101', tz='Europe/Berlin')
         delta = pd.Timestamp.now(tz='Europe/Berlin')-start
-        crawler.createDatabase(client, start,delta)
+        crawler.createDatabase(client, start, delta)
     else:
         crawler.updateDatabase(client)
 
-def updateEntsog(first=False):
-    db = 'data/entsog.db'
+
+def updateEntsog(db, first=False):
     crawler = EntsogCrawler(db, sparkfolder=None)
 
     names = ['cmpUnsuccessfulRequests',
              # 'operationaldata',
-             #'cmpUnavailables',
-             #'cmpAuctions',
+             # 'cmpUnavailables',
+             # 'cmpAuctions',
              # 'AggregatedData', # operationaldata aggregated for each zone
-             #'tariffssimulations',
-             #'tariffsfulls',
-             #'urgentmarketmessages',
+             # 'tariffssimulations',
+             # 'tariffsfulls',
+             # 'urgentmarketmessages',
              'connectionpoints',
              'operators',
              'balancingzones',
@@ -52,6 +50,13 @@ def updateEntsog(first=False):
 
 
 if __name__ == '__main__':
-    updateEntsoe(first=False)
+    # updateEntsoe('data/entsoe.db',first=False)
+    # updateEntsog('data/entsog.db',first=False)
+    db = 'postgresql://entso:entso@10.13.10.41:5432'
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
 
-    updateEntsog(first=False)
+    t = create_engine(f'{db}/entsoe')
+
+    updateEntsoe(f'{db}/entsoe', first=True)
+    updateEntsog(f'{db}/entsog', first=True)

@@ -6,3 +6,4 @@ Flask
 pandas
 entsoe-py
 requests
+sqlalchemy

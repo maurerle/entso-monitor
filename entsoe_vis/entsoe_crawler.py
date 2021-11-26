@@ -11,11 +11,19 @@ import sqlite3 as sql
 import pandas as pd
 from datetime import timedelta
 import time
+from sqlalchemy import create_engine
+from contextlib import contextmanager
 
 from entsoe import EntsoePandasClient
 from entsoe.mappings import PSRTYPE_MAPPINGS, NEIGHBOURS, Area
 from entsoe.exceptions import NoMatchingDataError
 from requests.exceptions import HTTPError
+
+import logging
+
+logging.basicConfig()
+log = logging.getLogger('entsoe')
+log.setLevel(logging.INFO)
 
 from_n = []
 to_n = []
@@ -70,15 +78,28 @@ def calcDiff(data, inplace=False):
 class EntsoeCrawler:
     def __init__(self, folder, spark=None, database=None):
         self.spark = spark
-        self.database = database
         self.folder = folder
+        if database:
+            if database.startswith('postgresql'):
+
+                self.engine = create_engine(database)
+                @contextmanager
+                def access_db():
+                    yield self.engine
+
+                self.db_accessor = access_db
+            else:
+                self.db_accessor = lambda: closing(sql.connect(database))
+        else:
+            self.db_accessor = None
 
     def initBaseSql(self):
         psrtype = pd.DataFrame.from_dict(
             PSRTYPE_MAPPINGS, orient='index', columns=['prod_type'])
         areas = pd.DataFrame([[e.name, e.value, e.tz, e.meaning]
-                             for e in Area], columns=['name', 'value', 'tz', 'meaning'])
-        with closing(sql.connect(self.database)) as conn:
+                              for e in Area], columns=['name', 'value', 'tz', 'meaning'])
+        with self.db_accessor() as conn:
+
             areas.to_sql('areas', conn, if_exists='replace')
             psrtype.to_sql('psrtype', conn, if_exists='replace')
 
@@ -93,16 +114,16 @@ class EntsoeCrawler:
             except NoMatchingDataError as e:
                 raise e
             except HTTPError as e:
-                print(e.response.status_code, e.response.reason)
+                log.error(e.response.status_code, e.response.reason)
                 if e.response.status_code == 400:
                     raise e
                 else:
-                    print('retrying:', repr(e), start, end)
+                    log.info(f'retrying: {repr(e)}, {start}, {end}')
                     time.sleep(10)
                     data = self.pullData(proc, country, start, end)
 
             except Exception as e:
-                print('retrying:', repr(e), start, end)
+                log.info(f'retrying: {repr(e)}, {start}, {end}')
                 time.sleep(10)
                 data = self.pullData(proc, country, start, end)
 
@@ -113,12 +134,12 @@ class EntsoeCrawler:
             data = calcDiff(data, inplace=True)
             # add country column
             data['country'] = country
-            if self.database != None:
-                with closing(sql.connect(self.database)) as conn:
+            if self.db_accessor:
+                with self.db_accessor() as conn:
                     try:
                         data.to_sql(proc.__name__, conn, if_exists='append')
                     except Exception as e:
-                        print(e)
+                        log.info(f'handling {repr(e)} by concat')
                         # merge old data with new data
                         prev = pd.read_sql_query(
                             f'select * from {proc.__name__}', conn, index_col='index')
@@ -126,7 +147,7 @@ class EntsoeCrawler:
                         # convert type as pandas needs it
                         dat.index = dat.index.astype('datetime64[ns]')
                         dat.to_sql(proc.__name__, conn, if_exists='replace')
-                        print(f'replaced table {proc.__name__}')
+                        log.info(f'replaced table {proc.__name__}')
 
             if self.spark != None:
                 data['time'] = data.index
@@ -137,17 +158,17 @@ class EntsoeCrawler:
                 spark_data.write.mode('append').parquet(
                     f'{self.folder}/{country}/{proc.__name__}')
         except NoMatchingDataError:
-            print('no data found for ', proc.__name__, start, end)
+            log.error('no data found for {proc.__name__}, {start}, {end}')
         except Exception as e:
-            print('Error:', e, start, end)
+            log.exception(f'error downloading {start}, {end}')
 
     def bulkDownload(self, countries, procs, start, delta, times):
         end = start+delta
         for proc in procs:
             # hier könnte man parallelisieren
             for country in countries:
-                print()
-                print(country, proc.__name__)
+                log.info('')
+                log.info(f'{country}, {proc.__name__}')
                 pbar = tqdm(range(times))
                 for i in pbar:
                     start1 = start + i * delta
@@ -158,14 +179,14 @@ class EntsoeCrawler:
 
                     self.persist(country, proc, start1, end1)
 
-            with closing(sql.connect(self.database)) as conn:
-                print(f'creating index country_idx_{proc.__name__}')
+            with self.db_accessor() as conn:
+                log.info(f'creating index country_idx_{proc.__name__}')
                 query = (
                     f'CREATE INDEX IF NOT EXISTS "country_idx_{proc.__name__}" ON "{proc.__name__}" ("country", "index");')
                 conn.execute(query)
                 #query = (f'CREATE INDEX IF NOT EXISTS "country_{proc.__name__}" ON "{proc.__name__}" ("country");')
                 # conn.execute(query)
-                print(f'created indexes country_idx_{proc.__name__}')
+                log.info(f'created indexes country_idx_{proc.__name__}')
 
     def pullCrossborders(self, start, delta, times, proc, allZones=True):
         end = start+delta
@@ -173,7 +194,7 @@ class EntsoeCrawler:
             data = pd.DataFrame()
             start1 = start + i * delta
             end1 = end + i*delta
-            print(start1)
+            log.info(start1)
 
             for n1 in NEIGHBOURS:
                 for n2 in NEIGHBOURS[n1]:
@@ -182,17 +203,17 @@ class EntsoeCrawler:
                             dataN = proc(n1, n2, start=start1, end=end1)
                             data[n1+'-'+n2] = dataN
                     except NoMatchingDataError:
-                        #print('no data found for ',n1,n2)
+                        #log.info('no data found for ',n1,n2)
                         pass
-                    except Exception as e:
-                        print(e)
+                    except Exception:
+                        log.exception('Error crawling Crossboarders')
 
-            if self.database != None:
-                with closing(sql.connect(self.database)) as conn:
+            if self.db_accessor:
+                with self.db_accessor() as conn:
                     try:
                         data.to_sql(proc.__name__, conn, if_exists='append')
-                    except Exception as e:
-                        print(e)
+                    except Exception:
+                        log.exception('error saving crossboarders')
                         prev = pd.read_sql_query(
                             f'select * from {proc.__name__}', conn, index_col='index')
 
@@ -214,8 +235,8 @@ class EntsoeCrawler:
                  'capacity', 'energy_source', 'lon', 'lat']]
         # delete those without location or eic_code
 
-        if self.database != None:
-            with closing(sql.connect(self.database)) as conn:
+        if self.db_accessor:
+            with self.db_accessor() as conn:
                 df.to_sql('powersystemdata', conn, if_exists='replace')
 
         if self.spark != None:
@@ -239,12 +260,12 @@ class EntsoeCrawler:
         procs = [query_per_plant]
         self.bulkDownload(countries, procs, start, delta=delta, times=times)
 
-        with closing(sql.connect(self.database)) as conn:
+        with self.db_accessor() as conn:
             query = 'CREATE INDEX IF NOT EXISTS "idx_name_query_per_plant" ON "query_per_plant" ("name", "index", "country");'
             conn.execute(query)
 
-        with closing(sql.connect(self.database)) as conn:
-            query = ('select distinct name, country,type from query_per_plant')
+        with self.db_accessor() as conn:
+            query = 'select distinct name, country,type from query_per_plant'
             names = pd.read_sql_query(query, conn)
             names.to_sql('plant_names', conn, if_exists='replace')
 
@@ -256,7 +277,7 @@ class EntsoeCrawler:
                 _ = client.query_generation_per_plant(
                     country, start=st, end=st+timedelta(days=1))
                 plant_countries.append(country)
-                print('found data for', country)
+                log.info(f'found data for {country}')
             except Exception:
                 continue
         return plant_countries
@@ -266,7 +287,7 @@ class EntsoeCrawler:
         if not (start and delta):
             import pytz
             try:
-                with closing(sql.connect(self.database)) as conn:
+                with self.db_accessor() as conn:
                     query = 'select max("index") from query_day_ahead_prices'
                     d = conn.execute(query).fetchone()[0]
                 start = pd.to_datetime(d)
@@ -316,8 +337,8 @@ if __name__ == "__main__":
     findspark.init()
     conf = SparkConf().setAppName('entsoe').setMaster('local')
     spark = SparkSession.builder.config(conf=conf).getOrCreate()
-    print('')
-    print('ENTSOE')
+    log.info('')
+    log.info('ENTSOE')
 
     client = EntsoePandasClient(api_key='ae2ed060-c25c-4eea-8ae4-007712f95375')
 
@@ -373,7 +394,7 @@ if __name__ == "__main__":
             test_data = client.query_generation_per_plant(
                 country, start=st, end=st+timedelta(days=1))
             plant_countries.append(country)
-            print('found data for', country)
+            log.info(f'found data for {country}')
         except Exception:
             continue
 

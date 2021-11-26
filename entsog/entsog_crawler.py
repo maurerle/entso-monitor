@@ -10,12 +10,21 @@ import requests
 import urllib
 
 import time
-from datetime import datetime, date, timedelta
+from datetime import date, timedelta
 import pandas as pd
 from tqdm import tqdm
 
 import sqlite3 as sql
 from contextlib import closing
+
+from sqlalchemy import create_engine
+from contextlib import contextmanager
+
+import logging
+
+logging.basicConfig()
+log = logging.getLogger('entsog')
+log.setLevel(logging.INFO)
 
 api_endpoint = 'https://transparency.entsog.eu/api/v1/'
 
@@ -35,7 +44,19 @@ data = pd.DataFrame(response.json()['AggregatedData'])
 class EntsogCrawler:
 
     def __init__(self, database=None, sparkfolder=None):
-        self.database = database
+        if database:
+            if database.startswith('postgresql'):
+
+                self.engine = create_engine(database)
+                @contextmanager
+                def access_db():
+                    yield self.engine
+
+                self.db_accessor = access_db
+            else:
+                self.db_accessor = lambda: closing(sql.connect(database))
+        else:
+            self.db_accessor = None
         self.sparkfolder = sparkfolder
 
     def getDataFrame(self, name, params=['limit=10000'], useJson=False):
@@ -64,9 +85,9 @@ class EntsogCrawler:
             except requests.exceptions.InvalidURL as e:
                 raise e
             except (requests.exceptions.HTTPError, urllib.error.HTTPError) as e:
-                print("Error: {} : {} ".format(e.reason, e.url))
+                log.exception('Error getting Frame')
                 if e.reason == 'Gateway Time-out':
-                    print('waiting 30 seconds..')
+                    log.info('waiting 30 seconds..')
                     time.sleep(30)
         if data.empty:
             raise Exception('could not get any data for params:', params_str)
@@ -100,36 +121,37 @@ class EntsogCrawler:
                     data.to_parquet(f'{self.sparkfolder}/{name}.parquet')
                 #spark_data = spark.read.parquet(name+'.parquet')
 
-                if self.database:
-                    with closing(sql.connect(self.database)) as conn:
+                if self.db_accessor:
+                    with self.db_accessor() as conn:
                         data.to_sql(name, conn, if_exists='replace')
 
-            except Exception as e:
-                print(e)
+            except Exception:
+                log.exception('error pulling data')
 
-        if 'operatorpointdirections' in names and self.database:
-            with closing(sql.connect(self.database)) as conn:
+        if 'operatorpointdirections' in names and self.db_accessor:
+            with self.db_accessor() as conn:
                 query = (
                     'CREATE INDEX IF NOT EXISTS "idx_opd" ON "operatorpointdirections" ("operatorKey", "pointKey","directionKey");')
                 conn.execute(query)
 
     def pullOperationalData(self, indicators, begin=None, end=None):
-        print('getting values from operationaldata')
+        log.info('getting values from operationaldata')
         if not end:
             end = date.today()
 
         if not begin:
             try:
-                with closing(sql.connect(self.database)) as conn:
-                    query = f'select max("periodFrom") from "{indicators[0]}"'
-                    d = conn.execute(query).fetchone()[0]
-                begin = pd.to_datetime(d).date()
-            except Exception as e:
-                print(repr(e), 'using default start')
+                if self.db_accessor:
+                    with self.db_accessor() as conn:
+                        query = f'select max("periodFrom") from "{indicators[0]}"'
+                        d = conn.execute(query).fetchone()[0]
+                    begin = pd.to_datetime(d).date()
+            except Exception:
+                log.exception('using default start')
                 begin = date(2017, 7, 10)
 
         bulks = (end-begin).days
-        print(
+        log.info(
             f'start: {begin}, end: {end}, days: {bulks}, indicators: {indicators}')
 
         if bulks < 1:
@@ -145,8 +167,8 @@ class EntsogCrawler:
             for span, phys in pbar:
                 pbar.set_description(f'op {span[0]} to {span[1]}')
 
-                if self.database:
-                    with closing(sql.connect(self.database)) as conn:
+                if self.db_accessor:
+                    with self.db_accessor() as conn:
                         phys.to_sql(indicator, conn, if_exists='append')
 
                 if self.sparkfolder:
@@ -167,8 +189,8 @@ class EntsogCrawler:
         # sqlite will only use one index. EXPLAIN QUERY PLAIN shows if index is used
         # ref: https://www.sqlite.org/optoverview.html#or_optimizations
         # reference https://stackoverflow.com/questions/31031561/sqlite-query-to-get-the-closest-datetime
-        if 'Allocation' in names and self.database:
-            with closing(sql.connect(self.database)) as conn:
+        if 'Allocation' in names and self.db_accessor:
+            with self.db_accessor() as conn:
                 query = (
                     'CREATE INDEX IF NOT EXISTS "idx_opdata" ON "Allocation" ("operatorKey","periodFrom");')
                 conn.execute(query)
@@ -176,8 +198,8 @@ class EntsogCrawler:
                 query = (
                     'CREATE INDEX IF NOT EXISTS "idx_pointKey" ON "Allocation" ("pointKey","periodFrom");')
                 conn.execute(query)
-        if 'Physical Flow' in names and self.database:
-            with closing(sql.connect(self.database)) as conn:
+        if 'Physical Flow' in names and self.db_accessor:
+            with self.db_accessor() as conn:
                 query = (
                     'CREATE INDEX IF NOT EXISTS "idx_phys_operator" ON "Physical Flow" ("operatorKey","periodFrom");')
                 conn.execute(query)
@@ -186,8 +208,8 @@ class EntsogCrawler:
                     'CREATE INDEX IF NOT EXISTS "idx_phys_point" ON "Physical Flow" ("pointKey","periodFrom");')
                 conn.execute(query)
 
-        if 'Firm Technical' in names and self.database:
-            with closing(sql.connect(self.database)) as conn:
+        if 'Firm Technical' in names and self.db_accessor:
+            with self.db_accessor() as conn:
                 query = (
                     'CREATE INDEX IF NOT EXISTS "idx_ft_opdata" ON "Firm Technical" ("operatorKey","periodFrom");')
                 conn.execute(query)
@@ -207,9 +229,9 @@ if __name__ == "__main__":
 
     try:
         spark
-        print('using existing spark object')
+        log.info('using existing spark object')
     except:
-        print('creating new spark object')
+        log.info('creating new spark object')
         appname = 'entsog'
 
         if True:
