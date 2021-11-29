@@ -9,25 +9,47 @@ Created on Sun Nov 29 14:58:52 2020
 from entsoe_data_manager import EntsoeDataManager, EntsoePlantDataManager, Filter, revReplaceStr
 
 import sqlite3 as sql
-from contextlib import closing
+from contextlib import closing, contextmanager
 
 from datetime import datetime, date
 import pandas as pd
 from typing import List
 
-ftime = {'day': '%Y-%m-%d',
-         'month': '%Y-%m-01',
-         'year': '%Y-01-01',
-         'hour': '%Y-%m-%d %H:00:00',
-         'minute': '%Y-%m-%d %H:%M:00'}
+ftime_sqlite = {'day': '%Y-%m-%d',
+                'month': '%Y-%m-01',
+                'year': '%Y-01-01',
+                'hour': '%Y-%m-%d %H:00:00',
+                'minute': '%Y-%m-%d %H:%M:00'}
+
+ftime_pg = {'day': 'YYYY-MM-DD',
+            'month': 'YYYY-MM-01',
+            'year': 'YYYY-01-01',
+            'hour': 'YYYY-MM-DD %H:00:00',
+            'minute': 'YYYY-MM-DD HH24:MI:00'}
+
+def groupTime(groupby, column):
+    #return f'strftime("{ftime_sqlite[groupby]}", "{column}")' # SQLite
+    return f"to_char('{column}', '{ftime_pg[groupby]}')" # PostgreSQL
 
 
 class EntsoeSQLite(EntsoeDataManager):
     def __init__(self, database: str):
-        self.database = database
+        if database:
+            if database.startswith('postgresql'):
+                from sqlalchemy import create_engine
+                self.engine = create_engine(database)
+                @contextmanager
+                def access_db():
+                    yield self.engine
+
+                self.db_accessor = access_db
+            else:
+                self.db_accessor = lambda: closing(sql.connect(database))
+        else:
+            self.db_accessor = None
 
     def capacity(self, country: str):
-        with closing(sql.connect(self.database)) as conn:
+        with self.db_accessor() as conn:
             query = f'select distinct * from query_installed_generation_capacity where country="{country}"'
             cap = pd.read_sql_query(query, conn, index_col='index')
         cap.columns = cap.columns.map(revReplaceStr)
@@ -36,18 +58,18 @@ class EntsoeSQLite(EntsoeDataManager):
     def load(self, country: str, filt: Filter):
         # average is correct here as some countries have quarter hour data and others
         whereString = f'country="{country}" and "{filt.begin.strftime("%Y-%m-%d")}" < "index" and "index" < "{filt.end.strftime("%Y-%m-%d")}"'
-        selectString = f'strftime("{ftime[filt.groupby]}", "index") as time, avg("0") as value'
-        groupString = f'strftime("{ftime[filt.groupby]}", "time")'
-        with closing(sql.connect(self.database)) as conn:
+        selectString = f'{groupTime(filt.groupby, "index")} as time, avg("0") as value'
+        groupString = groupTime(filt.groupby, "time")
+        with self.db_accessor() as conn:
             query = f"select {selectString} from query_load where {whereString} group by {groupString}"
             load = pd.read_sql_query(query, conn, index_col='time')
         return load
 
     def generation(self, country: str, filt: Filter):
         whereString = f'country="{country}" and "{filt.begin.strftime("%Y-%m-%d")}" < "index" and "index" < "{filt.end.strftime("%Y-%m-%d")}"'
-        selectString = f'strftime("{ftime[filt.groupby]}", "index") as time'
-        groupString = f'strftime("{ftime[filt.groupby]}", "time")'
-        with closing(sql.connect(self.database)) as conn:
+        selectString = f'{groupTime(filt.groupby, "index")} as time'
+        groupString = groupTime(filt.groupby, "time")
+        with self.db_accessor() as conn:
             columns = list(pd.read_sql_query(
                 'select * from query_generation where 1=0', conn).columns)
             columns.remove('country')
@@ -71,7 +93,7 @@ class EntsoeSQLite(EntsoeDataManager):
         return res
 
     def _neighbours(self, fromC):
-        with closing(sql.connect(self.database)) as conn:
+        with self.db_accessor() as conn:
             query = 'select * from query_crossborder_flows where 0=1'
             columns = pd.read_sql_query(query, conn).columns
         nei = []
@@ -86,10 +108,10 @@ class EntsoeSQLite(EntsoeDataManager):
         whereString = f'"{filt.begin.strftime("%Y-%m-%d")}" < "index" and "index" < "{filt.end.strftime("%Y-%m-%d")}"'
 
         nei = self._neighbours(country)
-        selectString = f'{self._selectBuilder(nei)} strftime("{ftime[filt.groupby]}", "index") as time'
+        selectString = f'{self._selectBuilder(nei)} {groupTime(filt.groupby, "index")} as time'
 
-        groupString = f'strftime("{ftime[filt.groupby]}", "time")'
-        with closing(sql.connect(self.database)) as conn:
+        groupString = groupTime(filt.groupby, "time")
+        with self.db_accessor() as conn:
             query = f"select {selectString} from query_crossborder_flows where {whereString} group by {groupString}"
             cross = pd.read_sql_query(query, conn, index_col='time')
         return cross
@@ -101,7 +123,7 @@ class EntsoeSQLite(EntsoeDataManager):
         # return crossborder.select(columns).groupby(['group']).sum().toPandas()
 
     def countries(self):
-        with closing(sql.connect(self.database)) as conn:
+        with self.db_accessor() as conn:
             df = pd.read_sql(
                 'select name, value, meaning from areas', conn)
         return df
@@ -114,21 +136,33 @@ class EntsoeSQLite(EntsoeDataManager):
 
 class EntsoePlantSQLite(EntsoePlantDataManager):
     def __init__(self, plantdatabase: str):
-        self.plantdatabase = plantdatabase
+        if plantdatabase:
+            if plantdatabase.startswith('postgresql'):
+                from sqlalchemy import create_engine
+                self.engine = create_engine(plantdatabase)
+                @contextmanager
+                def access_db():
+                    yield self.engine
+
+                self.db_accessor = access_db
+            else:
+                self.db_accessor = lambda: closing(sql.connect(database))
+        else:
+            self.db_accessor = None
 
     def plantGen(self, names: List[str], filt: Filter):
         # average is correct here as some countries have quarter hour data and others
         inString = '("'+'","'.join(names)+'")'
         whereString = f'name in {inString} and "{filt.begin.strftime("%Y-%m-%d")}" < "index" and "index" < "{filt.end.strftime("%Y-%m-%d")}"'
-        selectString = f'strftime("{ftime[filt.groupby]}", "index") as time, avg("value") as value, country, type, name'
-        groupString = f'strftime("{ftime[filt.groupby]}", "time"), name, type'
-        with closing(sql.connect(self.plantdatabase)) as conn:
+        selectString = f'{groupTime(filt.groupby, "index")} as time, avg("value") as value, country, type, name'
+        groupString = f'{groupTime(filt.groupby, "time")}, name, type'
+        with self.db_accessor() as conn:
             query = f"select {selectString} from query_per_plant where {whereString} group by {groupString}"
             generation = pd.read_sql_query(query, conn, index_col='time')
         return generation
 
     def getNames(self):
-        with closing(sql.connect(self.plantdatabase)) as conn:
+        with self.db_accessor() as conn:
             # TODO add type
             query = "select distinct name,country from plant_names"
             names = pd.read_sql_query(query, conn)
@@ -140,7 +174,7 @@ class EntsoePlantSQLite(EntsoePlantDataManager):
             whereString = ''
         else:
             whereString = f'where country="{country}"'
-        with closing(sql.connect(self.plantdatabase)) as conn:
+        with self.db_accessor() as conn:
             query = f'select distinct {selectString} from query_installed_generation_capacity_per_unit {whereString}'
             df = pd.read_sql(query, conn)
         return df
@@ -151,7 +185,7 @@ class EntsoePlantSQLite(EntsoePlantDataManager):
             whereString = ''
         else:
             whereString = f'where p.country="{country}"'
-        with closing(sql.connect(self.plantdatabase)) as conn:
+        with self.db_accessor() as conn:
             df = pd.read_sql(
                 f'select {selectString} from powersystemdata p join query_installed_generation_capacity_per_unit q on q."index" = p.eic_code {whereString}', conn)
         return df

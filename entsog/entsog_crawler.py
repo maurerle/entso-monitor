@@ -91,6 +91,7 @@ class EntsogCrawler:
                     time.sleep(30)
         if data.empty:
             raise Exception('could not get any data for params:', params_str)
+        data.columns = [x.lower() for x in data.columns]
         return data
 
     def yieldData(self, name, indicator='Physical Flow', bulks=365*3, begin=date(2017, 7, 10)):

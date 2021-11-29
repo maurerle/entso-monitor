@@ -21,6 +21,8 @@ from entsoe_data_manager import Filter
 import json
 import pandas as pd
 
+DATABASE_URI = 'data/entsoe.db'
+DATABASE_URI = 'postgresql://entso:entso@10.13.10.41:5432/entsoe'
 ENTSOE_URL = 'https://transparency.entsoe.eu/content/static_content/Static content/web api/Guide.html#_areas'
 
 if __name__ == "__main__":
@@ -33,9 +35,9 @@ else:
 if True:
     from entsoe_sqlite_manager import EntsoeSQLite, EntsoePlantSQLite
     # data manager
-    dm = EntsoeSQLite('data/entsoe.db')
+    dm = EntsoeSQLite(DATABASE_URI)
     # plant data manager
-    pdm = EntsoePlantSQLite('data/entsoe.db')
+    pdm = EntsoePlantSQLite(DATABASE_URI)
 else:
     from entsoe_parquet_manager import EntsoeParquet
     import findspark

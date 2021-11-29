@@ -14,12 +14,21 @@ from entsog_data_manager import EntsogDataManager, Filter
 import sqlite3 as sql
 from contextlib import closing
 
-ftime = {'day': '%Y-%m-%d',
-         'month': '%Y-%m-01',
-         'year': '%Y-01-01',
-         'hour': '%Y-%m-%d %H:00:00',
-         'minute': '%Y-%m-%d %H:%M:00'}
+ftime_sqlite = {'day': '%Y-%m-%d',
+                'month': '%Y-%m-01',
+                'year': '%Y-01-01',
+                'hour': '%Y-%m-%d %H:00:00',
+                'minute': '%Y-%m-%d %H:%M:00'}
 
+ftime_pg = {'day': 'YYYY-MM-DD',
+            'month': 'YYYY-MM-01',
+            'year': 'YYYY-01-01',
+            'hour': 'YYYY-MM-DD %H:00:00',
+            'minute': 'YYYY-MM-DD HH24:MI:00'}
+
+def groupTime(groupby, column):
+    #return f'strftime("{ftime_sqlite[groupby]}", "{column}")' # SQLite
+    return f"to_char('{column}', '{ftime_pg[groupby]}')" # PostgreSQL
 
 checkPipeInPipe = "pipeInPipeWithTsoKey is NULL"
 checkDoubleReporting = "isDoubleReporting is not 1"
@@ -35,11 +44,12 @@ physFlowTableName = 'Physical Flow'
 class EntsogSQLite(EntsogDataManager):
     def __init__(self, database: str):
         self.database = database
+        
 
     def connectionpoints(self):
         selectString = 'tpMapX as lat, tpMapY as long, pointKey, pointLabel'
 
-        with closing(sql.connect(self.database)) as conn:
+        with self.db_accessor() as conn:
             zones = pd.read_sql_query(
                 f'select {selectString} from connectionpoints', conn)
         return zones
@@ -53,7 +63,7 @@ class EntsogSQLite(EntsogDataManager):
         selectString += 'pointKey, pointLabel, fromOperatorKey, fromOperatorLabel, fromCountryKey, fromBzKey, fromBzLabel, '
         selectString += 'toCountryKey, toOperatorKey,toOperatorLabel, toPointKey, toPointLabel, toBzKey,toBzLabel'
 
-        with closing(sql.connect(self.database)) as conn:
+        with self.db_accessor() as conn:
             interconnections = pd.read_sql_query(
                 f'select {selectString} from Interconnections', conn)
         return interconnections
@@ -62,7 +72,7 @@ class EntsogSQLite(EntsogDataManager):
         """also known as bidding zones"""
         selectString = 'tpMapY as lat, tpMapX as lon, bzLabel'
 
-        with closing(sql.connect(self.database)) as conn:
+        with self.db_accessor() as conn:
             zones = pd.read_sql_query(
                 f'select {selectString} from balancingzones', conn)
         return zones
@@ -82,7 +92,7 @@ class EntsogSQLite(EntsogDataManager):
 
         selectString = 'operatorKey, operatorLabel, operatorCountryKey, operatorTypeLabel'
 
-        with closing(sql.connect(self.database)) as conn:
+        with self.db_accessor() as conn:
             operators = pd.read_sql_query(
                 f'select {selectString} from operators {whereString}', conn)
         return operators
@@ -92,7 +102,7 @@ class EntsogSQLite(EntsogDataManager):
         selectString += 'tpTsoItemLabel, tSOBalancingZone, tSOCountry, pipeInPipeWithTsoKey, isDoubleReporting,'
         selectString += 'adjacentCountry, connectedOperators, adjacentOperatorKey, adjacentZones'
 
-        with closing(sql.connect(self.database)) as conn:
+        with self.db_accessor() as conn:
             opd = pd.read_sql_query(
                 f'select {selectString} from operatorpointdirections', conn)
         return opd
@@ -106,12 +116,12 @@ class EntsogSQLite(EntsogDataManager):
         if table == physFlowTableName:
             whereString += f' and {checkPipeInPipe}'
 
-        selectString = f'strftime("{ftime[filt.groupby]}", "periodFrom") as time, '
+        selectString = f'{groupTime(filt.groupby, "periodFrom")} as time, '
         selectString += 't.operatorKey, t.operatorLabel, t.directionKey, sum(value) as value'
         group_by = ', '.join(list(map(lambda x: 't.'+x, group_by)))
-        groupString = f'strftime("{ftime[filt.groupby]}", "time"), {group_by}'
+        groupString = f'{groupTime(filt.groupby, "time")}, {group_by}'
 
-        with closing(sql.connect(self.database)) as conn:
+        with self.db_accessor() as conn:
             query = f'select {selectString} from "{table}" t {joinString} where {whereString} group by {groupString}'
             flow = pd.read_sql_query(query, conn, index_col='time')
         return flow
@@ -120,21 +130,21 @@ class EntsogSQLite(EntsogDataManager):
         whereString = timeFilter(filt)
         inString = '("'+'","'.join(points)+'")'
         whereString += f'and pointKey in {inString}'
-        selectString = f'strftime("{ftime[filt.groupby]}", "periodFrom") as time, '
+        selectString = f'{groupTime(filt.groupby, "periodFrom")} as time, '
         selectString += 'pointKey, pointLabel, operatorKey, operatorLabel, '
         selectString += 'directionKey, sum(value) as value, indicator, pipeInPipeWithTsoKey'
         joinString = ' left join (select distinct pointKey as pk, isDoubleReporting, operatorKey as ok, pipeInPipeWithTsoKey from operatorpointdirections) opd on t.pointKey = opd.pk and t.operatorKey = opd.ok'
 
         group_by = ', '.join(group_by)
-        groupString = f'strftime("{ftime[filt.groupby]}", "time"), {group_by}'
+        groupString = f'{groupTime(filt.groupby, "time")}, {group_by}'
 
-        with closing(sql.connect(self.database)) as conn:
+        with self.db_accessor() as conn:
             query = f'select {selectString} from "{table}" t {joinString} where {whereString} group by {groupString}'
             flow = pd.read_sql_query(query, conn, index_col='time')
         return flow
 
     def operatorsByBZ(self, bz: str):
-        with closing(sql.connect(self.database)) as conn:
+        with self.db_accessor() as conn:
             query = f'select distinct fromOperatorKey from Interconnections where "{bz}"=fromBzLabel'
             operatorKeys = pd.read_sql_query(query, conn).dropna()[
                 'fromOperatorKey'].unique()
@@ -146,17 +156,17 @@ class EntsogSQLite(EntsogDataManager):
         whereString = timeFilter(filt)
         whereString += f' and o.operatorKey in {inString} and {checkDoubleReporting}'
 
-        selectString = f'strftime("{ftime[filt.groupby]}", "periodFrom") as time, '
+        selectString = f'{groupTime(filt.groupby, "periodFrom")} as time, '
         # TODO if connectionpoints would not have missing data, remove this hack
         # this is using that the pointKeys first 3 chars are generelly indicating
         # the infrastructureKey
         selectString += 'coalesce(c.infrastructureKey, substr(o.pointKey,0,4)) as infra, directionKey, sum(value) as value'
-        groupString = f'strftime("{ftime[filt.groupby]}", "time"), directionKey, infra'
+        groupString = f'{groupTime(filt.groupby, "time")}, directionKey, infra'
         joinString = ' left join (select distinct pointKey, isDoubleReporting, operatorKey, pipeInPipeWithTsoKey from operatorpointdirections) opd on o.pointKey = opd.pointKey and o.operatorKey = opd.operatorKey'
         if table == physFlowTableName:
             whereString += f' and {checkPipeInPipe}'
 
-        with closing(sql.connect(self.database)) as conn:
+        with self.db_accessor() as conn:
             query = f'select {selectString} from "{table}" o {joinString} left join connectionpoints c on o.pointKey=c.pointKey where {whereString} group by {groupString}'
             bil = pd.read_sql_query(query, conn, index_col='time')
         bilanz = bil.pivot(columns=['infra', 'directionKey'])
@@ -197,12 +207,12 @@ class EntsogSQLite(EntsogDataManager):
         if table == physFlowTableName:
             whereString += f' and {checkPipeInPipe}'
 
-        selectString = f'strftime("{ftime[filt.groupby]}", "periodFrom") as time, '
+        selectString = f'{groupTime(filt.groupby, "periodFrom")} as time, '
         selectString += 't.directionKey, adjacentCountry, coalesce(adjacentZones, substr(t.pointKey,0,4)) as adjacentZones, sum(value) as value'
         group_by = ', '.join(list(map(lambda x: ''+x, group_by)))
-        groupString = f'strftime("{ftime[filt.groupby]}", "time"), {group_by}'
+        groupString = f'{groupTime(filt.groupby, "time")}, {group_by}'
 
-        with closing(sql.connect(self.database)) as conn:
+        with self.db_accessor() as conn:
             query = f'select {selectString} from "{table}" t {joinString} where {whereString} group by {groupString}'
             flow = pd.read_sql_query(query, conn, index_col='time')
 

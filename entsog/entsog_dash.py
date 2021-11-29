@@ -21,6 +21,9 @@ from typing import List
 import pandas as pd
 from entsog_data_manager import Filter
 
+DATABASE_URI = 'data/entsog.db'
+DATABASE_URI = 'postgresql://entso:entso@10.13.10.41:5432/entsog'
+
 if __name__ == "__main__":
     app = dash.Dash(__name__, meta_tags=[
                     {"name": "viewport", "content": "width=device-width"}])
@@ -30,7 +33,7 @@ else:
 
 if True:
     from entsog_sqlite_manager import EntsogSQLite
-    dm = EntsogSQLite('data/entsog.db')
+    dm = EntsogSQLite(DATABASE_URI)
 else:
     #from entsog_parquet_manager import EntsogParquet
     import findspark

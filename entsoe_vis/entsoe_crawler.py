@@ -99,7 +99,8 @@ class EntsoeCrawler:
         areas = pd.DataFrame([[e.name, e.value, e.tz, e.meaning]
                               for e in Area], columns=['name', 'value', 'tz', 'meaning'])
         with self.db_accessor() as conn:
-
+            areas.columns = [x.lower() for x in areas.columns]
+            psrtype.columns = [x.lower() for x in psrtype.columns]
             areas.to_sql('areas', conn, if_exists='replace')
             psrtype.to_sql('psrtype', conn, if_exists='replace')
 
@@ -128,7 +129,7 @@ class EntsoeCrawler:
                 data = self.pullData(proc, country, start, end)
 
             # replace spaces and invalid chars in column names
-            data.columns = list(map(replaceStr, map(str, data.columns)))
+            data.columns = [replaceStr(x).lower() for x in data.columns]
             data.fillna(0, inplace=True)
             # calculate difference betweeen agg and consumption
             data = calcDiff(data, inplace=True)
@@ -208,6 +209,7 @@ class EntsoeCrawler:
                     except Exception:
                         log.exception('Error crawling Crossboarders')
 
+            data.columns = [x.lower() for x in data.columns]
             if self.db_accessor:
                 with self.db_accessor() as conn:
                     try:
@@ -352,7 +354,7 @@ if __name__ == "__main__":
     db = 'data/entsoe.db'
 
     crawler = EntsoeCrawler(folder='data/spark', spark=spark, database=db)
-    procs = [client.query_day_ahead_prices('BE', start=start, end=end),
+    procs = [client.query_day_ahead_prices,
              client.query_load,
              client.query_load_forecast,
              client.query_generation_forecast,
