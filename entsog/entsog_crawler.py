@@ -124,7 +124,7 @@ class EntsogCrawler:
 
                 if self.db_accessor:
                     with self.db_accessor() as conn:
-                        data.to_sql(name, conn, if_exists='replace')
+                        data.to_sql(name.lower(), conn, if_exists='replace')
 
             except Exception:
                 log.exception('error pulling data')
@@ -170,7 +170,7 @@ class EntsogCrawler:
 
                 if self.db_accessor:
                     with self.db_accessor() as conn:
-                        phys.to_sql(indicator, conn, if_exists='append')
+                        phys.to_sql(indicator.lower(), conn, if_exists='append')
 
                 if self.sparkfolder:
                     phys.to_parquet(
