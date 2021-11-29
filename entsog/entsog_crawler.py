@@ -124,7 +124,8 @@ class EntsogCrawler:
 
                 if self.db_accessor:
                     with self.db_accessor() as conn:
-                        data.to_sql(name.lower(), conn, if_exists='replace')
+                        tbl_name = name.lower().replace(' ','_')
+                        data.to_sql(tbl_name, conn, if_exists='replace')
 
             except Exception:
                 log.exception('error pulling data')
@@ -132,7 +133,7 @@ class EntsogCrawler:
         if 'operatorpointdirections' in names and self.db_accessor:
             with self.db_accessor() as conn:
                 query = (
-                    'CREATE INDEX IF NOT EXISTS "idx_opd" ON "operatorpointdirections" ("operatorKey", "pointKey","directionKey");')
+                    'CREATE INDEX IF NOT EXISTS "idx_opd" ON operatorpointdirections (operatorKey, pointKey,directionKey);')
                 conn.execute(query)
 
     def pullOperationalData(self, indicators, begin=None, end=None):
@@ -143,8 +144,10 @@ class EntsogCrawler:
         if not begin:
             try:
                 if self.db_accessor:
+
                     with self.db_accessor() as conn:
-                        query = f'select max("periodFrom") from "{indicators[0]}"'
+                        tbl_name = indicators[0].lower().replace(' ','_')
+                        query = f'select max(periodFrom) from {tbl_name}'
                         d = conn.execute(query).fetchone()[0]
                     begin = pd.to_datetime(d).date()
             except Exception:
@@ -158,7 +161,7 @@ class EntsogCrawler:
         if bulks < 1:
             return
 
-        indicators = ['Physical Flow', 'Allocation', 'Firm Technical']
+        #indicators = ['Physical Flow', 'Allocation', 'Firm Technical']
         #indicator = 'Allocation'
 
         for indicator in indicators:
@@ -170,7 +173,8 @@ class EntsogCrawler:
 
                 if self.db_accessor:
                     with self.db_accessor() as conn:
-                        phys.to_sql(indicator.lower(), conn, if_exists='append')
+                        tbl_name = indicator.lower().replace(' ','_')
+                        phys.to_sql(tbl_name, conn, if_exists='append')
 
                 if self.sparkfolder:
                     phys.to_parquet(
@@ -193,30 +197,30 @@ class EntsogCrawler:
         if 'Allocation' in names and self.db_accessor:
             with self.db_accessor() as conn:
                 query = (
-                    'CREATE INDEX IF NOT EXISTS "idx_opdata" ON "Allocation" ("operatorKey","periodFrom");')
+                    'CREATE INDEX IF NOT EXISTS "idx_opdata" ON Allocation (operatorKey,periodFrom);')
                 conn.execute(query)
 
                 query = (
-                    'CREATE INDEX IF NOT EXISTS "idx_pointKey" ON "Allocation" ("pointKey","periodFrom");')
+                    'CREATE INDEX IF NOT EXISTS "idx_pointKey" ON Allocation (pointKey,periodFrom);')
                 conn.execute(query)
         if 'Physical Flow' in names and self.db_accessor:
             with self.db_accessor() as conn:
                 query = (
-                    'CREATE INDEX IF NOT EXISTS "idx_phys_operator" ON "Physical Flow" ("operatorKey","periodFrom");')
+                    'CREATE INDEX IF NOT EXISTS "idx_phys_operator" ON Physical_Flow (operatorKey,periodFrom);')
                 conn.execute(query)
 
                 query = (
-                    'CREATE INDEX IF NOT EXISTS "idx_phys_point" ON "Physical Flow" ("pointKey","periodFrom");')
+                    'CREATE INDEX IF NOT EXISTS "idx_phys_point" ON Physical_Flow (pointKey,periodFrom);')
                 conn.execute(query)
 
         if 'Firm Technical' in names and self.db_accessor:
             with self.db_accessor() as conn:
                 query = (
-                    'CREATE INDEX IF NOT EXISTS "idx_ft_opdata" ON "Firm Technical" ("operatorKey","periodFrom");')
+                    'CREATE INDEX IF NOT EXISTS "idx_ft_opdata" ON Firm_Technical (operatorKey,periodFrom);')
                 conn.execute(query)
 
                 query = (
-                    'CREATE INDEX IF NOT EXISTS "idx_ft_pointKey" ON "Firm Technical" ("pointKey","periodFrom");')
+                    'CREATE INDEX IF NOT EXISTS "idx_ft_pointKey" ON Firm_Technical (pointKey,periodFrom);')
                 conn.execute(query)
 
 
