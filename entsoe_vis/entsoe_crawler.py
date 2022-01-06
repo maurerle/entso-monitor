@@ -40,7 +40,7 @@ def replaceStr(string):
     replaces illegal values from a spark series name
     '''
 
-    st = str.replace(string, ')', '')
+    st = str.replace(str(string), ')', '')
     st = str.replace(st, '(', '')
     st = str.replace(st, ',', '')
     st = str.replace(st, "'", '')
