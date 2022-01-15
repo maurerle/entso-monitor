@@ -1,10 +1,11 @@
-version: "3.8"
+version: "3.9"
 services:
-  dash:
-    build: .
-    image: nowum-energy-entso:latest
+  entso-dashboard:
+    # build: .
+    container_name: entso-dashboard
+    image: registry.git.fh-aachen.de/nowum-energy/software-werkzeuge/entsoe-monitor:latest
+    restart: always
     ports:
       - "8000:8000"
     volumes:
-    #  - ../entsoe:/app
       - ./data:/app/data

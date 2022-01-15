@@ -151,7 +151,7 @@ class EntsogCrawler:
                         d = conn.execute(query).fetchone()[0]
                     begin = pd.to_datetime(d).date()
             except Exception:
-                log.exception('using default start')
+                log.error('table does not exist - using default start')
                 begin = date(2017, 7, 10)
 
         bulks = (end-begin).days
