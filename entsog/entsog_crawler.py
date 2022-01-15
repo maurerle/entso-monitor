@@ -14,7 +14,7 @@ from datetime import date, timedelta
 import pandas as pd
 from tqdm import tqdm
 
-import sqlite3 as sql
+import sqlite3
 from contextlib import closing
 
 from sqlalchemy import create_engine
@@ -54,7 +54,7 @@ class EntsogCrawler:
 
                 self.db_accessor = access_db
             else:
-                self.db_accessor = lambda: closing(sql.connect(database))
+                self.db_accessor = lambda: closing(sqlite3.connect(database))
         else:
             self.db_accessor = None
         self.sparkfolder = sparkfolder

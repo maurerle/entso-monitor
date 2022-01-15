@@ -8,7 +8,7 @@ Created on Sun Nov 29 14:58:52 2020
 
 from entsoe_data_manager import EntsoeDataManager, EntsoePlantDataManager, Filter, revReplaceStr
 
-import sqlite3 as sql
+import sqlite3
 from contextlib import closing, contextmanager
 
 from datetime import datetime, date
@@ -44,7 +44,7 @@ class EntsoeSQLite(EntsoeDataManager):
 
                 self.db_accessor = access_db
             else:
-                self.db_accessor = lambda: closing(sql.connect(database))
+                self.db_accessor = lambda: closing(sqlite3.connect(database))
         else:
             self.db_accessor = None
 
@@ -146,7 +146,7 @@ class EntsoePlantSQLite(EntsoePlantDataManager):
 
                 self.db_accessor = access_db
             else:
-                self.db_accessor = lambda: closing(sql.connect(database))
+                self.db_accessor = lambda: closing(sqlite3.connect(database))
         else:
             self.db_accessor = None
 

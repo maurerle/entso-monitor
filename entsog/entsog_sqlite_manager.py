@@ -11,8 +11,9 @@ import pandas as pd
 
 from entsog_data_manager import EntsogDataManager, Filter
 
-import sqlite3 as sql
+import sqlite3
 from contextlib import closing
+from sqlalchemy import create_engine
 
 ftime_sqlite = {'day': '%Y-%m-%d',
                 'month': '%Y-%m-01',
@@ -53,7 +54,7 @@ class EntsogSQLite(EntsogDataManager):
 
                 self.db_accessor = access_db
             else:
-                self.db_accessor = lambda: closing(sql.connect(database))
+                self.db_accessor = lambda: closing(sqlite3.connect(database))
         else:
             self.db_accessor = None
         

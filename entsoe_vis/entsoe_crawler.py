@@ -7,7 +7,7 @@ Created on Sun Nov 29 18:53:14 2020
 """
 from tqdm import tqdm
 from contextlib import closing
-import sqlite3 as sql
+import sqlite3
 import pandas as pd
 from datetime import timedelta
 import time
@@ -89,7 +89,7 @@ class EntsoeCrawler:
 
                 self.db_accessor = access_db
             else:
-                self.db_accessor = lambda: closing(sql.connect(database))
+                self.db_accessor = lambda: closing(sqlite3.connect(database))
         else:
             self.db_accessor = None
 
