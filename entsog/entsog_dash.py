@@ -63,9 +63,9 @@ del opd['directionkey']
 opd = opd.drop_duplicates()
 
 defaultBZ = 'Austria'
-inter = incons[incons['fromBzLabel'] == defaultBZ]
-points = inter['pointLabel'].dropna().unique()
-pointKeys = inter['pointKey'].dropna().unique()
+inter = incons[incons['frombzlabel'] == defaultBZ]
+points = inter['pointlabel'].dropna().unique()
+pointKeys = inter['pointkey'].dropna().unique()
 allPointOptions = [{'label': points[i], 'value': pointKeys[i]}
                    for i in range(len(points))]
 
@@ -145,14 +145,14 @@ layout = html.Div(
                         html.P("Balancing Zone:", className="control_label"),
                         dcc.Dropdown(id="bz_control",
                                      options=[{'label': x, 'value': x} for x in list(
-                                         dm.balancingzones()['bzLabel'])],
+                                         dm.balancingzones()['bzlabel'])],
                                      value=defaultBZ,
                                      className="dcc_control",
                                      ),
                         html.P("Operators:", className="control_label"),
                         dcc.Dropdown(id="operator_control",
                                      options=[{'label': x, 'value': y} for x, y in operators[[
-                                         'operatorKey', 'operatorLabel']].values.tolist()],
+                                         'operatorkey', 'operatorlabel']].values.tolist()],
                                      # value=[''],
                                      multi=True,
                                      className="dcc_control",
@@ -249,9 +249,7 @@ layout = html.Div(
             dcc.Link('Data comes from ENTSO-G Transparency Platform',
                      href='https://transparency.entsog.eu/', refresh=True),
             html.Br(),
-            dcc.Link('Legal Notice', refresh=True,
-                     href='https://datensch.eu/legal-notice/'),
-        ],
+            dcc.Link('Legal Notice', refresh=True, href='https://datensch.eu/legal-notice/'),
             className="pretty_container",
         ),
     ])
@@ -268,14 +266,14 @@ layout = html.Div(
 )
 def updatePointControl(operatorKey, bz):
     if operatorKey != None and len(operatorKey) > 0:
-        inter = incons[incons['fromOperatorKey'].apply(
+        inter = incons[incons['fromoperatorkey'].apply(
             lambda x: x in operatorKey)]
     elif bz != None and len(bz) > 0:
-        inter = incons[incons['fromBzLabel'] == bz]
+        inter = incons[incons['frombzlabel'] == bz]
     else:
         inter = incons
-    points = inter['pointLabel'].dropna().unique()
-    pointKeys = inter['pointKey'].dropna().unique()
+    points = inter['pointlabel'].dropna().unique()
+    pointKeys = inter['pointkey'].dropna().unique()
     return [{'label': points[i], 'value': pointKeys[i]} for i in range(len(points))]
 
 
@@ -310,11 +308,11 @@ def updateSelectedPoints(clickData, selectedData):
 )
 def updateOperatorControl(bz):
     if bz != None:
-        inter = incons[incons['fromBzLabel'] == bz]
+        inter = incons[incons['frombzlabel'] == bz]
     else:
         inter = incons
-    opt = inter['fromOperatorLabel'].dropna().unique()
-    optKeys = inter['fromOperatorKey'].dropna().unique()
+    opt = inter['fromoperatorlabel'].dropna().unique()
+    optKeys = inter['fromoperatorkey'].dropna().unique()
     return [{'label': opt[i], 'value': optKeys[i]} for i in range(len(opt))]
 
 
@@ -379,7 +377,7 @@ def makePointMap(layer_control, options):
         inter = incons
     else:
         points = list(df['value'])
-        inter = incons[incons['pointKey'].apply(lambda x: x in points)]
+        inter = incons[incons['pointkey'].apply(lambda x: x in points)]
 
     for layer in layer_control:
         layers.append({"below": 'traces',
@@ -387,10 +385,10 @@ def makePointMap(layer_control, options):
                        "sourceattribution": '<a href="https://transparency.entsog.eu/#/map">ENTSO-G Data</a>',
                        "source": [
                            "https://datensch.eu/cdn/entsog/"+layer+"/{z}/{x}/{y}.png"]})
-    #inter=inter[['lat','lon',"pointLabel","pointKey", "fromOperatorLabel",'fromCountryKey','toOperatorLabel',"toCountryKey"]].drop_duplicates()
-    fig = px.scatter_mapbox(inter, lat="lat", lon="lon", color='fromCountryKey',
-                            custom_data=["pointLabel", "pointKey", "fromOperatorLabel",
-                                         'fromCountryKey', 'toOperatorLabel', "toCountryKey"],
+    #inter=inter[['lat','lon',"pointlabel","pointKey", "fromoperatorlabel",'fromCountryKey','toOperatorLabel',"toCountryKey"]].drop_duplicates()
+    fig = px.scatter_mapbox(inter, lat="lat", lon="lon", color='fromcountrykey',
+                            custom_data=["pointlabel", "pointkey", "fromoperatorlabel",
+                                         'fromcountrykey', 'tooperatorlabel', "tocountrykey"],
                             zoom=1, height=600)
 
     fig.update_traces(
@@ -408,12 +406,12 @@ def makePointMap(layer_control, options):
 def handleBzOperator(bz, operators):
     desc = 'no valid points'
     if operators != None and len(operators) > 0:
-        inter = incons[incons['fromOperatorKey'].apply(
+        inter = incons[incons['fromoperatorkey'].apply(
             lambda x: x in operators)]
-        desc = ', '.join(inter['fromOperatorLabel'].unique())
+        desc = ', '.join(inter['fromoperatorlabel'].unique())
     elif bz != None:
-        inter = incons[incons['fromBzLabel'] == bz]
-        operators = list(inter['fromOperatorKey'].dropna().unique())
+        inter = incons[incons['frombzlabel'] == bz]
+        operators = list(inter['fromoperatorkey'].dropna().unique())
         desc = bz
     else:
         # TODO show usage for single pipeline
@@ -490,7 +488,7 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
 
     if points != None and len(points) > 0:
         # include with toPointKey:
-        inter = incons[incons['pointKey'].apply(lambda x: x in points)]
+        inter = incons[incons['pointkey'].apply(lambda x: x in points)]
 
         # select both from and to points here
         points = list(set(points) | set(inter['toPointKey'].unique()))
@@ -510,7 +508,7 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
 
     filt = Filter(start, end, group)
     p = dm.operationaldataByPoints(
-        valid_points, filt, ['pointKey', 'directionKey'])
+        valid_points, filt, ['pointkey', 'directionkey'])
     a = dm.operationaldataByPoints(valid_points, filt, [
                                    'pointKey', 'directionKey'], table='Allocation')
     t = dm.operationaldataByPoints(valid_points, filt, [
@@ -523,12 +521,12 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
     if g.empty:
         return {'data': [], 'layout': dict(title=f"No Data Found for {desc} from {start_date} to {end_date}")}
 
-    g['point'] = g['directionkey']+' '+g['pointLabel']
+    g['point'] = g['directionkey']+' '+g['pointlabel']
     g['value'].fillna(0, inplace=True)
     g['value'] = g['value']/1e6  # show in GW
     g.fillna('', inplace=True)
     g['pip'] = g.apply(lambda c: ' PIP' if (
-        c['pipeInPipeWithTsoKey'] != '' and c['indicator'] == 'phys') else '', axis=1)
+        c['pipeinpipewithtsokey'] != '' and c['indicator'] == 'phys') else '', axis=1)
     g['indicator'] = g['indicator']+g['pip']
 
     # sort values alphabetically for better visualization
@@ -538,7 +536,7 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
 
     figure = px.line(g, x=g.index, y="value", color='point', line_group="point",
                      line_dash='indicator', custom_data=[
-                         'operatorLabel', 'pointKey', 'pipeInPipeWithTsoKey'], category_orders={'point': list(ordered)})
+                         'operatorlabel', 'pointkey', 'pipeinpipewithtsokey'], category_orders={'point': list(ordered)})
     figure.update_traces(
         hovertemplate='<b>%{y}</b>, %{customdata[0]}, %{customdata[1]}, %{customdata[2]}')
     figure.update_layout(title=f"Flow in GWh/{group} {desc} from {start_date} to {end_date}",

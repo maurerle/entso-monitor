@@ -1,7 +1,7 @@
 version: "3.9"
 services:
   entso-dashboard:
-    # build: .
+    build: .
     container_name: entso-dashboard
     image: registry.git.fh-aachen.de/nowum-energy/software-werkzeuge/entsoe-monitor:latest
     restart: always

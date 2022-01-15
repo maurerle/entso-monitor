@@ -58,11 +58,11 @@ class EntsoeParquet(EntsoeDataManager):
         timeString = '"{}" < time and time < "{}"'.format(
             filt.begin.strftime("%Y-%m-%d"), filt.end.strftime("%Y-%m-%d"))
         cols = list(filter(lambda x: x.endswith(
-            '_Actual_Aggregated'), gen.columns))
+            '_actual_aggregated'), gen.columns))
         cols.append('time')
         gen = gen.select(cols)
         newcols = list(map(lambda x: x.replace(
-            '_Actual_Aggregated', ''), gen.columns))
+            '_actual_aggregated', ''), gen.columns))
         gen = gen.toDF(*newcols)
         genPandas = (gen.filter(timeString)
                      .withColumn("time", date_trunc(filt.groupby, "time"))
@@ -84,10 +84,10 @@ class EntsoeParquet(EntsoeDataManager):
         timeString = '"{}" < time and time < "{}"'.format(
             filt.begin.strftime("%Y-%m-%d"), filt.end.strftime("%Y-%m-%d"))
         cols = list(filter(lambda x: x.endswith(
-            '_Actual_Consumption'), pumpSto.columns))
+            '_actual_consumption'), pumpSto.columns))
         pumpSto = pumpSto.select(cols)
         newcols = list(map(lambda x: x.replace(
-            '_Actual_Consumption', ''), pumpSto.columns))
+            '_actual_consumption', ''), pumpSto.columns))
         pumpSto = pumpSto.toDF(*newcols)
         data = (pumpSto.filter(timeString)
                 .withColumn("time", date_trunc(filt.groupby, "time"))

@@ -86,10 +86,10 @@ color_map = {
     "Fossil Oil shale": "DarkGoldenRod",
     "Fossil Peat": "Coral",
 }
-
+color_map = dict((k.lower(), v) for k, v in color_map.items())
 
 def cmap(index):
-    return list(map(lambda x: color_map[x], index))
+    return list(map(lambda x: color_map[x.lower()], index))
 
 
 layout = html.Div(

@@ -50,13 +50,14 @@ def replaceStr(string):
 
 
 def calcDiff(data, inplace=False):
-    if not inplace:
-        dat = data.copy()
-    else:
+    if inplace:
         dat = data
-    for c in filter(lambda x: x.endswith('_Actual_Aggregated'), dat.columns):
-        new = str.replace(c, '_Actual_Aggregated', '')
-        dif = list(filter(lambda x: x.endswith('_Actual_Consumption')
+    else:
+        dat = data.copy()
+
+    for c in filter(lambda x: x.endswith('_actual_aggregated'), dat.columns):
+        new = str.replace(c, '_actual_aggregated', '')
+        dif = list(filter(lambda x: x.endswith('_actual_consumption')
                           and x.startswith(new), dat.columns))
         if len(dif) > 0:
             # wenn es beides gibt wird die Differenz gebildet
@@ -67,9 +68,9 @@ def calcDiff(data, inplace=False):
             # sonst wird direkt
             dat[new] = dat[c]
             del dat[c]
-    for c in filter(lambda x: x.endswith('_Actual_Consumption'), dat.columns):
+    for c in filter(lambda x: x.endswith('_actual_consumption'), dat.columns):
         # wenn es nur Verbrauch aber kein Erzeugnis gibt, mach negativ
-        new = str.replace(c, '_Actual_Consumption', '')
+        new = str.replace(c, '_actual_consumption', '')
         dat[new] = -dat[c]
         del dat[c]
     return dat
