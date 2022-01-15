@@ -7,7 +7,7 @@ Created on Sun Nov 15 23:26:05 2020
 """
 
 import pandas as pd
-import sqlite3 as sql
+import sqlite3
 from contextlib import closing
 
 
@@ -18,7 +18,7 @@ def pd2par(dbname,table,parquet=''):
     '''
     if parquet =='':
         parquet=table+'.parquet'
-    with closing(sql.connect(dbname)) as conn:
+    with closing(sqlite3.connect(dbname)) as conn:
         df = pd.read_sql_query('select * from '+table, conn)
         df.to_parquet(parquet)
 
@@ -28,7 +28,7 @@ def par2pd(dbname,parquet,table=''):
     '''
     if table =='':
         table=parquet
-    with closing(sql.connect(dbname)) as conn:
+    with closing(sqlite3.connect(dbname)) as conn:
         df = pd.read_parquet(parquet)
         df.to_sql(table, conn)
         

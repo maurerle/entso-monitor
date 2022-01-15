@@ -12,7 +12,7 @@ import pandas as pd
 from entsog_data_manager import EntsogDataManager, Filter
 
 import sqlite3
-from contextlib import closing
+from contextlib import closing, contextmanager
 from sqlalchemy import create_engine
 
 ftime_sqlite = {'day': '%Y-%m-%d',

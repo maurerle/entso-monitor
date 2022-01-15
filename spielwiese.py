@@ -62,7 +62,7 @@ unavailability_of_generation_units = client.query_unavailability_of_generation_u
 #         crossborders,
 #         imbalance_prices,
 #         unavailability_of_generation_units]
-import sqlite3 as sql
+import sqlite3
 from contextlib import closing
     
 abc = pd.read_parquet('operationaldata.parquet')
@@ -126,8 +126,8 @@ aggregate_interconnections = getDataFrame('aggregateInterconnections')
 #################################
 
 
-import sqlite3 as sql
-conn = sql.connect('entsog.db')
+import sqlite3
+conn = sqlite3.connect('entsog.db')
 pandas_df = pd.read_sql('select * from operationaldata', conn)
 pandas_df.to_parquet('operationaldata.parquet')
 
@@ -180,7 +180,7 @@ spark_data.schema
 spark_data.write.mode('append').partitionBy("Year","Month").parquet("Load")
 
 # visualize Data
-conn = sql.connect('entsog.db')
+conn = sqlite3.connect('entsog.db')
 query = "SELECT periodFrom,value FROM AggregatedData WHERE directionKey='entry' and adjacentSystemsLabel='IUK' and operatorKey='BE-TSO-0001'"
 
 query = '''select value-exit_value as diff,a.periodFrom,value, exit_value from (SELECT periodFrom,value FROM AggregatedData WHERE directionKey='entry' and adjacentSystemsLabel='IUK') a

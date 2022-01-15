@@ -14,6 +14,7 @@ from contextlib import closing, contextmanager
 from datetime import datetime, date
 import pandas as pd
 from typing import List
+from sqlalchemy import create_engine
 
 ftime_sqlite = {'day': '%Y-%m-%d',
                 'month': '%Y-%m-01',
@@ -36,7 +37,6 @@ class EntsoeSQLite(EntsoeDataManager):
     def __init__(self, database: str):
         if database:
             if database.startswith('postgresql'):
-                from sqlalchemy import create_engine
                 self.engine = create_engine(database)
                 @contextmanager
                 def access_db():
@@ -138,7 +138,6 @@ class EntsoePlantSQLite(EntsoePlantDataManager):
     def __init__(self, plantdatabase: str):
         if plantdatabase:
             if plantdatabase.startswith('postgresql'):
-                from sqlalchemy import create_engine
                 self.engine = create_engine(plantdatabase)
                 @contextmanager
                 def access_db():

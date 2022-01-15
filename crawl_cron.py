@@ -54,7 +54,6 @@ if __name__ == '__main__':
     # updateEntsog('data/entsog.db',first=False)
     db = 'postgresql://entso:entso@10.13.10.41:5432'
     from sqlalchemy import create_engine
-    from sqlalchemy.orm import Session
 
     t = create_engine(f'{db}/entsoe')
 
