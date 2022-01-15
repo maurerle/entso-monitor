@@ -43,7 +43,19 @@ physFlowTableName = 'Physical Flow'
 
 class EntsogSQLite(EntsogDataManager):
     def __init__(self, database: str):
-        self.database = database
+        if database:
+            if database.startswith('postgresql'):
+
+                self.engine = create_engine(database)
+                @contextmanager
+                def access_db():
+                    yield self.engine
+
+                self.db_accessor = access_db
+            else:
+                self.db_accessor = lambda: closing(sql.connect(database))
+        else:
+            self.db_accessor = None
         
 
     def connectionpoints(self):
