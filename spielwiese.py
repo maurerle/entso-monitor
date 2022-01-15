@@ -181,10 +181,10 @@ spark_data.write.mode('append').partitionBy("Year","Month").parquet("Load")
 
 # visualize Data
 conn = sqlite3.connect('entsog.db')
-query = "SELECT periodFrom,value FROM AggregatedData WHERE directionKey='entry' and adjacentSystemsLabel='IUK' and operatorKey='BE-TSO-0001'"
+query = "SELECT periodFrom,value FROM AggregatedData WHERE directionkey='entry' and adjacentSystemsLabel='IUK' and operatorKey='BE-TSO-0001'"
 
-query = '''select value-exit_value as diff,a.periodFrom,value, exit_value from (SELECT periodFrom,value FROM AggregatedData WHERE directionKey='entry' and adjacentSystemsLabel='IUK') a
-join (select periodFrom,value as exit_value from AggregatedData where directionKey='exit' and adjacentSystemsLabel='IUK') b
+query = '''select value-exit_value as diff,a.periodFrom,value, exit_value from (SELECT periodFrom,value FROM AggregatedData WHERE directionkey='entry' and adjacentSystemsLabel='IUK') a
+join (select periodFrom,value as exit_value from AggregatedData where directionkey='exit' and adjacentSystemsLabel='IUK') b
 on a.periodFrom = b.periodFrom
 '''
 

@@ -133,7 +133,7 @@ class EntsogCrawler:
         if 'operatorpointdirections' in names and self.db_accessor:
             with self.db_accessor() as conn:
                 query = (
-                    'CREATE INDEX IF NOT EXISTS "idx_opd" ON operatorpointdirections (operatorKey, pointKey,directionKey);')
+                    'CREATE INDEX IF NOT EXISTS "idx_opd" ON operatorpointdirections (operatorKey, pointKey,directionkey);')
                 conn.execute(query)
 
     def pullOperationalData(self, indicators, begin=None, end=None):
@@ -182,11 +182,11 @@ class EntsogCrawler:
                     spark_data = spark.read.parquet(
                         f'{self.sparkfolder}/temp{indicator}.parquet')
                     spark_data = (spark_data
-                                  .withColumn('year', year('periodFrom'))
-                                  .withColumn('month', month('periodFrom'))
-                                  # .withColumn("day", dayofmonth("periodFrom"))
-                                  .withColumn("time", to_timestamp("periodFrom"))
-                                  # .withColumn("hour", hour("periodFrom"))
+                                  .withColumn('year', year('periodfrom"))
+                                  .withColumn('month', month('periodfrom"))
+                                  # .withColumn("day", dayofmonth("periodfrom"))
+                                  .withColumn("time", to_timestamp("periodfrom"))
+                                  # .withColumn("hour", hour("periodfrom"))
                                   )
                     spark_data.write.mode('append').parquet(
                         f'{self.sparkfolder}/{indicator}')

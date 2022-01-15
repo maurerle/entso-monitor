@@ -59,7 +59,7 @@ operators = dm.operators()
 # a = oppointdir['tpTsoBalancingZone']== operators[operators['operatorKey'] in ]
 oppointdir = dm.operatorpointdirections()
 opd = oppointdir.copy()
-del opd['directionKey']
+del opd['directionkey']
 opd = opd.drop_duplicates()
 
 defaultBZ = 'Austria'
@@ -174,8 +174,7 @@ layout = html.Div(
                                      multi=True,
                                      className="dcc_control",
                                      ),
-                        html.P("Aggregation Intervall:",
-                               className="control_label"),
+                        html.P("Aggregation Intervall:", className="control_label"),
                         dcc.RadioItems(
                             id="group_by_control",
                             options=[
@@ -449,8 +448,8 @@ def updateFlowGraph(operators: List[str], bz: str, start_date, end_date, group):
     if p.empty and a.empty:
         return {'data': [], 'layout': dict(title=f"No Data Found for {desc} from {start_date} to {end_date}")}
 
-    a = a.pivot(columns=['directionKey'], values='value')
-    p = p.pivot(columns=['directionKey'], values='value')
+    a = a.pivot(columns=['directionkey'], values='value')
+    p = p.pivot(columns=['directionkey'], values='value')
     if 'entry' in a.columns and 'exit' in a.columns:
         a['usage'] = a['entry']-a['exit']
 
@@ -524,7 +523,7 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
     if g.empty:
         return {'data': [], 'layout': dict(title=f"No Data Found for {desc} from {start_date} to {end_date}")}
 
-    g['point'] = g['directionKey']+' '+g['pointLabel']
+    g['point'] = g['directionkey']+' '+g['pointLabel']
     g['value'].fillna(0, inplace=True)
     g['value'] = g['value']/1e6  # show in GW
     g.fillna('', inplace=True)

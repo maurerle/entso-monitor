@@ -43,10 +43,10 @@ class EntsogDataManager:
     def operatorpointdirections(self):
         pass
 
-    def operationaldata(self, operatorKeys: List[str], filt: Filter, group_by: List[str] = ['directionKey'], table=physFlowTableName):
+    def operationaldata(self, operatorKeys: List[str], filt: Filter, group_by: List[str] = ['directionkey'], table=physFlowTableName):
         pass
 
-    def operationaldataByPoints(self, points: List[str], filt: Filter, group_by: List[str] = ['directionKey'], table=physFlowTableName):
+    def operationaldataByPoints(self, points: List[str], filt: Filter, group_by: List[str] = ['directionkey'], table=physFlowTableName):
         pass
 
     def operatorsByBZ(self, bz: str):
@@ -55,5 +55,5 @@ class EntsogDataManager:
     def bilanz(self, operatorKeys: List[str], filt: Filter, table=physFlowTableName):
         pass
 
-    def crossborder(self, operatorKeys: List[str], filt: Filter, group_by: List[str] = ['t.directionKey', 'opd.adjacentZones', 'opd.adjacentCountry'], table=physFlowTableName):
+    def crossborder(self, operatorKeys: List[str], filt: Filter, group_by: List[str] = ['t.directionkey', 'opd.adjacentzones', 'opd.adjacentcountry'], table=physFlowTableName):
         pass
