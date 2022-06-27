@@ -1,5 +1,18 @@
 version: "3.9"
 services:
+  db:
+    container_name: entso-db
+    image: timescale/timescaledb:latest-pg14
+    restart: always
+    environment:
+      - POSTGRES_USER=entso
+      - POSTGRES_PASSWORD=entso
+      - POSTGRES_DB=entsoe
+    volumes:
+      - ./data/entsoe:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
   entso-dashboard:
     build: .
     container_name: entso-dashboard
