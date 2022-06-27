@@ -77,7 +77,7 @@ class EntsogCrawler:
                         api_endpoint+name+'.json'+params_str)
                     data = pd.DataFrame(response.json()[name])
                     # replace empty string with None
-                    data.replace([''], [None], inplace=True)
+                    data = data.replace([''], [None])
                 else:
                     data = pd.read_csv(api_endpoint+name+'.csv' +
                                        params_str, index_col=False)
@@ -182,8 +182,8 @@ class EntsogCrawler:
                     spark_data = spark.read.parquet(
                         f'{self.sparkfolder}/temp{indicator}.parquet')
                     spark_data = (spark_data
-                                  .withColumn('year', year('periodfrom"))
-                                  .withColumn('month', month('periodfrom"))
+                                  .withColumn('year', year("periodfrom"))
+                                  .withColumn('month', month("periodfrom"))
                                   # .withColumn("day", dayofmonth("periodfrom"))
                                   .withColumn("time", to_timestamp("periodfrom"))
                                   # .withColumn("hour", hour("periodfrom"))

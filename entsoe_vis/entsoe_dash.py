@@ -470,7 +470,7 @@ def make_capacity_figure(country_control):
     capacity = dm.capacity(country_control)
     del capacity['country']
 
-    capacity.fillna(0, inplace=True)
+    capacity = capacity.fillna(value=0)
     capacity /= 1e3
     capacity = capacity.loc[:, (capacity != 0).any(axis=0)]
     g = capacity.melt(var_name='kind', value_name='value', ignore_index=False)
@@ -543,7 +543,7 @@ def make_generation_figure(country_control, start_date, end_date, group, climate
         unit = 'tons'
         desc = climate_sel+' in '+unit
 
-    generation.fillna(0, inplace=True)
+    generation = generation.fillna(value=0)
     generation = generation.loc[:, (generation != 0).any(axis=0)]
     g = generation.melt(
         var_name='kind', value_name='value', ignore_index=False)

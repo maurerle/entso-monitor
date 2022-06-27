@@ -49,12 +49,11 @@ def replaceStr(string):
     return st
 
 
-def calcDiff(data, inplace=False):
-    if inplace:
-        dat = data
-    else:
-        dat = data.copy()
-
+def calcDiff(data):
+    '''
+    Calculates the difference between columns ending with _actual_aggregated and _actual_consumption.
+    '''
+    dat = data.copy()
     for c in filter(lambda x: x.endswith('_actual_aggregated'), dat.columns):
         new = str.replace(c, '_actual_aggregated', '')
         dif = list(filter(lambda x: x.endswith('_actual_consumption')
@@ -125,9 +124,9 @@ class EntsoeCrawler:
 
             # replace spaces and invalid chars in column names
             data.columns = [replaceStr(x).lower() for x in data.columns]
-            data.fillna(0, inplace=True)
+            data = data.fillna(0)
             # calculate difference betweeen agg and consumption
-            data = calcDiff(data, inplace=True)
+            data = calcDiff(data)
             # add country column
             data['country'] = country
             if self.db_accessor:
@@ -233,7 +232,7 @@ class EntsoeCrawler:
     def pullPowerSystemData(self):
         df = pd.read_csv(
             'https://data.open-power-system-data.org/conventional_power_plants/latest/conventional_power_plants_EU.csv')
-        df.dropna(axis=0, subset=['lon', 'lat', 'eic_code'], inplace=True)
+        df = df.dropna(axis=0, subset=['lon', 'lat', 'eic_code'])
         df = df[['eic_code', 'name', 'company', 'country',
                  'capacity', 'energy_source', 'lon', 'lat']]
         # delete those without location or eic_code

@@ -36,7 +36,8 @@ class EntsoeSQLite(EntsoeDataManager):
                 self.engine = create_engine(database)
                 @contextmanager
                 def access_db():
-                    yield self.engine
+                    with self.engine.connect() as conn, conn.begin():
+                        yield conn
 
                 self.db_accessor = access_db
             else:
@@ -144,7 +145,8 @@ class EntsoePlantSQLite(EntsoePlantDataManager):
                 self.engine = create_engine(plantdatabase)
                 @contextmanager
                 def access_db():
-                    yield self.engine
+                    with self.engine.connect() as conn, conn.begin():
+                        yield conn
 
                 self.db_accessor = access_db
             else:
@@ -211,11 +213,10 @@ if __name__ == "__main__":
     gen = generation.melt(
         var_name='kind', value_name='value', ignore_index=False)
     climate = par.climateImpact()
-    generation.fillna(0, inplace=True)
+    generation = generation.fillna(value=0)
     nox = generation*climate['Summe NOX']
 
     g = generation
-    g.fillna(0, inplace=True)
     g = g.loc[:, (g != 0).any(axis=0)]
     # from entsoe_data_manager import EntsoeDataManager
     # issubclass(par.__class__,EntsoeDataManager)

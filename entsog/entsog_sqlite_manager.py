@@ -46,7 +46,8 @@ class EntsogSQLite(EntsogDataManager):
                 self.engine = create_engine(database)
                 @contextmanager
                 def access_db():
-                    yield self.engine
+                    with self.engine.connect() as conn, conn.begin():
+                        yield conn
 
                 self.db_accessor = access_db
             else:
@@ -194,7 +195,7 @@ class EntsogSQLite(EntsogDataManager):
         '''
         l = []
         p = pd.DataFrame()
-        df.fillna(0, inplace=True)
+        df = df.fillna(value=0)
         for col in df.columns:
             if col[0] not in l:
                 for col2 in df.columns:
