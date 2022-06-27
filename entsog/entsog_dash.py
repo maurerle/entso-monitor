@@ -31,25 +31,8 @@ if __name__ == "__main__":
 else:
     from app import app
 
-if True:
-    from entsog_sqlite_manager import EntsogSQLite
-    dm = EntsogSQLite(DATABASE_URI)
-else:
-    #from entsog_parquet_manager import EntsogParquet
-    import findspark
-    from pyspark import SparkConf
-    from pyspark.sql import SparkSession
-    try:
-        findspark.init()
-
-        spark
-        print('using existing spark object')
-    except:
-        print('creating new spark object')
-        conf = SparkConf().setAppName('entsog').setMaster('local')
-        spark = SparkSession.builder.config(conf=conf).getOrCreate()
-    dm = EntsogParquet('data', spark)
-
+from entsog_sqlite_manager import EntsogSQLite
+dm = EntsogSQLite(DATABASE_URI)
 # initialize static data
 incons = dm.interconnections()
 bzs = dm.balancingzones()
@@ -60,6 +43,7 @@ operators = dm.operators()
 oppointdir = dm.operatorpointdirections()
 opd = oppointdir.copy()
 del opd['directionkey']
+
 opd = opd.drop_duplicates()
 
 defaultBZ = 'Austria'
@@ -76,8 +60,8 @@ appname = 'ENTSOG Monitor'
 
 
 def addTraces(figure, data, stackgroup=None, legendgroup=None):
-    data.sort_index(inplace=True)
-    data.fillna(0, inplace=True)
+    data = data.sort_index()
+    data = data.fillna(value=0)
     for column in data.columns:
         figure.add_trace(go.Scatter(
             x=data.index, y=data[column]/1e6, mode='lines', name=column, stackgroup=stackgroup, legendgroup=legendgroup))
@@ -250,6 +234,7 @@ layout = html.Div(
                      href='https://transparency.entsog.eu/', refresh=True),
             html.Br(),
             dcc.Link('Legal Notice', refresh=True, href='https://datensch.eu/legal-notice/'),
+            ],
             className="pretty_container",
         ),
     ])

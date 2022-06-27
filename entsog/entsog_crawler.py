@@ -43,21 +43,17 @@ data = pd.DataFrame(response.json()['AggregatedData'])
 
 class EntsogCrawler:
 
-    def __init__(self, database=None, sparkfolder=None):
-        if database:
-            if database.startswith('postgresql'):
+    def __init__(self, database):
+        if database.startswith('postgresql'):
+            self.engine = create_engine(database)
+            @contextmanager
+            def access_db():
+                with self.engine.connect() as conn, conn.begin():
+                    yield conn
 
-                self.engine = create_engine(database)
-                @contextmanager
-                def access_db():
-                    yield self.engine
-
-                self.db_accessor = access_db
-            else:
-                self.db_accessor = lambda: closing(sqlite3.connect(database))
+            self.db_accessor = access_db
         else:
-            self.db_accessor = None
-        self.sparkfolder = sparkfolder
+            self.db_accessor = lambda: closing(sqlite3.connect(database))
 
     def getDataFrame(self, name, params=['limit=10000'], useJson=False):
         params_str = ''
@@ -86,8 +82,8 @@ class EntsogCrawler:
                 raise e
             except (requests.exceptions.HTTPError, urllib.error.HTTPError) as e:
                 log.exception('Error getting Frame')
-                if e.reason == 'Gateway Time-out':
-                    log.info('waiting 30 seconds..')
+                if e.response.status_code >= 500 :
+                    log.info(f'{e.response.reason} - waiting 30 seconds..')
                     time.sleep(30)
         if data.empty:
             raise Exception('could not get any data for params:', params_str)
@@ -104,9 +100,11 @@ class EntsogCrawler:
             params = ['limit=-1', 'indicator='+urllib.parse.quote(indicator), 'from=' +
                       str(beg1), 'to='+str(end1), 'periodType=hour']
             time.sleep(5)
-            # impact is quite small in comparison to 50s query length
-            # rate limiting Gateway Timeo-outs
-            yield (beg1, end1), self.getDataFrame(name, params)
+            # impact of sleeping here is quite small in comparison to 50s query length
+            # rate limiting Gateway Timeouts
+            df = self.getDataFrame(name, params)
+            df['periodFrom'] = pd.to_datetime(df['periodFrom'], infer_datetime_format=True)
+            yield (beg1, end1), df
 
     def pullData(self, names):
         pbar = tqdm(names)
@@ -118,14 +116,10 @@ class EntsogCrawler:
                 # connectionpoints count differ
                 # and tpTSO column are named tSO in connpointdirections
                 data = self.getDataFrame(name, useJson=True)
-                if self.sparkfolder:
-                    data.to_parquet(f'{self.sparkfolder}/{name}.parquet')
-                #spark_data = spark.read.parquet(name+'.parquet')
 
-                if self.db_accessor:
-                    with self.db_accessor() as conn:
-                        tbl_name = name.lower().replace(' ','_')
-                        data.to_sql(tbl_name, conn, if_exists='replace')
+                with self.db_accessor() as conn:
+                    tbl_name = name.lower().replace(' ','_')
+                    data.to_sql(tbl_name, conn, if_exists='replace')
 
             except Exception:
                 log.exception('error pulling data')
@@ -151,7 +145,7 @@ class EntsogCrawler:
                         d = conn.execute(query).fetchone()[0]
                     begin = pd.to_datetime(d).date()
             except Exception:
-                log.error('table does not exist - using default start')
+                log.error('table does not exist yet - using default start')
                 begin = date(2017, 7, 10)
 
         bulks = (end-begin).days
@@ -165,31 +159,22 @@ class EntsogCrawler:
         #indicator = 'Allocation'
 
         for indicator in indicators:
-            #database = indicator+'.db'
             pbar = tqdm(self.yieldData(
                 'operationaldata', indicator, bulks, begin))
             for span, phys in pbar:
                 pbar.set_description(f'op {span[0]} to {span[1]}')
 
-                if self.db_accessor:
+                tbl_name = indicator.lower().replace(' ','_')
+                with self.db_accessor() as conn:
+                    phys.to_sql(tbl_name, conn, if_exists='append')
+                
+                try:
                     with self.db_accessor() as conn:
-                        tbl_name = indicator.lower().replace(' ','_')
-                        phys.to_sql(tbl_name, conn, if_exists='append')
-
-                if self.sparkfolder:
-                    phys.to_parquet(
-                        f'{self.sparkfolder}/temp{indicator}.parquet')
-                    spark_data = spark.read.parquet(
-                        f'{self.sparkfolder}/temp{indicator}.parquet')
-                    spark_data = (spark_data
-                                  .withColumn('year', year("periodfrom"))
-                                  .withColumn('month', month("periodfrom"))
-                                  # .withColumn("day", dayofmonth("periodfrom"))
-                                  .withColumn("time", to_timestamp("periodfrom"))
-                                  # .withColumn("hour", hour("periodfrom"))
-                                  )
-                    spark_data.write.mode('append').parquet(
-                        f'{self.sparkfolder}/{indicator}')
+                        query_create_hypertable = f"SELECT create_hypertable('{tbl_name}', 'periodfrom', if_not_exists => TRUE, migrate_data => TRUE);"
+                        conn.execute(query_create_hypertable)
+                        log.info(f'created hypertable {tbl_name}')
+                except Exception as e:
+                    log.error(f'could not create hypertable {tbl_name}: {e}')
 
         # sqlite will only use one index. EXPLAIN QUERY PLAIN shows if index is used
         # ref: https://www.sqlite.org/optoverview.html#or_optimizations
@@ -223,43 +208,10 @@ class EntsogCrawler:
                     'CREATE INDEX IF NOT EXISTS "idx_ft_pointKey" ON Firm_Technical (pointKey,periodFrom);')
                 conn.execute(query)
 
-
 if __name__ == "__main__":
-    import findspark
-    findspark.init()
-
-    from pyspark import SparkConf
-    from pyspark.sql import SparkSession
-    from pyspark.sql.functions import year, month, to_timestamp
-
-    try:
-        spark
-        log.info('using existing spark object')
-    except:
-        log.info('creating new spark object')
-        appname = 'entsog'
-
-        if True:
-            conf = SparkConf().setAppName(appname).setMaster('local')
-        else:
-            # master is 149.201.206.53
-            # 149.201.225.* is client vpn address
-            conf = SparkConf().setAll([('spark.executor.memory', '3g'),
-                                       ('spark.executor.cores', '8'),
-                                       ('spark.cores.max', '8'),
-                                       ('spark.driver.memory', '9g'),
-                                       ("spark.app.name", appname),
-                                       ("spark.master", "spark://master:7078"),
-                                       ("spark.driver.host", "149.201.225.67"),
-                                       ("spark.driver.bindAddress", "149.201.225.67")])
-        spark = SparkSession.builder.config(conf=conf).getOrCreate()
-
     database = 'data/entsog.db'
-    sparkfolder = 'data/spark'
     import os
-    if not os.path.exists(sparkfolder):
-        os.makedirs(sparkfolder)
-    craw = EntsogCrawler(database, sparkfolder=None)
+    craw = EntsogCrawler(database)
 
     names = ['cmpUnsuccessfulRequests',
              # 'operationaldata',

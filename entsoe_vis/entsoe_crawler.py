@@ -37,7 +37,7 @@ neighbours = pd.DataFrame({'from': from_n, 'to': to_n})
 
 def replaceStr(string):
     '''
-    replaces illegal values from a spark series name
+    replaces illegal values from a series name
     '''
 
     st = str.replace(str(string), ')', '')

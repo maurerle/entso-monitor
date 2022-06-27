@@ -20,14 +20,13 @@ def updateEntsoe(db, api_key, first=False):
     if first:
         start = pd.Timestamp('20150101', tz='Europe/Berlin')
         delta = pd.Timestamp.now(tz='Europe/Berlin')-start
-        c = ['DE_AT_LU']
-        crawler.createDatabase(client, start, delta, countries=c)
+        crawler.createDatabase(client, start, delta)
     else:
         crawler.updateDatabase(client)
 
 
 def updateEntsog(db, first=False):
-    crawler = EntsogCrawler(db, sparkfolder=None)
+    crawler = EntsogCrawler(db)
 
     names = ['cmpUnsuccessfulRequests',
              # 'operationaldata',
@@ -52,7 +51,7 @@ def updateEntsog(db, first=False):
 
 if __name__ == '__main__':
     import os
-    db = os.getenv('DATABASE_URI','postgresql://entso:entso@10.13.10.41:5432')
+    db = os.getenv('DATABASE_URI','postgresql://entso:entso@localhost:5432')
     from sqlalchemy import create_engine
 
     t = create_engine(f'{db}/entsoe')

@@ -32,29 +32,11 @@ if __name__ == "__main__":
 else:
     from app import app
 
-if True:
-    from entsoe_sqlite_manager import EntsoeSQLite, EntsoePlantSQLite
-    # data manager
-    dm = EntsoeSQLite(DATABASE_URI)
-    # plant data manager
-    pdm = EntsoePlantSQLite(DATABASE_URI)
-else:
-    from entsoe_parquet_manager import EntsoeParquet
-    import findspark
-    from pyspark import SparkConf
-    from pyspark.sql import SparkSession
-    try:
-        findspark.init()
-
-        spark
-        print('using existing spark object')
-    except:
-        print('creating new spark object')
-        conf = SparkConf().setAppName('entsoe').setMaster('local')
-        spark = SparkSession.builder.config(conf=conf).getOrCreate()
-    dm = EntsoeParquet('data', spark)
-    # TODO update SPARK
-    pdm = EntsoePlantSQLite('data/entsoe.db')
+from entsoe_sqlite_manager import EntsoeSQLite, EntsoePlantSQLite
+# data manager
+dm = EntsoeSQLite(DATABASE_URI)
+# plant data manager
+pdm = EntsoePlantSQLite(DATABASE_URI)
 
 powersys = pdm.powersystems('')
 powersys['capacityName'] = powersys['capacity'].apply(lambda x: str(x)+' MW')
