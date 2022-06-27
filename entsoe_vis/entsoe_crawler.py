@@ -130,10 +130,11 @@ class EntsoeCrawler:
             # add country column
             data['country'] = country
             if self.db_accessor:
-                with self.db_accessor() as conn:
-                    try:
+                try:
+                    with self.db_accessor() as conn:
                         data.to_sql(proc.__name__, conn, if_exists='append')
-                    except Exception as e:
+                except Exception as e:
+                    with self.db_accessor() as conn:
                         log.info(f'handling {repr(e)} by concat')
                         # merge old data with new data
                         prev = pd.read_sql_query(
@@ -237,9 +238,8 @@ class EntsoeCrawler:
                  'capacity', 'energy_source', 'lon', 'lat']]
         # delete those without location or eic_code
 
-        if self.db_accessor:
-            with self.db_accessor() as conn:
-                df.to_sql('powersystemdata', conn, if_exists='replace')
+        with self.db_accessor() as conn:
+            df.to_sql('powersystemdata', conn, if_exists='replace')
         return df
 
     def bulkDownloadPlantData(self, countries, client, start, delta, times):
