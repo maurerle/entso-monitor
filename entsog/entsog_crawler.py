@@ -178,7 +178,16 @@ class EntsogCrawler:
                     with self.db_accessor() as conn:
                         df.to_sql(tbl_name, conn, if_exists='append')
                 except Exception as e:
-                    log.error(f'could not save df from params: {params}: {e}')
+                    # allow adding a new column or converting type
+                    with self.db_accessor() as conn:
+                        log.info(f'handling {repr(e)} by concat')
+                        # merge old data with new data
+                        prev = pd.read_sql_query(
+                            f'select * from {tbl_name}', conn)
+                        dat = pd.concat([prev, data])
+                        # convert type as pandas needs it
+                        dat.to_sql(proc.__name__, conn, if_exists='replace')
+                        log.info(f'replaced table {proc.__name__}')
 
             try:
                 with self.db_accessor() as conn:
