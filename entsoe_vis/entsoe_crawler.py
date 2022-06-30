@@ -34,6 +34,7 @@ for n1 in NEIGHBOURS:
         to_n.append(n2)
 neighbours = pd.DataFrame({'from': from_n, 'to': to_n})
 
+all_countries = [e.name for e in Area]
 
 def replaceStr(string):
     '''
@@ -157,8 +158,9 @@ class EntsoeCrawler:
                     query = f'select max("index") from {proc.__name__}'
                     d = conn.execute(query).fetchone()[0]
                 start = pd.to_datetime(d).tz_localize('Europe/Berlin')
-            except Exception:
+            except Exception as e:
                 start = pd.Timestamp('20150101', tz=tz)
+                log.info('using default {start} timestamp {e}')
 
             end = pd.Timestamp.now(tz=tz)
             delta = end-start
@@ -221,8 +223,8 @@ class EntsoeCrawler:
                     except (NoMatchingDataError, InvalidBusinessParameterError):
                         #log.info('no data found for ',n1,n2)
                         pass
-                    except Exception:
-                        log.exception('Error crawling Crossboarders')
+                    except Exception as e:
+                        log.exception('Error crawling Crossboarders {e}')
                 data = data.copy()
 
             data.columns = [x.lower() for x in data.columns]
@@ -284,10 +286,10 @@ class EntsoeCrawler:
         except Exception as e:
             log.error(f'could not create plant_names: {e}')
 
-    def fetchCountriesWithPlants(self, client):
+    def fetchCountriesWithPlants(self, client, countries=all_countries):
         plant_countries = []
         st = pd.Timestamp('20180101', tz='Europe/Berlin')
-        for country in [e.name for e in Area]:
+        for country in countries:
             try:
                 _ = client.query_generation_per_plant(
                     country, start=st, end=st+timedelta(days=1))
@@ -297,14 +299,11 @@ class EntsoeCrawler:
                 continue
         return plant_countries
 
-    def updateDatabase(self, client, start=None, delta=None, countries=[]):
-        if not countries:
-            countries = [e.name for e in Area]
-
+    def updateDatabase(self, client, start=None, delta=None, countries=all_countries):
         proc_cap = client.query_installed_generation_capacity
         start_, delta_ = self.getStart(start, delta, proc_cap)
 
-        if delta.days > 365:
+        if delta_.days > 365:
             self.bulkDownload(countries, proc_cap,
                             start_, delta=delta_, times=1)
 
@@ -359,7 +358,6 @@ if __name__ == "__main__":
              client.query_wind_and_solar_forecast,
              client.query_generation]
     times = 1
-    countries = [e.name for e in Area]
     # Download load and generation
     for proc in procs:
         # hier könnte man parallelisieren
@@ -372,17 +370,7 @@ if __name__ == "__main__":
     # crawler.pullCrossborders(start,delta,1,client.query_crossborder_flows)
 
     # per plant generation
-    plant_countries = []
-    st = pd.Timestamp('20180101', tz='Europe/Berlin')
-
-    for country in countries:
-        try:
-            test_data = client.query_generation_per_plant(
-                country, start=st, end=st+timedelta(days=1))
-            plant_countries.append(country)
-            log.info(f'found data for {country}')
-        except Exception:
-            continue
+    crawler.fetchCountriesWithPlants(client, all_countries)
 
     #db = 'data/entsoe.db'
     crawler = EntsoeCrawler(database=db)
