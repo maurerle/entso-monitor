@@ -156,7 +156,7 @@ class EntsoeCrawler:
                 with self.db_accessor() as conn:
                     query = f'select max("index") from {proc.__name__}'
                     d = conn.execute(query).fetchone()[0]
-                start = pd.to_datetime(d)
+                start = pd.to_datetime(d).tz_localize('Europe/Berlin')
             except Exception:
                 start = pd.Timestamp('20150101', tz=tz)
 
@@ -168,7 +168,6 @@ class EntsoeCrawler:
     def bulkDownload(self, countries, proc, start, delta, times):
         # daten für jedes Land runterladen
         for country in countries:
-            log.info('')
             log.info(f'{country}, {proc.__name__}')
             pbar = tqdm(range(times))
             for i in pbar:
@@ -303,11 +302,11 @@ class EntsoeCrawler:
             countries = [e.name for e in Area]
 
         proc_cap = client.query_installed_generation_capacity
-        start, delta = self.getStart(start, delta, proc_cap, tz=None)
+        start_, delta_ = self.getStart(start, delta, proc_cap)
 
         if delta.days > 365:
             self.bulkDownload(countries, proc_cap,
-                            start, delta=delta, times=1)
+                            start_, delta=delta_, times=1)
 
         # timeseries
         ts_procs = [client.query_day_ahead_prices,
@@ -367,27 +366,8 @@ if __name__ == "__main__":
         crawler.bulkDownload(countries, proc, start, delta, times)
 
     # Capacities
-
-    def downloadCapPerUnit(country, start, end):
-        pp = client.query_installed_generation_capacity_per_unit(
-            country, start=start, end=end)
-        # modify encoding to utf-8, upstream fix contributed
-        #pp['Name'] = pp['Name'].str.encode('latin-1').str.decode('utf-8')
-        return pp
-
     procs = [client.query_installed_generation_capacity,
              client.query_installed_generation_capacity_per_unit]
-
-
-    #for proc in procs:
-    #   # hier könnte man parallelisieren
-    #   crawler.bulkDownload(countries,proc,start,delta=timedelta(days=365*6),times=1)
-    # crawler.pullPowerSystemData()
-    # crawler.bulkDownload(countries,client.query_installed_generation_capacity_per_unit,start,delta=timedelta(days=360*6),times=1)
-
-    # Crossborder Data
-    # s tart = pd.Timestamp('20181211', tz='Europe/Berlin')
-    # 2018-12-11 00:00:00+01:00 fehlt 1 mal, database locked
 
     # crawler.pullCrossborders(start,delta,1,client.query_crossborder_flows)
 

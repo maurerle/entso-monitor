@@ -114,7 +114,7 @@ class EntsogCrawler:
             except Exception:
                 log.exception('error pulling data')
 
-        if 'operatorpointdirections' in names and self.db_accessor:
+        if 'operatorpointdirections' in names:
             with self.db_accessor() as conn:
                 query = (
                     'CREATE INDEX IF NOT EXISTS "idx_opd" ON operatorpointdirections (operatorKey, pointKey,directionkey);')
@@ -122,12 +122,10 @@ class EntsogCrawler:
 
     def findNewBegin(self, table_name):
         try:
-            if self.db_accessor:
-
-                with self.db_accessor() as conn:
-                    query = f'select max(periodfrom) from {table_name}'
-                    d = conn.execute(query).fetchone()[0]
-                begin = pd.to_datetime(d).date()
+            with self.db_accessor() as conn:
+                query = f'select max(periodfrom) from {table_name}'
+                d = conn.execute(query).fetchone()[0]
+            begin = pd.to_datetime(d).date()
         except Exception as e:
             begin = date(2017, 7, 10)
             log.error(f'table does not exist yet - using default start {begin} ({e})')
@@ -137,11 +135,6 @@ class EntsogCrawler:
         log.info('getting values from operationaldata')
         if not end:
             end = date.today()
-
-        #indicators = ['Physical Flow', 'Allocation', 'Firm Technical']
-        #indicator = 'Allocation'
-
-
 
         for indicator in indicators:
             tbl_name = indicator.lower().replace(' ','_')
@@ -200,7 +193,7 @@ class EntsogCrawler:
         # sqlite will only use one index. EXPLAIN QUERY PLAIN shows if index is used
         # ref: https://www.sqlite.org/optoverview.html#or_optimizations
         # reference https://stackoverflow.com/questions/31031561/sqlite-query-to-get-the-closest-datetime
-        if 'Allocation' in names and self.db_accessor:
+        if 'Allocation' in names:
             with self.db_accessor() as conn:
                 query = (
                     'CREATE INDEX IF NOT EXISTS "idx_opdata" ON Allocation (operatorKey,periodfrom);')
@@ -209,7 +202,7 @@ class EntsogCrawler:
                 query = (
                     'CREATE INDEX IF NOT EXISTS "idx_pointKey" ON Allocation (pointKey,periodfrom);')
                 conn.execute(query)
-        if 'Physical Flow' in names and self.db_accessor:
+        if 'Physical Flow' in names:
             with self.db_accessor() as conn:
                 query = (
                     'CREATE INDEX IF NOT EXISTS "idx_phys_operator" ON Physical_Flow (operatorKey,periodfrom);')
@@ -219,7 +212,7 @@ class EntsogCrawler:
                     'CREATE INDEX IF NOT EXISTS "idx_phys_point" ON Physical_Flow (pointKey,periodfrom);')
                 conn.execute(query)
 
-        if 'Firm Technical' in names and self.db_accessor:
+        if 'Firm Technical' in names:
             with self.db_accessor() as conn:
                 query = (
                     'CREATE INDEX IF NOT EXISTS "idx_ft_opdata" ON Firm_Technical (operatorKey,periodfrom);')
