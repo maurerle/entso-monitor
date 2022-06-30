@@ -204,7 +204,7 @@ class EntsoeCrawler:
 
 
     def pullCrossborders(self, start, delta, times, proc, allZones=True):
-        start, delta, end = self.getStart(start, delta, proc)
+        start, delta = self.getStart(start, delta, proc)
 
         end = start+delta
         for i in range(times):
@@ -320,7 +320,7 @@ class EntsoeCrawler:
         # Download load and generation
         # hier könnte man parallelisieren
         for proc in ts_procs:
-            start_, delta_, end = self.getStart(start, delta, proc)
+            start_, delta_ = self.getStart(start, delta, proc)
             self.bulkDownload(countries, proc, start_, delta_, times=1)
 
         self.pullCrossborders(start, delta, 1, client.query_crossborder_flows)
