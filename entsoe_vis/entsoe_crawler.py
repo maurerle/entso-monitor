@@ -129,63 +129,56 @@ class EntsoeCrawler:
             data = calcDiff(data)
             # add country column
             data['country'] = country
-            if self.db_accessor:
-                try:
-                    with self.db_accessor() as conn:
-                        data.to_sql(proc.__name__, conn, if_exists='append')
-                except Exception as e:
-                    with self.db_accessor() as conn:
-                        log.info(f'handling {repr(e)} by concat')
-                        # merge old data with new data
-                        prev = pd.read_sql_query(
-                            f'select * from {proc.__name__}', conn, index_col='index')
-                        dat = pd.concat([prev, data])
-                        # convert type as pandas needs it
-                        dat.index = dat.index.astype('datetime64[ns]')
-                        dat.to_sql(proc.__name__, conn, if_exists='replace')
-                        log.info(f'replaced table {proc.__name__}')
+            try:
+                with self.db_accessor() as conn:
+                    data.to_sql(proc.__name__, conn, if_exists='append')
+            except Exception as e:
+                with self.db_accessor() as conn:
+                    log.info(f'handling {repr(e)} by concat')
+                    # merge old data with new data
+                    prev = pd.read_sql_query(
+                        f'select * from {proc.__name__}', conn, index_col='index')
+                    dat = pd.concat([prev, data])
+                    # convert type as pandas needs it
+                    dat.index = dat.index.astype('datetime64[ns]')
+                    dat.to_sql(proc.__name__, conn, if_exists='replace')
+                    log.info(f'replaced table {proc.__name__}')
         except NoMatchingDataError:
-            log.error(f'no data found for {proc.__name__}, {start}, {end}')
+            log.error(f'no data found for {proc.__name__}, {country}, {start}, {end}')
         except Exception as e:
-            log.exception(f'error downloading {start}, {end}')
+            log.exception(f'error downloading {proc.__name__}, {country}, {start}, {end}')
 
-    def getStart(self, start, delta):
-        if not (start and delta):
-            import pytz
+    def getStart(self, start, delta, proc, tz='Europe/Berlin'):
+        if start and delta:
+            return start, delta
+        else:
             try:
                 with self.db_accessor() as conn:
                     query = f'select max("index") from {proc.__name__}'
                     d = conn.execute(query).fetchone()[0]
                 start = pd.to_datetime(d)
             except Exception:
-                start = pd.Timestamp('20150101', tz=pytz.FixedOffset(120))
+                start = pd.Timestamp('20150101', tz=tz)
 
-            end = pd.Timestamp.now(tz=pytz.FixedOffset(120))
+            end = pd.Timestamp.now(tz=tz)
             delta = end-start
-            return start, delta, end
-        else:
-            end = start+delta
-            return start, delta, end
+            return start, delta
+
 
     def bulkDownload(self, countries, proc, start, delta, times):
-        start, delta, end = self.getStart(start, delta)
-
-        if 'installed_generation_capacity' in proc.__name__:
-            if end.year-start.year < 1:
-                return
         # daten für jedes Land runterladen
         for country in countries:
             log.info('')
             log.info(f'{country}, {proc.__name__}')
             pbar = tqdm(range(times))
             for i in pbar:
-                start1 = start + i * delta
-                end1 = start + (i+1)*delta
+                start_ = start + i * delta
+                end_ = start + (i+1)*delta
 
                 pbar.set_description(
-                    f"{country} {start1:%Y-%m-%d} to {end1:%Y-%m-%d}")
+                    f"{country} {start_:%Y-%m-%d} to {end_:%Y-%m-%d}")
 
-                self.pullData(country, proc, start1, end1)
+                self.pullData(country, proc, start_, end_)
 
         # indexe anlegen für schnelles suchen
         try:
@@ -211,20 +204,20 @@ class EntsoeCrawler:
 
 
     def pullCrossborders(self, start, delta, times, proc, allZones=True):
-        start, delta, end = self.getStart(start, delta)
+        start, delta, end = self.getStart(start, delta, proc)
 
         end = start+delta
         for i in range(times):
             data = pd.DataFrame()
-            start1 = start + i * delta
-            end1 = end + i*delta
-            log.info(start1)
+            start_ = start + i * delta
+            end_ = end + i*delta
+            log.info(start_)
 
             for n1 in NEIGHBOURS:
                 for n2 in NEIGHBOURS[n1]:
                     try:
                         if (len(n1) == 2 and len(n2) == 2) or allZones:
-                            dataN = proc(n1, n2, start=start1, end=end1)
+                            dataN = proc(n1, n2, start=start_, end=end_)
                             data[n1+'-'+n2] = dataN
                     except (NoMatchingDataError, InvalidBusinessParameterError):
                         #log.info('no data found for ',n1,n2)
@@ -234,26 +227,24 @@ class EntsoeCrawler:
                 data = data.copy()
 
             data.columns = [x.lower() for x in data.columns]
-            if self.db_accessor:
-                
-                try:
-                    with self.db_accessor() as conn:
-                        data.to_sql(proc.__name__, conn, if_exists='append')
-                except Exception as e:
-                    log.error('error saving crossboarders {e}')
-                    prev = pd.read_sql_query(
-                        f'select * from {proc.__name__}', conn, index_col='index')
+            try:
+                with self.db_accessor() as conn:
+                    data.to_sql(proc.__name__, conn, if_exists='append')
+            except Exception as e:
+                log.error('error saving crossboarders {e}')
+                prev = pd.read_sql_query(
+                    f'select * from {proc.__name__}', conn, index_col='index')
 
-                    ges = pd.concat([prev, data])
-                    ges.index = ges.index.astype('datetime64[ns]')
-                    ges.to_sql(proc.__name__, conn, if_exists='replace')
+                ges = pd.concat([prev, data])
+                ges.index = ges.index.astype('datetime64[ns]')
+                ges.to_sql(proc.__name__, conn, if_exists='replace')
 
-                try:
-                    with self.db_accessor() as conn:
-                        query_create_hypertable = f"SELECT create_hypertable('{proc.__name__}', 'index', if_not_exists => TRUE, migrate_data => TRUE);"
-                        conn.execute(query_create_hypertable)
-                except Exception as e:
-                    log.error(f'could not create hypertable: {e}')
+            try:
+                with self.db_accessor() as conn:
+                    query_create_hypertable = f"SELECT create_hypertable('{proc.__name__}', 'index', if_not_exists => TRUE, migrate_data => TRUE);"
+                    conn.execute(query_create_hypertable)
+            except Exception as e:
+                log.error(f'could not create hypertable: {e}')
 
     def pullPowerSystemData(self):
         df = pd.read_csv(
@@ -288,20 +279,13 @@ class EntsoeCrawler:
 
         try:
             with self.db_accessor() as conn:
-                query_create_hypertable = "SELECT create_hypertable('query_per_plant', 'index', if_not_exists => TRUE, migrate_data => TRUE);"
-                conn.execute(query_create_hypertable)
-        except Exception as e:
-            log.error(f'could not create hypertable: {e}')
-
-        try:
-            with self.db_accessor() as conn:
                 query = 'select distinct name, country,type from query_per_plant'
                 names = pd.read_sql_query(query, conn)
                 names.to_sql('plant_names', conn, if_exists='replace')
         except Exception as e:
             log.error(f'could not create plant_names: {e}')
 
-    def plantCountries(self, client):
+    def fetchCountriesWithPlants(self, client):
         plant_countries = []
         st = pd.Timestamp('20180101', tz='Europe/Berlin')
         for country in [e.name for e in Area]:
@@ -318,12 +302,11 @@ class EntsoeCrawler:
         if not countries:
             countries = [e.name for e in Area]
 
-        
-        gen_procs = [client.query_installed_generation_capacity,
-                        client.query_installed_generation_capacity_per_unit]
-        for proc in gen_procs:
-            # hier könnte man parallelisieren
-            self.bulkDownload(countries, proc,
+        proc_cap = client.query_installed_generation_capacity
+        start, delta = self.getStart(start, delta, proc, tz=None)
+
+        if delta.days > 365:
+            self.bulkDownload(countries, proc_cap,
                             start, delta=delta, times=1)
 
         # timeseries
@@ -337,17 +320,21 @@ class EntsoeCrawler:
         # Download load and generation
         # hier könnte man parallelisieren
         for proc in ts_procs:
-            self.bulkDownload(countries, proc, start, delta, times=1)
+            start_, delta_, end = self.getStart(start, delta)
+            self.bulkDownload(countries, proc, start_, delta_, times=1)
 
         self.pullCrossborders(start, delta, 1, client.query_crossborder_flows)
 
-        plant_countries = self.plantCountries(client)
+        plant_countries = self.fetchCountriesWithPlants(client)
+
         self.bulkDownloadPlantData(
             plant_countries[:], client, start, delta, times=1)
 
     def createDatabase(self, client, start, delta, countries=[]):
         self.initBaseSql()
         self.pullPowerSystemData()
+        self.bulkDownload(countries, client.query_installed_generation_capacity_per_unit,
+                            start, delta=delta, times=1)
         self.updateDatabase(client, start, delta, countries)
 
 
@@ -391,7 +378,7 @@ if __name__ == "__main__":
     procs = [client.query_installed_generation_capacity,
              client.query_installed_generation_capacity_per_unit]
 
-    
+
     #for proc in procs:
     #   # hier könnte man parallelisieren
     #   crawler.bulkDownload(countries,proc,start,delta=timedelta(days=365*6),times=1)
