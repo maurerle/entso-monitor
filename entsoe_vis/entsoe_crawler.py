@@ -303,7 +303,7 @@ class EntsoeCrawler:
             countries = [e.name for e in Area]
 
         proc_cap = client.query_installed_generation_capacity
-        start, delta = self.getStart(start, delta, proc, tz=None)
+        start, delta = self.getStart(start, delta, proc_cap, tz=None)
 
         if delta.days > 365:
             self.bulkDownload(countries, proc_cap,
@@ -320,7 +320,7 @@ class EntsoeCrawler:
         # Download load and generation
         # hier könnte man parallelisieren
         for proc in ts_procs:
-            start_, delta_, end = self.getStart(start, delta)
+            start_, delta_, end = self.getStart(start, delta, proc)
             self.bulkDownload(countries, proc, start_, delta_, times=1)
 
         self.pullCrossborders(start, delta, 1, client.query_crossborder_flows)
