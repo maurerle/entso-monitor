@@ -149,45 +149,70 @@ class EntsoeCrawler:
         except Exception as e:
             log.exception(f'error downloading {start}, {end}')
 
-    def bulkDownload(self, countries, procs, start, delta, times):
-        end = start+delta
-        for proc in procs:
-            # hier könnte man parallelisieren
-            for country in countries:
-                log.info('')
-                log.info(f'{country}, {proc.__name__}')
-                pbar = tqdm(range(times))
-                for i in pbar:
-                    start1 = start + i * delta
-                    end1 = end + i*delta
-
-                    pbar.set_description(
-                        f"{country} {start1:%Y-%m-%d} to {end1:%Y-%m-%d}")
-
-                    self.pullData(country, proc, start1, end1)
-
+    def getStart(self, start, delta):
+        if not (start and delta):
+            import pytz
             try:
                 with self.db_accessor() as conn:
-                    log.info(f'creating index country_idx_{proc.__name__}')
-                    query = (
-                        f'CREATE INDEX IF NOT EXISTS "country_idx_{proc.__name__}" ON "{proc.__name__}" ("country", "index");')
-                    conn.execute(query)
-                    #query = (f'CREATE INDEX IF NOT EXISTS "country_{proc.__name__}" ON "{proc.__name__}" ("country");')
-                    # conn.execute(query)
-                    log.info(f'created indexes country_idx_{proc.__name__}')
-            except Exception as e:
-                log.error(f'could not create index if needed: {e}')
+                    query = f'select max("index") from {proc.__name__}'
+                    d = conn.execute(query).fetchone()[0]
+                start = pd.to_datetime(d)
+            except Exception:
+                start = pd.Timestamp('20150101', tz=pytz.FixedOffset(120))
 
-            try:
-                with self.db_accessor() as conn:
-                    query_create_hypertable = f"SELECT create_hypertable('{proc.__name__}', 'index', if_not_exists => TRUE, migrate_data => TRUE);"
-                    conn.execute(query_create_hypertable)
-                log.info(f'created hypertable {proc.__name__}')
-            except Exception as e:
-                log.error(f'could not create hypertable: {e}')
+            end = pd.Timestamp.now(tz=pytz.FixedOffset(120))
+            delta = end-start
+            return start, delta, end
+        else:
+            end = start+delta
+            return start, delta, end
+
+    def bulkDownload(self, countries, proc, start, delta, times):
+        start, delta, end = self.getStart(start, delta)
+
+        if 'installed_generation_capacity' in proc.__name__:
+            if end.year-start.year < 1:
+                return
+        # daten für jedes Land runterladen
+        for country in countries:
+            log.info('')
+            log.info(f'{country}, {proc.__name__}')
+            pbar = tqdm(range(times))
+            for i in pbar:
+                start1 = start + i * delta
+                end1 = start + (i+1)*delta
+
+                pbar.set_description(
+                    f"{country} {start1:%Y-%m-%d} to {end1:%Y-%m-%d}")
+
+                self.pullData(country, proc, start1, end1)
+
+        # indexe anlegen für schnelles suchen
+        try:
+            with self.db_accessor() as conn:
+                log.info(f'creating index country_idx_{proc.__name__}')
+                query = (
+                    f'CREATE INDEX IF NOT EXISTS "country_idx_{proc.__name__}" ON "{proc.__name__}" ("country", "index");')
+                conn.execute(query)
+                #query = (f'CREATE INDEX IF NOT EXISTS "country_{proc.__name__}" ON "{proc.__name__}" ("country");')
+                # conn.execute(query)
+                log.info(f'created indexes country_idx_{proc.__name__}')
+        except Exception as e:
+            log.error(f'could not create index if needed: {e}')
+
+        # falls es eine TimescaleDB ist, erzeuge eine Hypertable
+        try:
+            with self.db_accessor() as conn:
+                query_create_hypertable = f"SELECT create_hypertable('{proc.__name__}', 'index', if_not_exists => TRUE, migrate_data => TRUE);"
+                conn.execute(query_create_hypertable)
+            log.info(f'created hypertable {proc.__name__}')
+        except Exception as e:
+            log.error(f'could not create hypertable: {e}')
 
 
     def pullCrossborders(self, start, delta, times, proc, allZones=True):
+        start, delta, end = self.getStart(start, delta)
+
         end = start+delta
         for i in range(times):
             data = pd.DataFrame()
@@ -250,12 +275,9 @@ class EntsoeCrawler:
             # convert multiindex into second column
             pp = ppp.melt(var_name=['name', 'type'],
                           value_name='value', ignore_index=False)
-            # modify encoding to utf-8, upstream fix contributed
-            #pp['name'] = pp['name'].str.encode('latin-1').str.decode('utf-8')
             return pp
 
-        procs = [query_per_plant]
-        #self.bulkDownload(countries, procs, start, delta=delta, times=times)
+        self.bulkDownload(countries, query_per_plant, start, delta=delta, times=times)
 
         try:
             with self.db_accessor() as conn:
@@ -293,29 +315,16 @@ class EntsoeCrawler:
         return plant_countries
 
     def updateDatabase(self, client, start=None, delta=None, countries=[]):
-
-        if not (start and delta):
-            import pytz
-            try:
-                with self.db_accessor() as conn:
-                    query = 'select max("index") from query_day_ahead_prices'
-                    d = conn.execute(query).fetchone()[0]
-                start = pd.to_datetime(d)
-            except Exception:
-                start = pd.Timestamp('20150101', tz=pytz.FixedOffset(120))
-
-            end = pd.Timestamp.now(tz=pytz.FixedOffset(120))
-            delta = end-start
-        else:
-            end = start+delta
         if not countries:
             countries = [e.name for e in Area]
 
-        if end.year-start.year > 0:
-            gen_procs = [client.query_installed_generation_capacity,
-                         client.query_installed_generation_capacity_per_unit]
-            self.bulkDownload(countries, gen_procs,
-                              start, delta=delta, times=1)
+        
+        gen_procs = [client.query_installed_generation_capacity,
+                        client.query_installed_generation_capacity_per_unit]
+        for proc in gen_procs:
+            # hier könnte man parallelisieren
+            self.bulkDownload(countries, proc,
+                            start, delta=delta, times=1)
 
         # timeseries
         ts_procs = [client.query_day_ahead_prices,
@@ -326,7 +335,9 @@ class EntsoeCrawler:
                     client.query_generation]
 
         # Download load and generation
-        self.bulkDownload(countries, ts_procs, start, delta, times=1)
+        # hier könnte man parallelisieren
+        for proc in ts_procs:
+            self.bulkDownload(countries, proc, start, delta, times=1)
 
         self.pullCrossborders(start, delta, 1, client.query_crossborder_flows)
 
@@ -364,7 +375,9 @@ if __name__ == "__main__":
     times = 1
     countries = [e.name for e in Area]
     # Download load and generation
-    crawler.bulkDownload(countries, procs, start, delta, times)
+    for proc in procs:
+        # hier könnte man parallelisieren
+        crawler.bulkDownload(countries, proc, start, delta, times)
 
     # Capacities
 
@@ -378,9 +391,12 @@ if __name__ == "__main__":
     procs = [client.query_installed_generation_capacity,
              client.query_installed_generation_capacity_per_unit]
 
-    # crawler.bulkDownload(countries,procs,start,delta=timedelta(days=365*6),times=1)
+    
+    #for proc in procs:
+    #   # hier könnte man parallelisieren
+    #   crawler.bulkDownload(countries,proc,start,delta=timedelta(days=365*6),times=1)
     # crawler.pullPowerSystemData()
-    # crawler.bulkDownload(countries,[client.query_installed_generation_capacity_per_unit],start,delta=timedelta(days=360*6),times=1)
+    # crawler.bulkDownload(countries,client.query_installed_generation_capacity_per_unit,start,delta=timedelta(days=360*6),times=1)
 
     # Crossborder Data
     # s tart = pd.Timestamp('20181211', tz='Europe/Berlin')
