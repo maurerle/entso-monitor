@@ -168,14 +168,13 @@ class EntsoeCrawler:
 
 
     def bulkDownload(self, countries, proc, start, delta, times):
-        # daten für jedes Land runterladen
-        for country in countries:
-            log.info(f'{country}, {proc.__name__}')
-            pbar = tqdm(range(times))
-            for i in pbar:
-                start_ = start + i * delta
-                end_ = start + (i+1)*delta
-
+        log.info(f'****** {proc.__name__} *******')
+        pbar = tqdm(range(times))
+        for i in pbar:
+            start_ = start + i * delta
+            end_ = start + (i+1)*delta
+            # daten für jedes Land runterladen
+            for country in countries:
                 pbar.set_description(
                     f"{country} {start_:%Y-%m-%d} to {end_:%Y-%m-%d}")
 
