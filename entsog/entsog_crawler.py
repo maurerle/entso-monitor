@@ -120,41 +120,42 @@ class EntsogCrawler:
                     'CREATE INDEX IF NOT EXISTS "idx_opd" ON operatorpointdirections (operatorKey, pointKey,directionkey);')
                 conn.execute(query)
 
-    def findNewBegin(self):
+    def findNewBegin(self, table_name):
         try:
             if self.db_accessor:
 
                 with self.db_accessor() as conn:
-                    tbl_name = indicators[0].lower().replace(' ','_')
-                    query = f'select max(periodfrom) from {tbl_name}'
+                    query = f'select max(periodfrom) from {table_name}'
                     d = conn.execute(query).fetchone()[0]
                 begin = pd.to_datetime(d).date()
-        except Exception:
-            log.error('table does not exist yet - using default start')
+        except Exception as e:
             begin = date(2017, 7, 10)
+            log.error(f'table does not exist yet - using default start {begin} ({e})')
         return begin
-        
-    def pullOperationalData(self, indicators, begin=None, end=None):
+
+    def pullOperationalData(self, indicators, initial_begin=None, end=None):
         log.info('getting values from operationaldata')
         if not end:
             end = date.today()
 
-        if not begin:
-            begin = self.findNewBegin()
-
-        bulks = (end-begin).days
-        log.info(
-            f'start: {begin}, end: {end}, days: {bulks}, indicators: {indicators}')
-
-        if bulks < 1:
-            return
-
         #indicators = ['Physical Flow', 'Allocation', 'Firm Technical']
         #indicator = 'Allocation'
 
-        
+
 
         for indicator in indicators:
+            tbl_name = indicator.lower().replace(' ','_')
+            if initial_begin:
+                begin = initial_begin
+            else:
+                begin = self.findNewBegin(tbl_name)
+
+            bulks = (end-begin).days
+            log.info(
+                f'start: {begin}, end: {end}, days: {bulks}, indicators: {indicators}')
+
+            if bulks < 1:
+                return
             delta = timedelta(days=1)
             end = begin+delta
 
@@ -163,8 +164,6 @@ class EntsogCrawler:
                 beg1 = begin+i*delta
                 end1 = end + i*delta
                 pbar.set_description(f'op {beg1} to {end1}')
-
-                tbl_name = indicator.lower().replace(' ','_')
 
                 params = ['limit=-1', 'indicator='+urllib.parse.quote(indicator), 'from=' +
                       str(beg1), 'to='+str(end1), 'periodType=hour']
@@ -175,9 +174,12 @@ class EntsogCrawler:
                 df['periodfrom'] = pd.to_datetime(df['periodfrom'], infer_datetime_format=True)
                 df['periodto'] = pd.to_datetime(df['periodto'], infer_datetime_format=True)
 
-                with self.db_accessor() as conn:
-                    df.to_sql(tbl_name, conn, if_exists='append')
-                
+                try:
+                    with self.db_accessor() as conn:
+                        df.to_sql(tbl_name, conn, if_exists='append')
+                except Exception as e:
+                    log.error(f'could not save df from params: {params}: {e}')
+
             try:
                 with self.db_accessor() as conn:
                     query_create_hypertable = f"SELECT create_hypertable('{tbl_name}', 'periodfrom', if_not_exists => TRUE, migrate_data => TRUE);"
