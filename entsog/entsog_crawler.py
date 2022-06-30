@@ -184,10 +184,10 @@ class EntsogCrawler:
                         # merge old data with new data
                         prev = pd.read_sql_query(
                             f'select * from {tbl_name}', conn)
-                        dat = pd.concat([prev, data])
+                        dat = pd.concat([prev, df])
                         # convert type as pandas needs it
-                        dat.to_sql(proc.__name__, conn, if_exists='replace')
-                        log.info(f'replaced table {proc.__name__}')
+                        dat.to_sql(tbl_name, conn, if_exists='replace')
+                        log.info(f'replaced table {tbl_name}')
 
             try:
                 with self.db_accessor() as conn:
