@@ -144,8 +144,7 @@ class EntsogCrawler:
                 begin = self.findNewBegin(tbl_name)
 
             bulks = (end-begin).days
-            log.info(
-                f'start: {begin}, end: {end}, days: {bulks}, indicators: {indicators}')
+            log.info(f'start: {begin}, end: {end}, days: {bulks}, indicator: {indicator}')
 
             if bulks < 1:
                 return
