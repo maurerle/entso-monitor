@@ -110,7 +110,7 @@ class EntsoeCrawler:
             except NoMatchingDataError as e:
                 raise e
             except HTTPError as e:
-                log.error(e.response.status_code, e.response.reason)
+                log.error(f'{e.response.status_code} - {e.response.reason}')
                 if e.response.status_code == 400:
                     raise e
                 else:
@@ -147,7 +147,7 @@ class EntsoeCrawler:
         except NoMatchingDataError:
             log.error(f'no data found for {proc.__name__}, {country}, {start}, {end}')
         except Exception as e:
-            log.exception(f'error downloading {proc.__name__}, {country}, {start}, {end}')
+            log.error(f'error downloading {proc.__name__}, {country}, {start}, {end}')
 
     def getStart(self, start, delta, proc, tz='Europe/Berlin'):
         if start and delta:

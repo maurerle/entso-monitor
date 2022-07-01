@@ -193,7 +193,7 @@ class EntsogCrawler:
         # sqlite will only use one index. EXPLAIN QUERY PLAIN shows if index is used
         # ref: https://www.sqlite.org/optoverview.html#or_optimizations
         # reference https://stackoverflow.com/questions/31031561/sqlite-query-to-get-the-closest-datetime
-        if 'Allocation' in names:
+        if 'Allocation' in indicators:
             with self.db_accessor() as conn:
                 query = (
                     'CREATE INDEX IF NOT EXISTS "idx_opdata" ON Allocation (operatorKey,periodfrom);')
@@ -202,7 +202,7 @@ class EntsogCrawler:
                 query = (
                     'CREATE INDEX IF NOT EXISTS "idx_pointKey" ON Allocation (pointKey,periodfrom);')
                 conn.execute(query)
-        if 'Physical Flow' in names:
+        if 'Physical Flow' in indicators:
             with self.db_accessor() as conn:
                 query = (
                     'CREATE INDEX IF NOT EXISTS "idx_phys_operator" ON Physical_Flow (operatorKey,periodfrom);')
@@ -212,7 +212,7 @@ class EntsogCrawler:
                     'CREATE INDEX IF NOT EXISTS "idx_phys_point" ON Physical_Flow (pointKey,periodfrom);')
                 conn.execute(query)
 
-        if 'Firm Technical' in names:
+        if 'Firm Technical' in indicators:
             with self.db_accessor() as conn:
                 query = (
                     'CREATE INDEX IF NOT EXISTS "idx_ft_opdata" ON Firm_Technical (operatorKey,periodfrom);')
