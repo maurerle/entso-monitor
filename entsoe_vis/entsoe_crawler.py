@@ -157,10 +157,15 @@ class EntsoeCrawler:
                 with self.db_accessor() as conn:
                     query = f'select max("index") from {proc.__name__}'
                     d = conn.execute(query).fetchone()[0]
-                start = pd.to_datetime(d).tz_localize('Europe/Berlin')
+                start = pd.to_datetime(d)
+                try:
+                    start = start.tz_localize('Europe/Berlin')
+                except TypeError:
+                    # if already localized
+                    pass
             except Exception as e:
                 start = pd.Timestamp('20150101', tz=tz)
-                log.info('using default {start} timestamp {e}')
+                log.info(f'using default {start} timestamp {e}')
 
             end = pd.Timestamp.now(tz=tz)
             delta = end-start
@@ -169,7 +174,7 @@ class EntsoeCrawler:
 
     def bulkDownload(self, countries, proc, start, delta, times):
         log.info(f'****** {proc.__name__} *******')
-        pbar = tqdm(range(times))
+        pbar = tqdm(range(times*len(countries)))
         for i in pbar:
             start_ = start + i * delta
             end_ = start + (i+1)*delta
@@ -223,7 +228,7 @@ class EntsoeCrawler:
                         #log.info('no data found for ',n1,n2)
                         pass
                     except Exception as e:
-                        log.exception('Error crawling Crossboarders {e}')
+                        log.error(f'Error crawling Crossboarders {e}')
                 data = data.copy()
 
             data.columns = [x.lower() for x in data.columns]
@@ -268,7 +273,8 @@ class EntsoeCrawler:
                           value_name='value', ignore_index=False)
             return pp
 
-        self.bulkDownload(countries, query_per_plant, start, delta=delta, times=times)
+        start_, delta_ = self.getStart(start, delta, query_per_plant)
+        self.bulkDownload(countries, query_per_plant, start_, delta=delta_, times=times)
 
         try:
             with self.db_accessor() as conn:

@@ -156,7 +156,8 @@ class EntsoePlantSQLite(EntsoePlantDataManager):
 
     def plantGen(self, names: List[str], filt: Filter):
         # average is correct here as some countries have quarter hour data and others
-        inString = f"('{','.join(names)}')"
+        inJoinString = "','".join(names)
+        inString = f"('{inJoinString}')"
         whereString = f"name in {inString} and '{filt.begin.strftime('%Y-%m-%d')}' < index and index < '{filt.end.strftime('%Y-%m-%d')}'"
         selectString = f'{self.groupTime(filt.groupby, "index")} as time, avg("value") as value, country, type, name'
         groupString = f'{self.groupTime(filt.groupby, "index")}, name, type, country'

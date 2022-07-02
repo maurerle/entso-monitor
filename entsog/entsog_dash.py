@@ -35,6 +35,7 @@ from entsog_sqlite_manager import EntsogSQLite
 dm = EntsogSQLite(DATABASE_URI)
 # initialize static data
 incons = dm.interconnections()
+incons['fromcountrykey'] = incons['fromcountrykey'].fillna('X')
 bzs = dm.balancingzones()
 connectionPoints = dm.connectionpoints()
 operators = dm.operators()
@@ -72,7 +73,6 @@ layout = html.Div(
     [
         html.Div(
             [
-                dcc.Location(id='url', refresh=False),
                 html.Div(
                     [
                         html.H1(
@@ -472,11 +472,11 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
     desc = 'no valid points'
 
     if points != None and len(points) > 0:
-        # include with toPointKey:
+        # include with topointkey:
         inter = incons[incons['pointkey'].apply(lambda x: x in points)]
 
         # select both from and to points here
-        points = list(set(points) | set(inter['toPointKey'].unique()))
+        points = list(set(points) | set(inter['topointkey'].unique()))
 
         valid_points = [x for x in points if x is not None]
 
@@ -507,9 +507,9 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
         return {'data': [], 'layout': dict(title=f"No Data Found for {desc} from {start_date} to {end_date}")}
 
     g['point'] = g['directionkey']+' '+g['pointlabel']
-    g['value'].fillna(0, inplace=True)
+    g['value'] = g['value'].fillna(value=0)
     g['value'] = g['value']/1e6  # show in GW
-    g.fillna('', inplace=True)
+    g = g.fillna('')
     g['pip'] = g.apply(lambda c: ' PIP' if (
         c['pipeinpipewithtsokey'] != '' and c['indicator'] == 'phys') else '', axis=1)
     g['indicator'] = g['indicator']+g['pip']
@@ -563,18 +563,19 @@ def updateCrossborderGraph(operators, bz, start_date, end_date, group, cumulativ
     g = pd.concat([p, a], axis=1)
     if g.empty:
         return {'data': [], 'layout': dict(title=f"No Data Found for {bz} from {start_date} to {end_date}")}
+    g = g[g.columns.sort_values()]
 
     figure = go.Figure()
     if cumulative == 'none':
-        g = g[g.columns.sort_values()]
-        addTraces(figure, g)
+        addTraces(figure, p)
+        addTraces(figure, a)
     else:
         addTraces(figure, p, legendgroup='phy', stackgroup='phy')
         addTraces(figure, a, legendgroup='alloc', stackgroup='alloc')
 
     figure.update_layout(title=f"Crossborder Flow in GWh/{group} for {desc} from {start_date} to {end_date}",
                          xaxis_title='',
-                         yaxis_title=f'Imported - Exported Energy in GWh/{group}',
+                         yaxis_title=f'Imported Energy in GWh/{group}',
                          hovermode="x unified",
                          legend=dict(font=dict(size=10), orientation="v"),
                          height=700,)
@@ -582,7 +583,7 @@ def updateCrossborderGraph(operators, bz, start_date, end_date, group, cumulativ
 
     return figure
 
-#### Infrastructure Graph ###########
+##### Infrastructure Graph #######
 
 
 @app.callback(
@@ -617,21 +618,21 @@ def updateInfrastructureGraph(operators, bz, start_date, end_date, group, cumula
     #     a['sum']=a.sum(axis=1)
     a.columns = list(map(lambda x: x+' alloc', a.columns))
     p.columns = list(map(lambda x: x+' phy', p.columns))
-    g = pd.concat([a, p], axis=1)
-    if g.empty:
+    pa = pd.concat([a, p], axis=1)
+    if pa.empty:
         return {'data': [], 'layout': dict(title=f"No Data Found for {bz} from {start_date} to {end_date}")}
 
     figure = go.Figure()
     if cumulative == 'none':
-        g = g[g.columns.sort_values()]
-        addTraces(figure, g)
+        addTraces(figure, p)
+        addTraces(figure, a)
     else:
         addTraces(figure, p, legendgroup='phy', stackgroup='phy')
         addTraces(figure, a, legendgroup='alloc', stackgroup='alloc')
 
     figure.update_layout(title=f"Flow per Infrastructure type in GWh/{group} for {desc} from {start_date} to {end_date}",
                          xaxis_title='',
-                         yaxis_title=f'Energy transferred into {desc} in GWh/{group}',
+                         yaxis_title=f'Energy added to {desc} in GWh/{group}',
                          hovermode="x unified",
                          showlegend=True,
                          legend=dict(font=dict(size=10), orientation="v"),

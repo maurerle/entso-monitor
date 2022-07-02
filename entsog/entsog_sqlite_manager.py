@@ -28,7 +28,6 @@ ftime_pg = {'day': 'YYYY-MM-DD',
             'minute': 'YYYY-MM-DD hh24:mi:00'}
 
 checkPipeInPipe = "pipeinpipewithtsokey is NULL"
-checkDoubleReporting = "not isdoublereporting"
 
 
 def timeFilter(filt):
@@ -40,20 +39,22 @@ physFlowTableName = 'physical_flow'
 
 class EntsogSQLite(EntsogDataManager):
     def __init__(self, database: str):
-        if database:
-            self.use_pg = database.startswith('postgresql')
-            if self.use_pg:
-                self.engine = create_engine(database)
-                @contextmanager
-                def access_db():
-                    with self.engine.connect() as conn, conn.begin():
-                        yield conn
+        self.use_pg = database.startswith('postgresql')
+        if self.use_pg:
+            self.engine = create_engine(database)
+            @contextmanager
+            def access_db():
+                with self.engine.connect() as conn, conn.begin():
+                    yield conn
 
-                self.db_accessor = access_db
-            else:
-                self.db_accessor = lambda: closing(sqlite3.connect(database))
+            self.db_accessor = access_db
         else:
-            self.db_accessor = None
+            self.db_accessor = lambda: closing(sqlite3.connect(database))
+
+        if self.use_pg:
+            self.checkDoubleReporting = "isdoublereporting is not TRUE"
+        else:
+            self.checkDoubleReporting = "not isdoublereporting"
 
     def groupTime(self, groupby, column):
         if self.use_pg:
@@ -125,8 +126,9 @@ class EntsogSQLite(EntsogDataManager):
 
     def operationaldata(self, operatorKeys: List[str], filt: Filter, group_by: List[str] = ['directionkey'], table=physFlowTableName):
         whereString = timeFilter(filt)
-        inString = f"('{','.join(operatorKeys)}')"
-        whereString += f'and t.operatorkey in {inString} and {checkDoubleReporting}'
+        inJoinString = "','".join(operatorKeys)
+        inString = f"('{inJoinString}')"
+        whereString += f'and t.operatorkey in {inString} and {self.checkDoubleReporting}'
         joinString = ' left join (select distinct pointKey, isdoublereporting, operatorKey, pipeinpipewithtsokey from operatorpointdirections) opd on t.pointKey = opd.pointKey and t.operatorkey = opd.operatorKey'
 
         if table == physFlowTableName:
@@ -144,7 +146,8 @@ class EntsogSQLite(EntsogDataManager):
 
     def operationaldataByPoints(self, points: List[str], filt: Filter, group_by: List[str] = ['directionkey'], table=physFlowTableName):
         whereString = timeFilter(filt)
-        inString = f"('{','.join(points)}')"
+        inJoinString = "','".join(points)
+        inString = f"('{inJoinString}')"
         whereString += f'and pointKey in {inString}'
         selectString = f'{self.groupTime(filt.groupby, "periodfrom")} as time, '
         selectString += 'pointKey, pointlabel, operatorKey, operatorLabel, '
@@ -167,10 +170,11 @@ class EntsogSQLite(EntsogDataManager):
         return operatorKeys
 
     def bilanz(self, operatorKeys: List[str], filt: Filter, table=physFlowTableName):
-        inString = f"('{','.join(operatorKeys)}')"
+        inJoinString = "','".join(operatorKeys)
+        inString = f"('{inJoinString}')"
 
         whereString = timeFilter(filt)
-        whereString += f' and o.operatorKey in {inString} and {checkDoubleReporting}'
+        whereString += f' and o.operatorKey in {inString} and {self.checkDoubleReporting}'
 
         selectString = f'{self.groupTime(filt.groupby, "periodfrom")} as time, '
         # TODO if connectionpoints would not have missing data, remove this hack
@@ -216,8 +220,9 @@ class EntsogSQLite(EntsogDataManager):
 
     def crossborder(self, operatorKeys: List[str], filt: Filter, group_by: List[str] = ['t.directionkey', 'opd.adjacentzones', 'opd.adjacentcountry'], table=physFlowTableName):
         whereString = timeFilter(filt)
-        inString = f"('{','.join(operatorKeys)}')"
-        whereString += f'and t.operatorkey in {inString} and {checkDoubleReporting}'
+        inJoinString = "','".join(operatorKeys)
+        inString = f"('{inJoinString}')"
+        whereString += f'and t.operatorkey in {inString} and {self.checkDoubleReporting}'
 
         joinString = ' left join (select distinct pointKey, isdoublereporting, operatorKey, pipeinpipewithtsokey, adjacentzones, adjacentcountry from operatorpointdirections) opd on t.pointKey = opd.pointKey and t.operatorkey = opd.operatorKey'
         if table == physFlowTableName:

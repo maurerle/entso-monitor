@@ -8,3 +8,4 @@ entsoe-py
 requests
 sqlalchemy
 psycopg2-binary
+tqdm
