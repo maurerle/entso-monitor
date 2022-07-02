@@ -214,15 +214,19 @@ class EntsoeCrawler:
 
     def pullCrossborders(self, start, delta, times, proc, allZones=True):
         start, delta = self.getStart(start, delta, proc)
+        log.info(f'****** {proc.__name__} *******')
 
-        end = start+delta
+        if (times*delta).days < 2:
+            log.info('nothing to do')
+            return
+
         for i in range(times):
             data = pd.DataFrame()
             start_ = start + i * delta
-            end_ = end + i*delta
+            end_ = start + (i+1)*delta
             log.info(start_)
 
-            for n1 in NEIGHBOURS:
+            for n1 in tqdm(NEIGHBOURS):
                 for n2 in NEIGHBOURS[n1]:
                     try:
                         if (len(n1) == 2 and len(n2) == 2) or allZones:
@@ -240,7 +244,7 @@ class EntsoeCrawler:
                 with self.db_accessor() as conn:
                     data.to_sql(proc.__name__, conn, if_exists='append')
             except Exception as e:
-                log.error('error saving crossboarders {e}')
+                log.error(f'error saving crossboarders {e}')
                 prev = pd.read_sql_query(
                     f'select * from {proc.__name__}', conn, index_col='index')
 
