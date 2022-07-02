@@ -149,12 +149,11 @@ class EntsogCrawler:
             if bulks < 1:
                 return
             delta = timedelta(days=1)
-            end = begin+delta
 
             pbar = tqdm(range(int(bulks)))
             for i in pbar:
-                beg1 = begin+i*delta
-                end1 = end + i*delta
+                beg1 = begin + i*delta
+                end1 = begin + (i+1)*delta
                 pbar.set_description(f'op {beg1} to {end1}')
 
                 params = ['limit=-1', 'indicator='+urllib.parse.quote(indicator), 'from=' +
