@@ -235,7 +235,6 @@ class EntsogSQLite(EntsogDataManager):
 
         with self.db_accessor() as conn:
             query = f'select {selectString} from {table} t {joinString} where {whereString} group by {groupString}'
-            print(query)
             flow = pd.read_sql_query(query, conn, index_col='time')
 
         flow['name'] = flow['adjacentcountry'].apply(lambda x: str(

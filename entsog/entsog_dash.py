@@ -70,7 +70,7 @@ def addTraces(figure, data, stackgroup=None, legendgroup=None):
 
 # initialize layout
 layout = html.Div(
-    [
+    [ dcc.Location(id='url_entsog', refresh=False),
         html.Div(
             [
                 html.Div(
@@ -304,41 +304,43 @@ def updateOperatorControl(bz):
 component_ids = ['start_date', 'end_date', 'group_by_control',
                  'bz_control', 'operator_control', 'point_control', 'map_layer_control']
 
-
 def parse_state(url):
     parse_result = urlparse(url)
     params = parse_qsl(parse_result.query)
     state = dict(params)
     return state
 
-
 @app.callback([
     Output("date_picker", "start_date"),
     Output("date_picker", "end_date"),
     Output("group_by_control", "value"),
+    Output("bz_control", "value"),
+    Output("operator_control", "value"),
 ],
-    inputs=[Input('url', 'href')])
+    inputs=[Input('url_entsog', 'href')])
 def page_load(href):
+
+    str_to_list = lambda x: x.strip(
+                    "][").replace("'", '').split(',')
     if not href:
         return []
     state = parse_state(href)
-    print(href)
     # for element in elements
-    if all(element in state for element in ['start_date', 'end_date', 'group_by_control']):
-        return state['start_date'], state['end_date'], state['group_by_control']
+    if all(element in state for element in ['start_date', 'end_date', 'group_by_control', 'bz_control', 'operator_control']):
+        return state['start_date'], state['end_date'], state['group_by_control'], state['bz_control'], str_to_list(state['operator_control'])
     else:
         raise PreventUpdate
 
 
-@app.callback(Output('url', 'search'),
+@app.callback(Output('url_entsog', 'search'),
               [
     Input("date_picker", "start_date"),
     Input("date_picker", "end_date"),
     Input("group_by_control", "value"),
     Input("bz_control", "value"),
     Input("operator_control", "value"),
-    Input("point_control", "value"),
-    Input("map_layer_control", "value"),
+    #Input("point_control", "value"),
+    #Input("map_layer_control", "value"),
 ])
 def update_url_state(*values):
     state = urlencode(dict(zip(component_ids, values)))
@@ -496,10 +498,13 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
         valid_points, filt, ['pointkey', 'directionkey'])
     a = dm.operationaldataByPoints(valid_points, filt, [
                                    'pointkey', 'directionkey'], table='Allocation')
+    t = dm.operationaldataByPoints(valid_points, filt, [
+                                   'pointkey', 'directionkey'], table='firm_technical')    
     p['indicator'] = 'phys'
     a['indicator'] = 'alloc'
+    t['indicator'] = 'ftc'
 
-    g = pd.concat([p, a], axis=0)
+    g = pd.concat([p, a, t], axis=0)
     if g.empty:
         return {'data': [], 'layout': dict(title=f"No Data Found for {desc} from {start_date} to {end_date}")}
 
@@ -611,13 +616,15 @@ def updateInfrastructureGraph(operators, bz, start_date, end_date, group, cumula
 
     p = dm.bilanz(operators, filt)
     a = dm.bilanz(operators, filt, table='Allocation')
+    t = dm.bilanz(operators, filt, table='firm_technical')
     # if len(p.columns) > 1:
     #     p['sum']=p.sum(axis=1)
     # if len(a.columns) > 1:
     #     a['sum']=a.sum(axis=1)
     a.columns = list(map(lambda x: x+' alloc', a.columns))
     p.columns = list(map(lambda x: x+' phy', p.columns))
-    pa = pd.concat([a, p], axis=1)
+    t.columns = list(map(lambda x: x+' ftc', t.columns)) # firm technical capacity
+    pa = pd.concat([a, p, t], axis=1)
     if pa.empty:
         return {'data': [], 'layout': dict(title=f"No Data Found for {bz} from {start_date} to {end_date}")}
 
@@ -625,9 +632,11 @@ def updateInfrastructureGraph(operators, bz, start_date, end_date, group, cumula
     if cumulative == 'none':
         addTraces(figure, p)
         addTraces(figure, a)
+        addTraces(figure, t)
     else:
         addTraces(figure, p, legendgroup='phy', stackgroup='phy')
         addTraces(figure, a, legendgroup='alloc', stackgroup='alloc')
+        #addTraces(figure, t, legendgroup='ftc', stackgroup='ftc')
 
     figure.update_layout(title=f"Flow per Infrastructure type in GWh/{group} for {desc} from {start_date} to {end_date}",
                          xaxis_title='',
