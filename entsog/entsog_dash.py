@@ -118,9 +118,9 @@ layout = html.Div(
                         dcc.DatePickerRange(
                             id='date_picker',
                             min_date_allowed=date(2017, 7, 1),
-                            max_date_allowed=date(2020, 10, 19),
-                            start_date=date(2017, 7, 2),
-                            end_date=date(2017, 7, 11),
+                            max_date_allowed=date.today(),
+                            start_date=date(2019, 7, 2),
+                            end_date=date(2019, 7, 11),
                             display_format='DD.MM.YY',
                             # initial_visible_month='2015-02-01',
                             show_outside_days=True,
@@ -495,14 +495,11 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
     p = dm.operationaldataByPoints(
         valid_points, filt, ['pointkey', 'directionkey'])
     a = dm.operationaldataByPoints(valid_points, filt, [
-                                   'pointKey', 'directionKey'], table='Allocation')
-    t = dm.operationaldataByPoints(valid_points, filt, [
-                                   'pointKey', 'directionKey'], table='Firm Technical')
+                                   'pointkey', 'directionkey'], table='Allocation')
     p['indicator'] = 'phys'
     a['indicator'] = 'alloc'
-    t['indicator'] = 'firmTechnical'
 
-    g = pd.concat([p, a, t], axis=0)
+    g = pd.concat([p, a], axis=0)
     if g.empty:
         return {'data': [], 'layout': dict(title=f"No Data Found for {desc} from {start_date} to {end_date}")}
 
@@ -513,6 +510,8 @@ def updatePointsLabelGraph(points, start_date, end_date, group, options):
     g['pip'] = g.apply(lambda c: ' PIP' if (
         c['pipeinpipewithtsokey'] != '' and c['indicator'] == 'phys') else '', axis=1)
     g['indicator'] = g['indicator']+g['pip']
+
+    g = g.sort_index()
 
     # sort values alphabetically for better visualization
     ordered = g['point'].unique()
