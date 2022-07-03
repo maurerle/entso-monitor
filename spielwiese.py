@@ -35,14 +35,14 @@ day_ahead_prices = client.query_day_ahead_prices(country_code, start=start,end=e
 load = client.query_load(country_code, start=start,end=end)
 try:
     load_forecast = client.query_load_forecast(country_code, start=start,end=end) # todo what is this
-except:
+except Exception as e:
     print('query load_forecast failed')
 generation_forecast = client.query_generation_forecast(country_code, start=start,end=end)
 
 # methods that return Pandas DataFrames
 try:
     wind_and_solar_forecast=client.query_wind_and_solar_forecast(country_code, start=start,end=end, psr_type=None)
-except:
+except Exception as e:
     print('query wind_and_solar_forecast failed')
 generation = client.query_generation(country_code, start=start,end=end, psr_type=None)
 installed_generation_capacity = client.query_installed_generation_capacity(country_code, start=start,end=end, psr_type=None)

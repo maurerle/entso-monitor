@@ -30,21 +30,17 @@ ftime_pg = {'day': 'YYYY-MM-DD',
 
 class EntsoeSQLite(EntsoeDataManager):
     def __init__(self, database: str):
-        if database:
-            self.use_pg = database.startswith('postgresql')
-            if self.use_pg:
-                self.engine = create_engine(database)
-                @contextmanager
-                def access_db():
-                    with self.engine.connect() as conn, conn.begin():
-                        yield conn
+        self.use_pg = database.startswith('postgresql')
+        if self.use_pg:
+            self.engine = create_engine(database)
+            @contextmanager
+            def access_db():
+                with self.engine.connect() as conn, conn.begin():
+                    yield conn
 
-                self.db_accessor = access_db
-            else:
-                
-                self.db_accessor = lambda: closing(sqlite3.connect(database))
+            self.db_accessor = access_db
         else:
-            self.db_accessor = None
+            self.db_accessor = lambda: closing(sqlite3.connect(database))
 
     def groupTime(self, groupby, column):
         if self.use_pg:
@@ -140,19 +136,23 @@ class EntsoeSQLite(EntsoeDataManager):
 
 class EntsoePlantSQLite(EntsoePlantDataManager):
     def __init__(self, plantdatabase: str):
-        if plantdatabase:
-            if plantdatabase.startswith('postgresql'):
-                self.engine = create_engine(plantdatabase)
-                @contextmanager
-                def access_db():
-                    with self.engine.connect() as conn, conn.begin():
-                        yield conn
+        self.use_pg = plantdatabase.startswith('postgresql')
+        if self.use_pg:
+            self.engine = create_engine(plantdatabase)
+            @contextmanager
+            def access_db():
+                with self.engine.connect() as conn, conn.begin():
+                    yield conn
 
-                self.db_accessor = access_db
-            else:
-                self.db_accessor = lambda: closing(sqlite3.connect(database))
+            self.db_accessor = access_db
         else:
-            self.db_accessor = None
+            self.db_accessor = lambda: closing(sqlite3.connect(plantdatabase))
+
+    def groupTime(self, groupby, column):
+        if self.use_pg:
+            return f"to_char({column}, '{ftime_pg[groupby]}')" # PostgreSQL
+        else:
+            return f'strftime("{ftime_sqlite[groupby]}", "{column}")' # SQLite
 
     def plantGen(self, names: List[str], filt: Filter):
         # average is correct here as some countries have quarter hour data and others

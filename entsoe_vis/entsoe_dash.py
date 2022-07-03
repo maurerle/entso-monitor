@@ -22,7 +22,7 @@ import json
 import pandas as pd
 
 DATABASE_URI = 'data/entsoe.db'
-DATABASE_URI = 'postgresql://entso:entso@10.13.10.41:5432/entsoe'
+DATABASE_URI = 'postgresql://readonly:readonly@10.13.10.41:5432/entsoe'
 ENTSOE_URL = 'https://transparency.entsoe.eu/content/static_content/Static content/web api/Guide.html#_areas'
 
 if __name__ == "__main__":
@@ -143,9 +143,9 @@ layout = html.Div(
                         dcc.DatePickerRange(
                             id='datepicker',
                             min_date_allowed=date(2015, 1, 1),
-                            max_date_allowed=date(2020, 12, 19),
-                            start_date=date(2015, 8, 21),
-                            end_date=date(2015, 9, 4),
+                            max_date_allowed=date.today(),
+                            start_date=date(2017, 8, 21),
+                            end_date=date(2017, 9, 4),
                             display_format='DD.MM.YY',
                             # initial_visible_month='2020-08-01',
                             show_outside_days=True,
@@ -581,4 +581,4 @@ def make_neighbour_figure(country_control, start_date, end_date, group_by_contro
 
 if __name__ == "__main__":
     app.layout = layout
-    app.run_server(debug=True, use_reloader=False, host='0.0.0.0', port=8051)
+    app.run_server(debug=True, use_reloader=True, host='0.0.0.0', port=8051)
