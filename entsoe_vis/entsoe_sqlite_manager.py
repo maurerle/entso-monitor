@@ -107,14 +107,14 @@ class EntsoeSQLite(EntsoeDataManager):
     def crossborderFlows(self, country: str, filt: Filter):
         whereString = f"'{filt.begin.strftime('%Y-%m-%d')}' < index and index < '{filt.end.strftime('%Y-%m-%d')}'"
 
-        nei = self._neighbours(country)
+        nei = self._neighbours(country.lower())
         selectString = f'{self._selectBuilder(nei)} {self.groupTime(filt.groupby, "index")} as time'
 
         groupString = f'{self.groupTime(filt.groupby, "index")}'
         with self.db_accessor() as conn:
             query = f"select {selectString} from query_crossborder_flows where {whereString} group by {groupString}"
             cross = pd.read_sql_query(query, conn, index_col='time')
-        return cross
+        return cross.sort_index()
         # relList= map(lambda x: x.split('.'),crossborder.columns)
         # filteredRelations=filter(lambda x: x.count(country)>0,relList)
         # columns=list(map(lambda x: '{}.{}'.format(x[0],x[1]), filteredRelations))
@@ -164,7 +164,7 @@ class EntsoePlantSQLite(EntsoePlantDataManager):
         with self.db_accessor() as conn:
             query = f"select {selectString} from query_per_plant where {whereString} group by {groupString}"
             generation = pd.read_sql_query(query, conn, index_col='time')
-        return generation
+        return generation.sort_index()
 
     def getNames(self):
         with self.db_accessor() as conn:
