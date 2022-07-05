@@ -97,10 +97,13 @@ class EntsoeSQLite(EntsoeDataManager):
             query = 'select * from query_crossborder_flows where 0=1'
             columns = pd.read_sql_query(query, conn).columns
         nei = []
-        for x in columns:
-            sp = x.split('-')
+        for columnname in columns:
+            # some columns are meaningless and only one direction exists
+            if columnname in ['fr-it_nord_fr', 'ch-it_nord_ch', 'de_at_lu-it_nord_at', 'pl-ua']:
+                continue
+            sp = columnname.split('-')
             if sp[0] == fromC:
-                nei.append(x)
+                nei.append(columnname)
                 # nei.append(sp[1]+'.'+sp[0])
         return nei
 
@@ -174,7 +177,7 @@ class EntsoePlantSQLite(EntsoePlantDataManager):
         return names
 
     def capacityPerPlant(self, country=''):
-        selectString = 'Name,country,"Installed_Capacity_[MW]" as capacity,Production_Type'
+        selectString = 'Name,country,"Installed_Capacity_[MW]" as capacity,production_type'
         if country == '':
             whereString = ''
         else:
@@ -185,7 +188,7 @@ class EntsoePlantSQLite(EntsoePlantDataManager):
         return df
 
     def powersystems(self, country=''):
-        selectString = 'eic_code,p.name,q.name as entsoe_name, company,p.country,q.country as area,lat,lon,capacity,Production_Type'
+        selectString = 'eic_code,p.name,q.name as entsoe_name, company,p.country,q.country as area,lat,lon,capacity,production_type'
         if country == '':
             whereString = ''
         else:
@@ -235,4 +238,4 @@ if __name__ == "__main__":
     # oft falsch, nuklear richtig
     aa = par.capacityPerPlant('FR')
     aa['capacity'] = aa['capacity'].astype(float)
-    aaa = aa.groupby('Production_Type').sum()['capacity']
+    aaa = aa.groupby('production_type').sum()['capacity']

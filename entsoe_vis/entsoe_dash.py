@@ -42,6 +42,7 @@ powersys = pdm.powersystems('')
 powersys['capacityName'] = powersys['capacity'].apply(lambda x: str(x)+' MW')
 
 climate = dm.climateImpact()
+climate.index = [item.lower() for item in climate.index]
 climateList = list(climate.columns)
 climateList.append('None')
 appname = 'Entsoe Monitor'
@@ -414,9 +415,9 @@ def update_figure(climate_sel, mapSelection):
         data.append(choro)
 
     if 'plants' in mapSelection:
-        vals = powersys['Production_Type'].unique()
+        vals = powersys['production_type'].unique()
         for val in vals:
-            d = powersys[powersys['Production_Type'] == val]
+            d = powersys[powersys['production_type'] == val]
             scatt = go.Scattermapbox(lat=d['lat'], name=val,
                                      lon=d['lon'],
                                      mode='markers',
@@ -426,7 +427,7 @@ def update_figure(climate_sel, mapSelection):
                                      hoverinfo=['text'],
                                      showlegend=True,
                                      below='',
-                                     marker=dict(size=6, color=color_map[val])
+                                     marker=dict(size=6, color=color_map[val.lower()])
                                      )
             data.append(scatt)
     layout = go.Layout(title_text='Europe mapbox choropleth', title_x=0.5,  # width=750, height=700,
