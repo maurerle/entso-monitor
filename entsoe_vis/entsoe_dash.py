@@ -247,7 +247,7 @@ layout = html.Div(
                      href='https://transparency.entsoe.eu/', refresh=True),
             html.Br(),
             dcc.Link('Legal Notice', refresh=True,
-                     href='https://datensch.eu/legal-notice/'),
+                     href='https://demo.nowum.fh-aachen.de/info.html'),
         ],
         className="pretty_container",
     ),

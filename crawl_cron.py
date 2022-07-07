@@ -20,9 +20,10 @@ def updateEntsoe(db, api_key, first=False):
     if first:
         start = pd.Timestamp('20150101', tz='Europe/Berlin')
         delta = pd.Timestamp.now(tz='Europe/Berlin')-start
-        crawler.createDatabase(client, start, delta)
+        crawler.create_database(client, start, delta)
+        crawler.update_database(client, start, delta)
     else:
-        crawler.updateDatabase(client)
+        crawler.update_database(client)
 
 
 def updateEntsog(db, first=False):

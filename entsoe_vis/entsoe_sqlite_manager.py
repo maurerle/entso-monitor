@@ -83,6 +83,9 @@ class EntsoeSQLite(EntsoeDataManager):
         return gen
 
     def _selectBuilder(self, neighbours):
+        '''
+        builds the select statement for the difference of import and export
+        '''
         res = ''
         for x in neighbours:
             fr = x.split('-')[0]
@@ -93,6 +96,9 @@ class EntsoeSQLite(EntsoeDataManager):
         return res
 
     def _neighbours(self, fromC):
+        '''
+        finds all neighbours of a country by looking at the columns of query_crossborder_flows
+        '''
         with self.db_accessor() as conn:
             query = 'select * from query_crossborder_flows where 0=1'
             columns = pd.read_sql_query(query, conn).columns
@@ -170,6 +176,9 @@ class EntsoePlantSQLite(EntsoePlantDataManager):
         return generation.sort_index()
 
     def getNames(self):
+        '''
+        returns a list of plant names and countries with existing generation data
+        '''
         with self.db_accessor() as conn:
             # TODO add type
             query = "select distinct name,country from plant_names"
@@ -188,6 +197,9 @@ class EntsoePlantSQLite(EntsoePlantDataManager):
         return df
 
     def powersystems(self, country=''):
+        '''
+        returns a list of all power systems which exist in ENTSO-E and OPSD (open-power-system-data) - joined on the eic_code
+        '''
         selectString = 'eic_code,p.name,q.name as entsoe_name, company,p.country,q.country as area,lat,lon,capacity,production_type'
         if country == '':
             whereString = ''

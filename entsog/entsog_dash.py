@@ -233,7 +233,7 @@ layout = html.Div(
             dcc.Link('Data comes from ENTSO-G Transparency Platform',
                      href='https://transparency.entsog.eu/', refresh=True),
             html.Br(),
-            dcc.Link('Legal Notice', refresh=True, href='https://datensch.eu/legal-notice/'),
+            dcc.Link('Legal Notice', refresh=True, href='https://demo.nowum.fh-aachen.de/info.html'),
             ],
             className="pretty_container",
         ),

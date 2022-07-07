@@ -36,12 +36,24 @@ neighbours = pd.DataFrame({'from': from_n, 'to': to_n})
 
 all_countries = [e.name for e in Area]
 
-def replaceStr(string):
-    '''
+def sanitize_series(seriesname):
+    """
     replaces illegal values from a series name
-    '''
+    for insertion into database
 
-    st = str.replace(str(string), ')', '')
+    Parameters
+    ----------
+    seriesname : str
+        name of the series
+
+    Returns
+    -------
+
+    st : str
+
+    """
+
+    st = str.replace(str(seriesname), ')', '')
     st = str.replace(st, '(', '')
     st = str.replace(st, ',', '')
     st = str.replace(st, "'", '')
@@ -50,26 +62,36 @@ def replaceStr(string):
     return st
 
 
-def calcDiff(data):
-    '''
+def calculate_nett_generation(df):
+    """
     Calculates the difference between columns ending with _actual_aggregated and _actual_consumption.
-    '''
-    dat = data.copy()
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame with columns ending with _actual_aggregated or _actual_consumption
+
+    Returns
+    -------
+    dat: pd.DataFrame
+    """
+
+    dat = df.copy()
     for c in filter(lambda x: x.endswith('_actual_aggregated'), dat.columns):
         new = str.replace(c, '_actual_aggregated', '')
         dif = list(filter(lambda x: x.endswith('_actual_consumption')
                           and x.startswith(new), dat.columns))
         if len(dif) > 0:
-            # wenn es beides gibt wird die Differenz gebildet
+            # calc difference if both exists
             dat[new] = dat[c]-dat[dif[0]]
-            del dat[c]
+            del dat[c] # delete handled series of our copy here
             del dat[dif[0]]
         else:
-            # sonst wird direkt
+            # if no consumption exists, directly return aggregated
             dat[new] = dat[c]
             del dat[c]
     for c in filter(lambda x: x.endswith('_actual_consumption'), dat.columns):
-        # wenn es nur Verbrauch aber kein Erzeugnis gibt, mach negativ
+        # if only consumption exists use the negative value
         new = str.replace(c, '_actual_consumption', '')
         dat[new] = -dat[c]
         del dat[c]
@@ -77,6 +99,15 @@ def calcDiff(data):
 
 
 class EntsoeCrawler:
+    """
+    class to allow easier crawling of ENTSO-E timeseries data
+
+    Parameters
+    ----------
+    database: str
+        database connection string or path to sqlite db
+    """
+
     def __init__(self, database):
         # choice between pg and sqlite
         if database.startswith('postgresql'):
@@ -84,6 +115,7 @@ class EntsoeCrawler:
             self.engine = create_engine(database)
             @contextmanager
             def access_db():
+                """contextmanager to handle opening of db, similar to closing for sqlite3"""
                 with self.engine.connect() as conn, conn.begin():
                     yield conn
 
@@ -91,8 +123,10 @@ class EntsoeCrawler:
         else:
             self.db_accessor = lambda: closing(sqlite3.connect(database))
 
-    def initBaseSql(self):
-        # write static data database
+    def init_base_sql(self):
+        """
+        write static data to database once
+        """
         psrtype = pd.DataFrame.from_dict(
             PSRTYPE_MAPPINGS, orient='index', columns=['prod_type'])
         areas = pd.DataFrame([[e.name, e.value, e.tz, e.meaning]
@@ -103,7 +137,25 @@ class EntsoeCrawler:
             areas.to_sql('areas', conn, if_exists='replace')
             psrtype.to_sql('psrtype', conn, if_exists='replace')
 
-    def pullData(self, country, proc, start, end):
+    def fetch_and_write_entsoe_df_to_db(self, country, proc, start, end):
+        """
+        Crawl data from ENTSO-E transparency platform and write it to the database
+
+        Parameters
+        ----------
+        country : str
+            2-letter country code
+        proc :
+            procedure of entsoe-py client
+        start : pd.Timestamp
+            start time
+        end : pd.Timestamp
+            end time
+
+        Returns
+        -------
+
+        """
         try:
             try:
                 data = pd.DataFrame(proc(country, start=start, end=end))
@@ -124,10 +176,13 @@ class EntsoeCrawler:
                 data = pd.DataFrame(proc(country, start=start, end=end))
 
             # replace spaces and invalid chars in column names
-            data.columns = [replaceStr(x).lower() for x in data.columns]
+            data.columns = [sanitize_series(x).lower() for x in data.columns]
             data = data.fillna(0)
+
+            # XXX could have used nett=True in entsoe-py client
             # calculate difference betweeen agg and consumption
-            data = calcDiff(data)
+            data = calculate_nett_generation(data)
+
             # add country column
             data['country'] = country
             try:
@@ -149,7 +204,31 @@ class EntsoeCrawler:
         except Exception as e:
             log.error(f'error downloading {proc.__name__}, {country}, {start}, {end}')
 
-    def getStart(self, start, delta, proc, tz='Europe/Berlin'):
+    def get_latest_crawled_timestamp(self, start, delta, tablename, tz='Europe/Berlin'):
+        """
+        Find the best Start for the given procedurename by finding the last timestemp where data was collected for.
+        Also calculates the best delta to update until today.
+
+        Parameters
+        ----------
+        start : pd.Timestamp 
+        delta : pd.Timedelta
+            to check if a delta has already been set
+        tablename : str
+            name of the table
+        tz :  str
+            (Default value = 'Europe/Berlin')
+
+        Returns
+        -------
+        type
+        start : pd.Timestamp
+            best start
+        delta : pd.Timedelta
+            best delta
+        
+        """
+
         if start and delta:
             return start, delta
         else:
@@ -162,7 +241,7 @@ class EntsoeCrawler:
                     start = start.tz_localize('Europe/Berlin')
                 except TypeError:
                     # if already localized
-                    pass
+                        pass
             except Exception as e:
                 start = pd.Timestamp('20150101', tz=tz)
                 log.info(f'using default {start} timestamp {e}')
@@ -172,7 +251,28 @@ class EntsoeCrawler:
             return start, delta
 
 
-    def bulkDownload(self, countries, proc, start, delta, times):
+    def download_entsoe(self, countries, proc, start, delta, times):
+        """
+        Downloads data with a procedure from a EntsoePandasClient
+        and stores it in the configured database
+
+        Parameters
+        ----------
+        countries : list[str]
+            list of country codes
+        proc :
+            procedure of entsoe-py
+        start : pd.Timestamp
+            
+        delta : pd.Timedelta
+            
+        times : int
+            
+
+        Returns
+        -------
+
+        """
         log.info(f'****** {proc.__name__} *******')
         
         if (times*delta).days < 2:
@@ -187,7 +287,7 @@ class EntsoeCrawler:
                 pbar.set_description(
                     f"{country} {start_:%Y-%m-%d} to {end_:%Y-%m-%d}")
 
-                self.pullData(country, proc, start_, end_)
+                self.fetch_and_write_entsoe_df_to_db(country, proc, start_, end_)
 
         # indexe anlegen für schnelles suchen
         try:
@@ -212,8 +312,28 @@ class EntsoeCrawler:
             log.error(f'could not create hypertable: {e}')
 
 
-    def pullCrossborders(self, start, delta, times, proc, allZones=True):
-        start, delta = self.getStart(start, delta, proc)
+    def pull_crossborders(self, start, delta, times, proc, allZones=True):
+        """
+        Pulls transmissions across borders from entsoe
+
+        Parameters
+        ----------
+        start :
+            param delta:
+        times :
+            param proc:
+        allZones :
+            Default value = True)
+        delta :
+            param proc:
+        proc :
+            
+
+        Returns
+        -------
+
+        """
+        start, delta = self.get_latest_crawled_timestamp(start, delta, proc)
         log.info(f'****** {proc.__name__} *******')
 
         if (times*delta).days < 2:
@@ -259,7 +379,18 @@ class EntsoeCrawler:
             except Exception as e:
                 log.error(f'could not create hypertable: {e}')
 
-    def pullPowerSystemData(self):
+    def save_power_system_data(self):
+        """
+        pulls static data from opsd and reads it into the database
+        - used for mapping existing power plants from entsoe to a location on a map
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+
+        """
         df = pd.read_csv(
             'https://data.open-power-system-data.org/conventional_power_plants/latest/conventional_power_plants_EU.csv')
         df = df.dropna(axis=0, subset=['lon', 'lat', 'eic_code'])
@@ -271,9 +402,46 @@ class EntsoeCrawler:
             df.to_sql('powersystemdata', conn, if_exists='replace')
         return df
 
-    def bulkDownloadPlantData(self, countries, client, start, delta, times):
+    def download_entsoe_plant_data(self, countries, client, start, delta, times):
+        """
+        Allows to download the generation per power plant from entsoe.
+        Uses download_entsoe to write the data into the DB.
+
+        Parameters
+        ----------
+        countries : list[str]
+            list of 2-letter countrycodes
+        client : entsoe.EntsoePandasClient
+            DataFrameClient of entsoe-py package
+        start : pd.Timestamp
+            timestamp aware pd.Timestamp
+        delta : pd.Timedelta
+            Timedelta to fetch data for per bulk
+        times : int
+            number of bulks with size delta to fetch
+
+        Returns
+        -------
+
+        """
         # new proxy function
         def query_per_plant(country, start, end):
+            """
+            wrapper function around query_generation_per_plant to convert multiindex
+
+            Parameters
+            ----------
+            country : str
+                country to fetch
+            start : pd.DateTime
+                param end:
+            end :
+                
+
+            Returns
+            -------
+
+            """
             ppp = client.query_generation_per_plant(
                 country, start=start, end=end)
             # convert multiindex into second column
@@ -281,8 +449,8 @@ class EntsoeCrawler:
                           value_name='value', ignore_index=False)
             return pp
 
-        start_, delta_ = self.getStart(start, delta, query_per_plant)
-        self.bulkDownload(countries, query_per_plant, start_, delta=delta_, times=times)
+        start_, delta_ = self.get_latest_crawled_timestamp(start, delta, query_per_plant.__name__)
+        self.download_entsoe(countries, query_per_plant, start_, delta=delta_, times=times)
 
         try:
             with self.db_accessor() as conn:
@@ -299,9 +467,23 @@ class EntsoeCrawler:
         except Exception as e:
             log.error(f'could not create plant_names: {e}')
 
-    def fetchCountriesWithPlants(self, client, countries=all_countries):
+    def countries_with_plant_data(self, client, countries=all_countries, st=pd.Timestamp('20180101', tz='Europe/Berlin')):
+        """
+        checks for all countries if the have available data at date.
+        Returns list of countries with existing generation data per plant at given timestamp
+
+        Parameters
+        ----------
+        client : entsoe.EntsoePandasClient
+        countries : list[str], default all_countries
+
+        Returns
+        -------
+        plant_countries : list[str]
+            list of country_codes with existing data for generation per plant
+
+        """
         plant_countries = []
-        st = pd.Timestamp('20180101', tz='Europe/Berlin')
         for country in countries:
             try:
                 _ = client.query_generation_per_plant(
@@ -312,12 +494,27 @@ class EntsoeCrawler:
                 continue
         return plant_countries
 
-    def updateDatabase(self, client, start=None, delta=None, countries=all_countries):
+    def update_database(self, client, start=None, delta=None, countries=all_countries):
+        """
+        Runs everything which is needed to update the database and pull the data since the last successful pull.
+
+        Parameters
+        ----------
+        client : entsoe.EntsoePandasClient
+            entsoe-py client
+        delta : pd.Timedelta
+        countries : list[str], default all_countries
+        start : pd.Timestamp
+
+        Returns
+        -------
+
+        """
         proc_cap = client.query_installed_generation_capacity
-        start_, delta_ = self.getStart(start, delta, proc_cap)
+        start_, delta_ = self.get_latest_crawled_timestamp(start, delta, proc_cap.__name__)
 
         if delta_.days > 365:
-            self.bulkDownload(countries, proc_cap,
+            self.download_entsoe(countries, proc_cap,
                             start_, delta=delta_, times=1)
 
         # timeseries
@@ -331,22 +528,38 @@ class EntsoeCrawler:
         # Download load and generation
         # hier könnte man parallelisieren
         for proc in ts_procs:
-            start_, delta_ = self.getStart(start, delta, proc)
-            self.bulkDownload(countries, proc, start_, delta_, times=1)
+            start_, delta_ = self.get_latest_crawled_timestamp(start, delta, proc.__name__)
+            self.download_entsoe(countries, proc, start_, delta_, times=1)
 
-        self.pullCrossborders(start, delta, 1, client.query_crossborder_flows)
+        self.pull_crossborders(start, delta, 1, client.query_crossborder_flows)
 
-        plant_countries = self.fetchCountriesWithPlants(client)
+        plant_countries = self.countries_with_plant_data(client)
 
-        self.bulkDownloadPlantData(
+        self.download_entsoe_plant_data(
             plant_countries[:], client, start, delta, times=1)
 
-    def createDatabase(self, client, start, delta, countries=[]):
-        self.initBaseSql()
-        self.pullPowerSystemData()
-        self.bulkDownload(countries, client.query_installed_generation_capacity_per_unit,
+    def create_database(self, client, start, delta, countries=[]):
+        """
+
+        Parameters
+        ----------
+        client : entsoe.EntsoePandasClient
+            param start:
+        delta :
+            param countries:  (Default value = [])
+        start :
+            param countries:  (Default value = [])
+        countries :
+             (Default value = [])
+
+        Returns
+        -------
+
+        """
+        self.init_base_sql()
+        self.save_power_system_data()
+        self.download_entsoe(countries, client.query_installed_generation_capacity_per_unit,
                             start, delta=delta, times=1)
-        self.updateDatabase(client, start, delta, countries)
 
 
 if __name__ == "__main__":
@@ -374,22 +587,22 @@ if __name__ == "__main__":
     # Download load and generation
     for proc in procs:
         # hier könnte man parallelisieren
-        crawler.bulkDownload(countries, proc, start, delta, times)
+        crawler.download_entsoe(countries, proc, start, delta, times)
 
     # Capacities
     procs = [client.query_installed_generation_capacity,
              client.query_installed_generation_capacity_per_unit]
 
-    # crawler.pullCrossborders(start,delta,1,client.query_crossborder_flows)
+    # crawler.pull_crossborders(start,delta,1,client.query_crossborder_flows)
 
     # per plant generation
-    crawler.fetchCountriesWithPlants(client, all_countries)
+    crawler.countries_with_plant_data(client, all_countries)
 
     #db = 'data/entsoe.db'
     crawler = EntsoeCrawler(database=db)
 
     # 2017-12-16 bis 2018-03-15 runterladen
-    crawler.bulkDownloadPlantData(
+    crawler.download_entsoe_plant_data(
         plant_countries[:], client, start, delta, times)
 
     # create indices if not existing
