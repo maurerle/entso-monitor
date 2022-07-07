@@ -30,19 +30,28 @@ class EntsogDataManager:
         pass
 
     def balancingzones(self):
-        """also known as bidding zones"""
+        """
+        returns a list of balancing zones.
+        also known as bidding zones
+        """
         pass
 
     def operators(self):
         '''
-        returns operators which have an interconnection in one of the balancingZones
+        returns a list of operators
         '''
         pass
 
     def operatorpointdirections(self):
+        '''
+        returns the result of the operatorpointdirections request
+        '''
         pass
 
     def operationaldata(self, operatorKeys: List[str], filt: Filter, group_by: List[str] = ['directionkey'], table=physFlowTableName):
+        '''
+        returns timeseries data of the given Indicator
+        '''
         pass
 
     def operationaldataByPoints(self, points: List[str], filt: Filter, group_by: List[str] = ['directionkey'], table=physFlowTableName):

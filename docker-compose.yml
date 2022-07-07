@@ -7,11 +7,13 @@ services:
     environment:
       - POSTGRES_USER=entso
       - POSTGRES_PASSWORD=entso
-      - POSTGRES_DB=entsoe
+      - POSTGRES_DB=postgres
     volumes:
-      - ./data/entsoe:/var/lib/postgresql/data
+      - ./data/pg:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
+    command: postgres -c  'timescaledb.telemetry_level=off'
 
   entso-dashboard:
     build: .
@@ -19,7 +21,8 @@ services:
     image: registry.git.fh-aachen.de/nowum-energy/software-werkzeuge/entsoe-monitor:latest
     restart: always
     environment:
-      - DATABASE_URI="postgresql://readonly:readonly@10.13.10.41:5432"
+      - DATABASE_URI=postgresql://entso:entso@db:5432
+      - ENTSOE_API_KEY=XXX
     ports:
       - "8000:8000"
     volumes:

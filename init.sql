@@ -1,0 +1,2 @@
+CREATE DATABASE entsog;
+CREATE DATABASE entsoe;

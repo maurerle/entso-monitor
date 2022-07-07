@@ -6,8 +6,6 @@ Created on Sun Nov 29 21:55:39 2020
 @author: maurer
 """
 
-import findspark
-
 from entsoe_data_manager import EntsoeDataManager, Filter, revReplaceStr
 from datetime import datetime
 
@@ -123,6 +121,7 @@ class EntsoeParquet(EntsoeDataManager):
 
 
 if __name__ == "__main__":
+    import findspark
     findspark.init()
     conf = SparkConf().setAppName('entsoe').setMaster('local')
     spark = SparkSession.builder.config(conf=conf).getOrCreate()
