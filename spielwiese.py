@@ -70,7 +70,7 @@ abc = pd.read_parquet('operationaldata.parquet')
 
 ###################### ENTSO-G ##################
 
-from entsog.entsog_crawler import getDataFrame
+from entsog_data.entsog_crawler import getDataFrame
 # point Data
 transportData = getDataFrame('operationaldata',['limit=1000'])
 cmpUnsuccessfulRequest= getDataFrame('cmpUnsuccessfulRequests')

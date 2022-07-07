@@ -9,8 +9,8 @@ Created on Mon Oct 18 15:35:12 2021
 from entsoe import EntsoePandasClient
 import pandas as pd
 
-from entsoe_vis.entsoe_crawler import EntsoeCrawler
-from entsog.entsog_crawler import EntsogCrawler
+from entsoe_data.entsoe_crawler import EntsoeCrawler
+from entsog_data.entsog_crawler import EntsogCrawler
 
 
 def updateEntsoe(db, api_key, first=False):
