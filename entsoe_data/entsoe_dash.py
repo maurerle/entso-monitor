@@ -20,9 +20,10 @@ import plotly.express as px
 from entsoe_data_manager import Filter
 import json
 import pandas as pd
+import os
 
-DATABASE_URI = 'data/entsoe.db'
-DATABASE_URI = 'postgresql://readonly:readonly@10.13.10.41:5432/entsoe'
+DATABASE_URI = 'postgresql://readonly:readonly@localhost:5432/entsoe'
+DATABASE_URI = os.getenv('DATABASE_URI','data/entsoe.db')
 ENTSOE_URL = 'https://transparency.entsoe.eu/content/static_content/Static content/web api/Guide.html#_areas'
 
 if __name__ == "__main__":

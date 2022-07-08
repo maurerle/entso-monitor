@@ -20,9 +20,10 @@ import plotly.express as px
 from typing import List
 import pandas as pd
 from entsog_data_manager import Filter
+import os
 
-DATABASE_URI = 'data/entsog.db'
-DATABASE_URI = 'postgresql://readonly:readonly@10.13.10.41:5432/entsog'
+DATABASE_URI = 'postgresql://readonly:readonly@localhost:5432/entsog'
+DATABASE_URI = os.getenv('DATABASE_URI','data/entsog.db')
 
 if __name__ == "__main__":
     app = dash.Dash(__name__, meta_tags=[
