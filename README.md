@@ -1,3 +1,5 @@
+[![generate docs](https://github.com/NOWUM/entso-monitor/actions/workflows/generate-docs.yml/badge.svg)](https://github.com/NOWUM/entso-monitor/actions/workflows/generate-docs.yml)
+
 # ENTSO-E and ENTSO-G Monitor
 
 This is a software project developed for the AMI Master at FH Jülich
