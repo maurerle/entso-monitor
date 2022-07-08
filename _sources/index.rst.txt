@@ -13,6 +13,7 @@ This is especially useful if the data is also used in other projects.
 
 The second part is the visualization of the data with a Plotly Dash-board.
 Check out the :doc:`usage` section for further information, including how to install the project.
+
 .. toctree::
    :maxdepth: 4
    :caption: Contents:
@@ -21,11 +22,13 @@ Check out the :doc:`usage` section for further information, including how to ins
    entsoe_dash
    entsoe_data_manager
    entsoe_sqlite_manager
+   entsoe_parquet_manager
    entsog_crawler
    entsog_dash
    entsog_data_manager
    entsog_maploader
    entsog_sqlite_manager
+   usage
 
 
 Indices and tables
