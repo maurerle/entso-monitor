@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>entsog_dash &mdash; ENTSOE/G-Monitor 0.1 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> ENTSOE/G-Monitor
+          </a>
+              <div class="version">
+                0.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">ENTSOE/G-Monitor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="index.html">Module code</a> &raquo;</li>
+      <li>entsog_dash</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for entsog_dash</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Created on Mon Nov 30 00:57:00 2020</span>
+
+<span class="sd">@author: maurer</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">date</span>
+<span class="kn">from</span> <span class="nn">urllib.parse</span> <span class="kn">import</span> <span class="n">urlparse</span><span class="p">,</span> <span class="n">parse_qsl</span><span class="p">,</span> <span class="n">urlencode</span>
+<span class="kn">import</span> <span class="nn">dash</span>
+<span class="kn">from</span> <span class="nn">dash.exceptions</span> <span class="kn">import</span> <span class="n">PreventUpdate</span>
+<span class="kn">from</span> <span class="nn">dash.dependencies</span> <span class="kn">import</span> <span class="n">Input</span><span class="p">,</span> <span class="n">Output</span>
+<span class="kn">from</span> <span class="nn">dash</span> <span class="kn">import</span> <span class="n">dcc</span>
+<span class="kn">from</span> <span class="nn">dash</span> <span class="kn">import</span> <span class="n">html</span>
+<span class="kn">from</span> <span class="nn">dash</span> <span class="kn">import</span> <span class="n">dash_table</span>
+<span class="kn">import</span> <span class="nn">plotly.graph_objects</span> <span class="k">as</span> <span class="nn">go</span>
+<span class="kn">import</span> <span class="nn">plotly.express</span> <span class="k">as</span> <span class="nn">px</span>
+
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">entsog_data_manager</span> <span class="kn">import</span> <span class="n">Filter</span>
+
+<span class="n">DATABASE_URI</span> <span class="o">=</span> <span class="s1">&#39;data/entsog.db&#39;</span>
+<span class="n">DATABASE_URI</span> <span class="o">=</span> <span class="s1">&#39;postgresql://readonly:readonly@10.13.10.41:5432/entsog&#39;</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">dash</span><span class="o">.</span><span class="n">Dash</span><span class="p">(</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">meta_tags</span><span class="o">=</span><span class="p">[</span>
+                    <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;viewport&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;width=device-width&quot;</span><span class="p">}])</span>
+    <span class="n">server</span> <span class="o">=</span> <span class="n">app</span><span class="o">.</span><span class="n">server</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">app</span> <span class="kn">import</span> <span class="n">app</span>
+
+<span class="kn">from</span> <span class="nn">entsog_sqlite_manager</span> <span class="kn">import</span> <span class="n">EntsogSQLite</span>
+<span class="n">dm</span> <span class="o">=</span> <span class="n">EntsogSQLite</span><span class="p">(</span><span class="n">DATABASE_URI</span><span class="p">)</span>
+<span class="c1"># initialize static data</span>
+<span class="n">incons</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">interconnections</span><span class="p">()</span>
+<span class="n">incons</span><span class="p">[</span><span class="s1">&#39;fromcountrykey&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">incons</span><span class="p">[</span><span class="s1">&#39;fromcountrykey&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s1">&#39;X&#39;</span><span class="p">)</span>
+<span class="n">bzs</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">balancingzones</span><span class="p">()</span>
+<span class="n">connectionPoints</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">connectionpoints</span><span class="p">()</span>
+<span class="n">operators</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">operators</span><span class="p">()</span>
+
+<span class="c1"># a = oppointdir[&#39;tpTsoBalancingZone&#39;]== operators[operators[&#39;operatorKey&#39;] in ]</span>
+<span class="n">oppointdir</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">operatorpointdirections</span><span class="p">()</span>
+<span class="n">opd</span> <span class="o">=</span> <span class="n">oppointdir</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="k">del</span> <span class="n">opd</span><span class="p">[</span><span class="s1">&#39;directionkey&#39;</span><span class="p">]</span>
+
+<span class="n">opd</span> <span class="o">=</span> <span class="n">opd</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">()</span>
+
+<span class="n">defaultBZ</span> <span class="o">=</span> <span class="s1">&#39;Austria&#39;</span>
+<span class="n">inter</span> <span class="o">=</span> <span class="n">incons</span><span class="p">[</span><span class="n">incons</span><span class="p">[</span><span class="s1">&#39;frombzlabel&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">defaultBZ</span><span class="p">]</span>
+<span class="n">points</span> <span class="o">=</span> <span class="n">inter</span><span class="p">[</span><span class="s1">&#39;pointlabel&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+<span class="n">pointKeys</span> <span class="o">=</span> <span class="n">inter</span><span class="p">[</span><span class="s1">&#39;pointkey&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+<span class="n">allPointOptions</span> <span class="o">=</span> <span class="p">[{</span><span class="s1">&#39;label&#39;</span><span class="p">:</span> <span class="n">points</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">pointKeys</span><span class="p">[</span><span class="n">i</span><span class="p">]}</span>
+                   <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">))]</span>
+
+<span class="n">available_maplayers</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;countries_zones&#39;</span><span class="p">,</span> <span class="s1">&#39;pipelines_small_medium_large&#39;</span><span class="p">,</span> <span class="s1">&#39;pipelines_medium_large&#39;</span><span class="p">,</span>
+                       <span class="s1">&#39;pipelines_large&#39;</span><span class="p">,</span> <span class="s1">&#39;drilling_platforms&#39;</span><span class="p">,</span> <span class="s1">&#39;gasfields&#39;</span><span class="p">,</span> <span class="s1">&#39;projects&#39;</span><span class="p">,</span> <span class="s1">&#39;country_names&#39;</span><span class="p">]</span>
+<span class="n">standard_layers</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;countries_zones&#39;</span><span class="p">,</span> <span class="s1">&#39;pipelines_small_medium_large&#39;</span><span class="p">]</span>
+<span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;ENTSOG Monitor&#39;</span>
+
+
+<div class="viewcode-block" id="addTraces"><a class="viewcode-back" href="../entsog_dash.html#entsog_dash.addTraces">[docs]</a><span class="k">def</span> <span class="nf">addTraces</span><span class="p">(</span><span class="n">figure</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">stackgroup</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">legendgroup</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">sort_index</span><span class="p">()</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">figure</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span><span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span>
+            <span class="n">x</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="o">/</span><span class="mf">1e6</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;lines&#39;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">column</span><span class="p">,</span> <span class="n">stackgroup</span><span class="o">=</span><span class="n">stackgroup</span><span class="p">,</span> <span class="n">legendgroup</span><span class="o">=</span><span class="n">legendgroup</span><span class="p">))</span></div>
+
+
+<span class="c1"># initialize layout</span>
+<span class="n">layout</span> <span class="o">=</span> <span class="n">html</span><span class="o">.</span><span class="n">Div</span><span class="p">(</span>
+    <span class="p">[</span> <span class="n">dcc</span><span class="o">.</span><span class="n">Location</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s1">&#39;url_entsog&#39;</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+        <span class="n">html</span><span class="o">.</span><span class="n">Div</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">html</span><span class="o">.</span><span class="n">Div</span><span class="p">(</span>
+                    <span class="p">[</span>
+                        <span class="n">html</span><span class="o">.</span><span class="n">H1</span><span class="p">(</span>
+                            <span class="n">appname</span><span class="p">,</span>
+                            <span class="n">style</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;margin-bottom&quot;</span><span class="p">:</span> <span class="s2">&quot;0px&quot;</span><span class="p">},</span>
+                        <span class="p">),</span>
+                        <span class="n">html</span><span class="o">.</span><span class="n">H5</span><span class="p">(</span>
+                            <span class="s2">&quot;Transmission Overview&quot;</span><span class="p">,</span> <span class="n">style</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;margin-top&quot;</span><span class="p">:</span> <span class="s2">&quot;70px&quot;</span><span class="p">},</span>
+                        <span class="p">),</span>
+                    <span class="p">],</span>
+                    <span class="n">className</span><span class="o">=</span><span class="s2">&quot;eleven columns&quot;</span><span class="p">,</span>
+                    <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;title&quot;</span><span class="p">,</span>
+                <span class="p">),</span>
+                <span class="n">html</span><span class="o">.</span><span class="n">Div</span><span class="p">(</span>
+                    <span class="p">[</span>
+                        <span class="n">html</span><span class="o">.</span><span class="n">Img</span><span class="p">(</span>
+                            <span class="n">src</span><span class="o">=</span><span class="n">app</span><span class="o">.</span><span class="n">get_asset_url</span><span class="p">(</span><span class="s2">&quot;fh-aachen.png&quot;</span><span class="p">),</span>
+                            <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;plotly-image&quot;</span><span class="p">,</span>
+                            <span class="n">style</span><span class="o">=</span><span class="p">{</span>
+                                <span class="s2">&quot;height&quot;</span><span class="p">:</span> <span class="s2">&quot;auto&quot;</span><span class="p">,</span>
+                                <span class="s2">&quot;width&quot;</span><span class="p">:</span> <span class="s2">&quot;60px&quot;</span><span class="p">,</span>
+                                <span class="c1"># &quot;margin-bottom&quot;: &quot;0px&quot;,</span>
+                                <span class="s2">&quot;backgroundColor&quot;</span><span class="p">:</span> <span class="s1">&#39;white&#39;</span><span class="p">,</span>
+                            <span class="p">},</span>
+                        <span class="p">)</span>
+                    <span class="p">],</span>
+                    <span class="n">className</span><span class="o">=</span><span class="s2">&quot;one columns&quot;</span><span class="p">,</span>
+                <span class="p">),</span>
+            <span class="p">],</span>
+            <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;header&quot;</span><span class="p">,</span>
+            <span class="n">className</span><span class="o">=</span><span class="s2">&quot;row flex-display pretty_container&quot;</span><span class="p">,</span>
+            <span class="n">style</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;margin-bottom&quot;</span><span class="p">:</span> <span class="s2">&quot;25px&quot;</span><span class="p">},</span>
+        <span class="p">),</span>
+        <span class="n">html</span><span class="o">.</span><span class="n">Div</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">html</span><span class="o">.</span><span class="n">Div</span><span class="p">(</span>
+                    <span class="p">[</span>
+                        <span class="n">html</span><span class="o">.</span><span class="n">P</span><span class="p">(</span>
+                            <span class="s2">&quot;Select Time Filter:&quot;</span><span class="p">,</span>
+                            <span class="n">className</span><span class="o">=</span><span class="s2">&quot;control_label&quot;</span><span class="p">,</span>
+                        <span class="p">),</span>
+                        <span class="c1">#dcc.Dropdown(options=[{&#39;label&#39;:x, &#39;value&#39;: x} for x in range(2015, 2020)]),</span>
+                        <span class="n">dcc</span><span class="o">.</span><span class="n">DatePickerRange</span><span class="p">(</span>
+                            <span class="nb">id</span><span class="o">=</span><span class="s1">&#39;date_picker&#39;</span><span class="p">,</span>
+                            <span class="n">min_date_allowed</span><span class="o">=</span><span class="n">date</span><span class="p">(</span><span class="mi">2017</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+                            <span class="n">max_date_allowed</span><span class="o">=</span><span class="n">date</span><span class="o">.</span><span class="n">today</span><span class="p">(),</span>
+                            <span class="n">start_date</span><span class="o">=</span><span class="n">date</span><span class="p">(</span><span class="mi">2019</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+                            <span class="n">end_date</span><span class="o">=</span><span class="n">date</span><span class="p">(</span><span class="mi">2019</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">11</span><span class="p">),</span>
+                            <span class="n">display_format</span><span class="o">=</span><span class="s1">&#39;DD.MM.YY&#39;</span><span class="p">,</span>
+                            <span class="c1"># initial_visible_month=&#39;2015-02-01&#39;,</span>
+                            <span class="n">show_outside_days</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                            <span class="n">start_date_placeholder_text</span><span class="o">=</span><span class="s1">&#39;MMMM Y, DD&#39;</span>
+                        <span class="p">),</span>
+                        <span class="n">html</span><span class="o">.</span><span class="n">P</span><span class="p">(</span><span class="s2">&quot;Balancing Zone:&quot;</span><span class="p">,</span> <span class="n">className</span><span class="o">=</span><span class="s2">&quot;control_label&quot;</span><span class="p">),</span>
+                        <span class="n">dcc</span><span class="o">.</span><span class="n">Dropdown</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;bz_control&quot;</span><span class="p">,</span>
+                                     <span class="n">options</span><span class="o">=</span><span class="p">[{</span><span class="s1">&#39;label&#39;</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">x</span><span class="p">}</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span>
+                                         <span class="n">dm</span><span class="o">.</span><span class="n">balancingzones</span><span class="p">()[</span><span class="s1">&#39;bzlabel&#39;</span><span class="p">])],</span>
+                                     <span class="n">value</span><span class="o">=</span><span class="n">defaultBZ</span><span class="p">,</span>
+                                     <span class="n">className</span><span class="o">=</span><span class="s2">&quot;dcc_control&quot;</span><span class="p">,</span>
+                                     <span class="p">),</span>
+                        <span class="n">html</span><span class="o">.</span><span class="n">P</span><span class="p">(</span><span class="s2">&quot;Operators:&quot;</span><span class="p">,</span> <span class="n">className</span><span class="o">=</span><span class="s2">&quot;control_label&quot;</span><span class="p">),</span>
+                        <span class="n">dcc</span><span class="o">.</span><span class="n">Dropdown</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;operator_control&quot;</span><span class="p">,</span>
+                                     <span class="n">options</span><span class="o">=</span><span class="p">[{</span><span class="s1">&#39;label&#39;</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">y</span><span class="p">}</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">operators</span><span class="p">[[</span>
+                                         <span class="s1">&#39;operatorkey&#39;</span><span class="p">,</span> <span class="s1">&#39;operatorlabel&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">tolist</span><span class="p">()],</span>
+                                     <span class="c1"># value=[&#39;&#39;],</span>
+                                     <span class="n">multi</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                     <span class="n">className</span><span class="o">=</span><span class="s2">&quot;dcc_control&quot;</span><span class="p">,</span>
+                                     <span class="p">),</span>
+                        <span class="n">html</span><span class="o">.</span><span class="n">P</span><span class="p">(</span><span class="s2">&quot;Points:&quot;</span><span class="p">,</span> <span class="n">className</span><span class="o">=</span><span class="s2">&quot;control_label&quot;</span><span class="p">),</span>
+                        <span class="n">dcc</span><span class="o">.</span><span class="n">Dropdown</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;point_control&quot;</span><span class="p">,</span>
+
+
+                                     <span class="n">options</span><span class="o">=</span><span class="n">allPointOptions</span><span class="p">,</span>
+                                     <span class="c1"># value=[&#39;&#39;],</span>
+                                     <span class="n">multi</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                     <span class="n">className</span><span class="o">=</span><span class="s2">&quot;dcc_control&quot;</span><span class="p">,</span>
+                                     <span class="p">),</span>
+                        <span class="n">html</span><span class="o">.</span><span class="n">P</span><span class="p">(</span><span class="s2">&quot;Map Layer:&quot;</span><span class="p">,</span> <span class="n">className</span><span class="o">=</span><span class="s2">&quot;control_label&quot;</span><span class="p">),</span>
+                        <span class="n">dcc</span><span class="o">.</span><span class="n">Dropdown</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;map_layer_control&quot;</span><span class="p">,</span>
+                                     <span class="n">options</span><span class="o">=</span><span class="p">[</span>
+                                         <span class="p">{</span><span class="s1">&#39;label&#39;</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">),</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">x</span><span class="p">}</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">available_maplayers</span><span class="p">],</span>
+                                     <span class="n">value</span><span class="o">=</span><span class="n">standard_layers</span><span class="p">,</span>
+                                     <span class="n">multi</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                     <span class="n">className</span><span class="o">=</span><span class="s2">&quot;dcc_control&quot;</span><span class="p">,</span>
+                                     <span class="p">),</span>
+                        <span class="n">html</span><span class="o">.</span><span class="n">P</span><span class="p">(</span><span class="s2">&quot;Aggregation Intervall:&quot;</span><span class="p">,</span> <span class="n">className</span><span class="o">=</span><span class="s2">&quot;control_label&quot;</span><span class="p">),</span>
+                        <span class="n">dcc</span><span class="o">.</span><span class="n">RadioItems</span><span class="p">(</span>
+                            <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;group_by_control&quot;</span><span class="p">,</span>
+                            <span class="n">options</span><span class="o">=</span><span class="p">[</span>
+                                <span class="p">{</span><span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="s2">&quot;Year&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="s2">&quot;year&quot;</span><span class="p">},</span>
+                                <span class="p">{</span><span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="s2">&quot;Month&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="s2">&quot;month&quot;</span><span class="p">},</span>
+                                <span class="p">{</span><span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="s2">&quot;Day &quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="s2">&quot;day&quot;</span><span class="p">},</span>
+                                <span class="p">{</span><span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="s2">&quot;Hour&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="s2">&quot;hour&quot;</span><span class="p">},</span>
+                            <span class="p">],</span>
+                            <span class="n">value</span><span class="o">=</span><span class="s2">&quot;day&quot;</span><span class="p">,</span>
+                            <span class="n">labelStyle</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;display&quot;</span><span class="p">:</span> <span class="s2">&quot;inline-block&quot;</span><span class="p">},</span>
+                            <span class="n">className</span><span class="o">=</span><span class="s2">&quot;dcc_control&quot;</span><span class="p">,</span>
+                        <span class="p">),</span>
+                    <span class="p">],</span>
+                    <span class="n">className</span><span class="o">=</span><span class="s2">&quot;pretty_container four columns&quot;</span><span class="p">,</span>
+                    <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;cross-filter-options&quot;</span><span class="p">,</span>
+                <span class="p">),</span>
+                <span class="n">html</span><span class="o">.</span><span class="n">Div</span><span class="p">(</span>
+                    <span class="p">[</span>
+                        <span class="n">html</span><span class="o">.</span><span class="n">Div</span><span class="p">(</span>
+                            <span class="p">[</span><span class="n">dcc</span><span class="o">.</span><span class="n">Graph</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;point_map&quot;</span><span class="p">,</span> <span class="n">animate</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                       <span class="n">config</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;displaylogo&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">})],</span>
+                            <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;mapContainer&quot;</span><span class="p">,</span>
+                            <span class="n">className</span><span class="o">=</span><span class="s2">&quot;pretty_container&quot;</span><span class="p">,</span>
+                        <span class="p">),</span>
+                    <span class="p">],</span>
+                    <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;right-column&quot;</span><span class="p">,</span>
+                    <span class="n">className</span><span class="o">=</span><span class="s2">&quot;eight columns&quot;</span><span class="p">,</span>
+                <span class="p">),</span>
+            <span class="p">],</span>
+            <span class="n">className</span><span class="o">=</span><span class="s2">&quot;row flex-display&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">html</span><span class="o">.</span><span class="n">Div</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">dcc</span><span class="o">.</span><span class="n">Dropdown</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="s2">&quot;cumulative_control&quot;</span><span class="p">,</span>
+                          <span class="n">options</span><span class="o">=</span><span class="p">[</span>
+                              <span class="p">{</span><span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="s2">&quot;Cumulative&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="s2">&quot;cumulative&quot;</span><span class="p">},</span>
+                              <span class="p">{</span><span class="s2">&quot;label&quot;</span><span class="p">:</span> <span class="s2">&quot;None&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="s2">&quot;none&quot;</span><span class="p">},</span>
+                          <span class="p">],</span>
+                          <span class="n">value</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span>
+                          <span class="n">className</span><span class="o">=</span><span class="s2">&quot;dcc_control&quot;</span><span class="p">,</span>
+                          <span class="p">),</span>
+             <span class="n">dcc</span><span class="o">.</span><span class="n">Tabs</span><span class="p">([</span>
+                 <span class="n">dcc</span><span class="o">.</span><span class="n">Tab</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;Sum for Region&#39;</span><span class="p">,</span> <span class="n">children</span><span class="o">=</span><span class="p">[</span><span class="n">dcc</span><span class="o">.</span><span class="n">Graph</span><span class="p">(</span>
+                     <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;points_graph&quot;</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;displaylogo&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">})]),</span>
+                 <span class="n">dcc</span><span class="o">.</span><span class="n">Tab</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;Crossborder Zone&#39;</span><span class="p">,</span> <span class="n">children</span><span class="o">=</span><span class="p">[</span><span class="n">dcc</span><span class="o">.</span><span class="n">Graph</span><span class="p">(</span>
+                     <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;crossborder_graph&quot;</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;displaylogo&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">})]),</span>
+                 <span class="n">dcc</span><span class="o">.</span><span class="n">Tab</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;Sum per Infrastructure&#39;</span><span class="p">,</span> <span class="n">children</span><span class="o">=</span><span class="p">[</span><span class="n">dcc</span><span class="o">.</span><span class="n">Graph</span><span class="p">(</span>
+                     <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;infrastructure_graph&quot;</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;displaylogo&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">})]),</span>
+                 <span class="n">dcc</span><span class="o">.</span><span class="n">Tab</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s1">&#39;Selected Points&#39;</span><span class="p">,</span> <span class="n">children</span><span class="o">=</span><span class="p">[</span><span class="n">dcc</span><span class="o">.</span><span class="n">Graph</span><span class="p">(</span>
+                     <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;points_label_graph&quot;</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;displaylogo&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">})]),</span>
+             <span class="p">])],</span>
+            <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;graphTabContainer&quot;</span><span class="p">,</span>
+            <span class="n">className</span><span class="o">=</span><span class="s2">&quot;pretty_container&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">html</span><span class="o">.</span><span class="n">Div</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">html</span><span class="o">.</span><span class="n">P</span><span class="p">(</span><span class="s2">&quot;Operator Point Directions:&quot;</span><span class="p">,</span> <span class="n">className</span><span class="o">=</span><span class="s2">&quot;control_label&quot;</span><span class="p">),</span>
+             <span class="n">dash_table</span><span class="o">.</span><span class="n">DataTable</span><span class="p">(</span>
+                <span class="nb">id</span><span class="o">=</span><span class="s1">&#39;opdTable&#39;</span><span class="p">,</span>
+                <span class="n">columns</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">i</span><span class="p">,</span> <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">i</span><span class="p">}</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">opd</span><span class="o">.</span><span class="n">columns</span><span class="p">],</span>
+                <span class="n">data</span><span class="o">=</span><span class="n">opd</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="s1">&#39;records&#39;</span><span class="p">),</span>
+                <span class="n">filter_action</span><span class="o">=</span><span class="s2">&quot;native&quot;</span><span class="p">,</span>
+                <span class="n">sort_action</span><span class="o">=</span><span class="s2">&quot;native&quot;</span><span class="p">,</span>
+                <span class="n">sort_mode</span><span class="o">=</span><span class="s2">&quot;multi&quot;</span><span class="p">,</span>
+                <span class="n">page_action</span><span class="o">=</span><span class="s2">&quot;native&quot;</span><span class="p">,</span>
+                <span class="n">page_current</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                <span class="n">page_size</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span>
+                <span class="n">style_table</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;overflowX&#39;</span><span class="p">:</span> <span class="s1">&#39;auto&#39;</span><span class="p">},</span>
+            <span class="p">)],</span>
+            <span class="nb">id</span><span class="o">=</span><span class="s2">&quot;tableContainer&quot;</span><span class="p">,</span>
+            <span class="n">className</span><span class="o">=</span><span class="s2">&quot;pretty_container&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">html</span><span class="o">.</span><span class="n">Div</span><span class="p">([</span>
+            <span class="n">dcc</span><span class="o">.</span><span class="n">Link</span><span class="p">(</span><span class="s1">&#39;Data comes from ENTSO-G Transparency Platform&#39;</span><span class="p">,</span>
+                     <span class="n">href</span><span class="o">=</span><span class="s1">&#39;https://transparency.entsog.eu/&#39;</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+            <span class="n">html</span><span class="o">.</span><span class="n">Br</span><span class="p">(),</span>
+            <span class="n">dcc</span><span class="o">.</span><span class="n">Link</span><span class="p">(</span><span class="s1">&#39;Legal Notice&#39;</span><span class="p">,</span> <span class="n">refresh</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">href</span><span class="o">=</span><span class="s1">&#39;https://demo.nowum.fh-aachen.de/info.html&#39;</span><span class="p">),</span>
+            <span class="p">],</span>
+            <span class="n">className</span><span class="o">=</span><span class="s2">&quot;pretty_container&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">])</span>
+
+<span class="c1">############ Controls   ##############</span>
+
+
+<div class="viewcode-block" id="updatePointControl"><a class="viewcode-back" href="../entsog_dash.html#entsog_dash.updatePointControl">[docs]</a><span class="nd">@app</span><span class="o">.</span><span class="n">callback</span><span class="p">(</span>
+    <span class="n">Output</span><span class="p">(</span><span class="s2">&quot;point_control&quot;</span><span class="p">,</span> <span class="s2">&quot;options&quot;</span><span class="p">),</span>
+    <span class="p">[</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;operator_control&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;bz_control&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">updatePointControl</span><span class="p">(</span><span class="n">operatorKey</span><span class="p">,</span> <span class="n">bz</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">operatorKey</span> <span class="o">!=</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">operatorKey</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">inter</span> <span class="o">=</span> <span class="n">incons</span><span class="p">[</span><span class="n">incons</span><span class="p">[</span><span class="s1">&#39;fromoperatorkey&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">operatorKey</span><span class="p">)]</span>
+    <span class="k">elif</span> <span class="n">bz</span> <span class="o">!=</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">bz</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">inter</span> <span class="o">=</span> <span class="n">incons</span><span class="p">[</span><span class="n">incons</span><span class="p">[</span><span class="s1">&#39;frombzlabel&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">bz</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">inter</span> <span class="o">=</span> <span class="n">incons</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="n">inter</span><span class="p">[</span><span class="s1">&#39;pointlabel&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+    <span class="n">pointKeys</span> <span class="o">=</span> <span class="n">inter</span><span class="p">[</span><span class="s1">&#39;pointkey&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+    <span class="k">return</span> <span class="p">[{</span><span class="s1">&#39;label&#39;</span><span class="p">:</span> <span class="n">points</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">pointKeys</span><span class="p">[</span><span class="n">i</span><span class="p">]}</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">))]</span></div>
+
+
+<div class="viewcode-block" id="updateSelectedPoints"><a class="viewcode-back" href="../entsog_dash.html#entsog_dash.updateSelectedPoints">[docs]</a><span class="nd">@app</span><span class="o">.</span><span class="n">callback</span><span class="p">(</span>
+    <span class="n">Output</span><span class="p">(</span><span class="s2">&quot;point_control&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span>
+    <span class="p">[</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s1">&#39;point_map&#39;</span><span class="p">,</span> <span class="s1">&#39;clickData&#39;</span><span class="p">),</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s1">&#39;point_map&#39;</span><span class="p">,</span> <span class="s1">&#39;selectedData&#39;</span><span class="p">)</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">updateSelectedPoints</span><span class="p">(</span><span class="n">clickData</span><span class="p">,</span> <span class="n">selectedData</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">selectedData</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">selectedData</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="n">selectedData</span>
+    <span class="k">elif</span> <span class="n">clickData</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">clickData</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="n">clickData</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+
+    <span class="n">pointKeys</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">points</span><span class="p">[</span><span class="s1">&#39;points&#39;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="s1">&#39;customdata&#39;</span> <span class="ow">in</span> <span class="n">point</span><span class="p">:</span>
+            <span class="n">pointKeys</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">point</span><span class="p">[</span><span class="s1">&#39;customdata&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">pointKeys</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="updateOperatorControl"><a class="viewcode-back" href="../entsog_dash.html#entsog_dash.updateOperatorControl">[docs]</a><span class="nd">@app</span><span class="o">.</span><span class="n">callback</span><span class="p">(</span>
+    <span class="n">Output</span><span class="p">(</span><span class="s2">&quot;operator_control&quot;</span><span class="p">,</span> <span class="s2">&quot;options&quot;</span><span class="p">),</span>
+    <span class="p">[</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;bz_control&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">updateOperatorControl</span><span class="p">(</span><span class="n">bz</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">bz</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">inter</span> <span class="o">=</span> <span class="n">incons</span><span class="p">[</span><span class="n">incons</span><span class="p">[</span><span class="s1">&#39;frombzlabel&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">bz</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">inter</span> <span class="o">=</span> <span class="n">incons</span>
+    <span class="n">opt</span> <span class="o">=</span> <span class="n">inter</span><span class="p">[</span><span class="s1">&#39;fromoperatorlabel&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+    <span class="n">optKeys</span> <span class="o">=</span> <span class="n">inter</span><span class="p">[</span><span class="s1">&#39;fromoperatorkey&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+    <span class="k">return</span> <span class="p">[{</span><span class="s1">&#39;label&#39;</span><span class="p">:</span> <span class="n">opt</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="s1">&#39;value&#39;</span><span class="p">:</span> <span class="n">optKeys</span><span class="p">[</span><span class="n">i</span><span class="p">]}</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">opt</span><span class="p">))]</span></div>
+
+
+<span class="n">component_ids</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;start_date&#39;</span><span class="p">,</span> <span class="s1">&#39;end_date&#39;</span><span class="p">,</span> <span class="s1">&#39;group_by_control&#39;</span><span class="p">,</span>
+                 <span class="s1">&#39;bz_control&#39;</span><span class="p">,</span> <span class="s1">&#39;operator_control&#39;</span><span class="p">,</span> <span class="s1">&#39;point_control&#39;</span><span class="p">,</span> <span class="s1">&#39;map_layer_control&#39;</span><span class="p">]</span>
+
+<div class="viewcode-block" id="parse_state"><a class="viewcode-back" href="../entsog_dash.html#entsog_dash.parse_state">[docs]</a><span class="k">def</span> <span class="nf">parse_state</span><span class="p">(</span><span class="n">url</span><span class="p">):</span>
+    <span class="n">parse_result</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="n">parse_qsl</span><span class="p">(</span><span class="n">parse_result</span><span class="o">.</span><span class="n">query</span><span class="p">)</span>
+    <span class="n">state</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">state</span></div>
+
+<div class="viewcode-block" id="page_load"><a class="viewcode-back" href="../entsog_dash.html#entsog_dash.page_load">[docs]</a><span class="nd">@app</span><span class="o">.</span><span class="n">callback</span><span class="p">([</span>
+    <span class="n">Output</span><span class="p">(</span><span class="s2">&quot;date_picker&quot;</span><span class="p">,</span> <span class="s2">&quot;start_date&quot;</span><span class="p">),</span>
+    <span class="n">Output</span><span class="p">(</span><span class="s2">&quot;date_picker&quot;</span><span class="p">,</span> <span class="s2">&quot;end_date&quot;</span><span class="p">),</span>
+    <span class="n">Output</span><span class="p">(</span><span class="s2">&quot;group_by_control&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span>
+    <span class="n">Output</span><span class="p">(</span><span class="s2">&quot;bz_control&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span>
+    <span class="n">Output</span><span class="p">(</span><span class="s2">&quot;operator_control&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span>
+<span class="p">],</span>
+    <span class="n">inputs</span><span class="o">=</span><span class="p">[</span><span class="n">Input</span><span class="p">(</span><span class="s1">&#39;url_entsog&#39;</span><span class="p">,</span> <span class="s1">&#39;href&#39;</span><span class="p">)])</span>
+<span class="k">def</span> <span class="nf">page_load</span><span class="p">(</span><span class="n">href</span><span class="p">):</span>
+
+    <span class="n">str_to_list</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span>
+                    <span class="s2">&quot;][&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;&#39;&quot;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">href</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+    <span class="n">state</span> <span class="o">=</span> <span class="n">parse_state</span><span class="p">(</span><span class="n">href</span><span class="p">)</span>
+    <span class="c1"># for element in elements</span>
+    <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">element</span> <span class="ow">in</span> <span class="n">state</span> <span class="k">for</span> <span class="n">element</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;start_date&#39;</span><span class="p">,</span> <span class="s1">&#39;end_date&#39;</span><span class="p">,</span> <span class="s1">&#39;group_by_control&#39;</span><span class="p">,</span> <span class="s1">&#39;bz_control&#39;</span><span class="p">,</span> <span class="s1">&#39;operator_control&#39;</span><span class="p">]):</span>
+        <span class="k">return</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;start_date&#39;</span><span class="p">],</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;end_date&#39;</span><span class="p">],</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;group_by_control&#39;</span><span class="p">],</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;bz_control&#39;</span><span class="p">],</span> <span class="n">str_to_list</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="s1">&#39;operator_control&#39;</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">PreventUpdate</span></div>
+
+
+<div class="viewcode-block" id="update_url_state"><a class="viewcode-back" href="../entsog_dash.html#entsog_dash.update_url_state">[docs]</a><span class="nd">@app</span><span class="o">.</span><span class="n">callback</span><span class="p">(</span><span class="n">Output</span><span class="p">(</span><span class="s1">&#39;url_entsog&#39;</span><span class="p">,</span> <span class="s1">&#39;search&#39;</span><span class="p">),</span>
+              <span class="p">[</span>
+    <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;date_picker&quot;</span><span class="p">,</span> <span class="s2">&quot;start_date&quot;</span><span class="p">),</span>
+    <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;date_picker&quot;</span><span class="p">,</span> <span class="s2">&quot;end_date&quot;</span><span class="p">),</span>
+    <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;group_by_control&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span>
+    <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;bz_control&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span>
+    <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;operator_control&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span>
+    <span class="c1">#Input(&quot;point_control&quot;, &quot;value&quot;),</span>
+    <span class="c1">#Input(&quot;map_layer_control&quot;, &quot;value&quot;),</span>
+<span class="p">])</span>
+<span class="k">def</span> <span class="nf">update_url_state</span><span class="p">(</span><span class="o">*</span><span class="n">values</span><span class="p">):</span>
+    <span class="n">state</span> <span class="o">=</span> <span class="n">urlencode</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">component_ids</span><span class="p">,</span> <span class="n">values</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;?</span><span class="si">{</span><span class="n">state</span><span class="si">}</span><span class="s1">&#39;</span></div>
+
+<span class="c1">############ Map       ##############</span>
+
+
+<div class="viewcode-block" id="makePointMap"><a class="viewcode-back" href="../entsog_dash.html#entsog_dash.makePointMap">[docs]</a><span class="nd">@app</span><span class="o">.</span><span class="n">callback</span><span class="p">(</span>
+    <span class="n">Output</span><span class="p">(</span><span class="s2">&quot;point_map&quot;</span><span class="p">,</span> <span class="s2">&quot;figure&quot;</span><span class="p">),</span>
+    <span class="p">[</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;map_layer_control&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;point_control&quot;</span><span class="p">,</span> <span class="s2">&quot;options&quot;</span><span class="p">)</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">makePointMap</span><span class="p">(</span><span class="n">layer_control</span><span class="p">,</span> <span class="n">options</span><span class="p">):</span>
+    <span class="n">layers</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">options</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="n">inter</span> <span class="o">=</span> <span class="n">incons</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">])</span>
+        <span class="n">inter</span> <span class="o">=</span> <span class="n">incons</span><span class="p">[</span><span class="n">incons</span><span class="p">[</span><span class="s1">&#39;pointkey&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">points</span><span class="p">)]</span>
+
+    <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">layer_control</span><span class="p">:</span>
+        <span class="n">layers</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;below&quot;</span><span class="p">:</span> <span class="s1">&#39;traces&#39;</span><span class="p">,</span>
+                       <span class="s2">&quot;sourcetype&quot;</span><span class="p">:</span> <span class="s2">&quot;raster&quot;</span><span class="p">,</span>
+                       <span class="s2">&quot;sourceattribution&quot;</span><span class="p">:</span> <span class="s1">&#39;&lt;a href=&quot;https://transparency.entsog.eu/#/map&quot;&gt;ENTSO-G Data&lt;/a&gt;&#39;</span><span class="p">,</span>
+                       <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="p">[</span>
+                           <span class="s2">&quot;https://datensch.eu/cdn/entsog/&quot;</span><span class="o">+</span><span class="n">layer</span><span class="o">+</span><span class="s2">&quot;/</span><span class="si">{z}</span><span class="s2">/</span><span class="si">{x}</span><span class="s2">/</span><span class="si">{y}</span><span class="s2">.png&quot;</span><span class="p">]})</span>
+    <span class="c1">#inter=inter[[&#39;lat&#39;,&#39;lon&#39;,&quot;pointlabel&quot;,&quot;pointKey&quot;, &quot;fromoperatorlabel&quot;,&#39;fromCountryKey&#39;,&#39;toOperatorLabel&#39;,&quot;toCountryKey&quot;]].drop_duplicates()</span>
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">px</span><span class="o">.</span><span class="n">scatter_mapbox</span><span class="p">(</span><span class="n">inter</span><span class="p">,</span> <span class="n">lat</span><span class="o">=</span><span class="s2">&quot;lat&quot;</span><span class="p">,</span> <span class="n">lon</span><span class="o">=</span><span class="s2">&quot;lon&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;fromcountrykey&#39;</span><span class="p">,</span>
+                            <span class="n">custom_data</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;pointlabel&quot;</span><span class="p">,</span> <span class="s2">&quot;pointkey&quot;</span><span class="p">,</span> <span class="s2">&quot;fromoperatorlabel&quot;</span><span class="p">,</span>
+                                         <span class="s1">&#39;fromcountrykey&#39;</span><span class="p">,</span> <span class="s1">&#39;tooperatorlabel&#39;</span><span class="p">,</span> <span class="s2">&quot;tocountrykey&quot;</span><span class="p">],</span>
+                            <span class="n">zoom</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">600</span><span class="p">)</span>
+
+    <span class="n">fig</span><span class="o">.</span><span class="n">update_traces</span><span class="p">(</span>
+        <span class="n">hovertemplate</span><span class="o">=</span><span class="s1">&#39;&lt;/br&gt;&lt;b&gt;%</span><span class="si">{customdata[0]}</span><span class="s1">&lt;/b&gt; - %</span><span class="si">{customdata[1]}</span><span class="s1">&lt;/br&gt; from: %</span><span class="si">{customdata[2]}</span><span class="s1">, %</span><span class="si">{customdata[3]}</span><span class="s1"> &lt;/br&gt; to:     %</span><span class="si">{customdata[4]}</span><span class="s1">, %</span><span class="si">{customdata[5]}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">mapbox_style</span><span class="o">=</span><span class="s2">&quot;white-bg&quot;</span><span class="p">,</span> <span class="n">mapbox_layers</span><span class="o">=</span><span class="n">layers</span><span class="p">,</span>
+                      <span class="n">legend</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">font</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">10</span><span class="p">),</span>
+                                  <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="n">title</span><span class="o">=</span><span class="s1">&#39;From Country&#39;</span><span class="p">),</span>
+                      <span class="n">margin</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;r&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;t&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;l&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">})</span>
+    <span class="k">return</span> <span class="n">fig</span></div>
+
+<span class="c1">############ Graphs   ##############</span>
+
+
+<div class="viewcode-block" id="handleBzOperator"><a class="viewcode-back" href="../entsog_dash.html#entsog_dash.handleBzOperator">[docs]</a><span class="k">def</span> <span class="nf">handleBzOperator</span><span class="p">(</span><span class="n">bz</span><span class="p">,</span> <span class="n">operators</span><span class="p">):</span>
+    <span class="n">desc</span> <span class="o">=</span> <span class="s1">&#39;no valid points&#39;</span>
+    <span class="k">if</span> <span class="n">operators</span> <span class="o">!=</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">operators</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">inter</span> <span class="o">=</span> <span class="n">incons</span><span class="p">[</span><span class="n">incons</span><span class="p">[</span><span class="s1">&#39;fromoperatorkey&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
+            <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">operators</span><span class="p">)]</span>
+        <span class="n">desc</span> <span class="o">=</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">inter</span><span class="p">[</span><span class="s1">&#39;fromoperatorlabel&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+    <span class="k">elif</span> <span class="n">bz</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">inter</span> <span class="o">=</span> <span class="n">incons</span><span class="p">[</span><span class="n">incons</span><span class="p">[</span><span class="s1">&#39;frombzlabel&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">bz</span><span class="p">]</span>
+        <span class="n">operators</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">inter</span><span class="p">[</span><span class="s1">&#39;fromoperatorkey&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+        <span class="n">desc</span> <span class="o">=</span> <span class="n">bz</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># TODO show usage for single pipeline</span>
+        <span class="n">operators</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">return</span> <span class="n">desc</span><span class="p">,</span> <span class="n">operators</span></div>
+
+
+<div class="viewcode-block" id="updateFlowGraph"><a class="viewcode-back" href="../entsog_dash.html#entsog_dash.updateFlowGraph">[docs]</a><span class="nd">@app</span><span class="o">.</span><span class="n">callback</span><span class="p">(</span>
+    <span class="n">Output</span><span class="p">(</span><span class="s2">&quot;points_graph&quot;</span><span class="p">,</span> <span class="s2">&quot;figure&quot;</span><span class="p">),</span>
+    <span class="p">[</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;operator_control&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;bz_control&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;date_picker&quot;</span><span class="p">,</span> <span class="s2">&quot;start_date&quot;</span><span class="p">),</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;date_picker&quot;</span><span class="p">,</span> <span class="s2">&quot;end_date&quot;</span><span class="p">),</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;group_by_control&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">)</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">updateFlowGraph</span><span class="p">(</span><span class="n">operators</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">bz</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">start_date</span><span class="p">,</span> <span class="n">end_date</span><span class="p">,</span> <span class="n">group</span><span class="p">):</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">start_date</span><span class="p">,</span> <span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1">&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">()</span>
+    <span class="n">end</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">end_date</span><span class="p">,</span> <span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1">&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">()</span>
+    <span class="n">filt</span> <span class="o">=</span> <span class="n">Filter</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">group</span><span class="p">)</span>
+
+    <span class="n">desc</span><span class="p">,</span> <span class="n">operators</span> <span class="o">=</span> <span class="n">handleBzOperator</span><span class="p">(</span><span class="n">bz</span><span class="p">,</span> <span class="n">operators</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">operators</span> <span class="o">==</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">operators</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;layout&#39;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;No Operators or Zone selected&quot;</span><span class="p">)}</span>
+
+    <span class="n">p</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">operationaldata</span><span class="p">(</span><span class="n">operators</span><span class="p">,</span> <span class="n">filt</span><span class="p">)</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">operationaldata</span><span class="p">(</span><span class="n">operators</span><span class="p">,</span> <span class="n">filt</span><span class="p">,</span> <span class="n">table</span><span class="o">=</span><span class="s1">&#39;Allocation&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">empty</span> <span class="ow">and</span> <span class="n">a</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;layout&#39;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;No Data Found for </span><span class="si">{</span><span class="n">desc</span><span class="si">}</span><span class="s2"> from </span><span class="si">{</span><span class="n">start_date</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">end_date</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)}</span>
+
+    <span class="n">a</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">pivot</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;directionkey&#39;</span><span class="p">],</span> <span class="n">values</span><span class="o">=</span><span class="s1">&#39;value&#39;</span><span class="p">)</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">pivot</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;directionkey&#39;</span><span class="p">],</span> <span class="n">values</span><span class="o">=</span><span class="s1">&#39;value&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s1">&#39;entry&#39;</span> <span class="ow">in</span> <span class="n">a</span><span class="o">.</span><span class="n">columns</span> <span class="ow">and</span> <span class="s1">&#39;exit&#39;</span> <span class="ow">in</span> <span class="n">a</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">a</span><span class="p">[</span><span class="s1">&#39;usage&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="s1">&#39;entry&#39;</span><span class="p">]</span><span class="o">-</span><span class="n">a</span><span class="p">[</span><span class="s1">&#39;exit&#39;</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="s1">&#39;entry&#39;</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">columns</span> <span class="ow">and</span> <span class="s1">&#39;exit&#39;</span> <span class="ow">in</span> <span class="n">p</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+        <span class="n">p</span><span class="p">[</span><span class="s1">&#39;usage&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s1">&#39;entry&#39;</span><span class="p">]</span><span class="o">-</span><span class="n">p</span><span class="p">[</span><span class="s1">&#39;exit&#39;</span><span class="p">]</span>
+
+    <span class="n">a</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="s1">&#39;allocation &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">a</span><span class="o">.</span><span class="n">columns</span><span class="p">))</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="s1">&#39;physical &#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">p</span><span class="o">.</span><span class="n">columns</span><span class="p">))</span>
+    <span class="n">ap</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">a</span><span class="p">,</span> <span class="n">p</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">figure</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">()</span>
+    <span class="n">addTraces</span><span class="p">(</span><span class="n">figure</span><span class="p">,</span> <span class="n">ap</span><span class="p">)</span>
+
+    <span class="n">figure</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Flow in GWh/</span><span class="si">{</span><span class="n">group</span><span class="si">}</span><span class="s2"> for </span><span class="si">{</span><span class="n">desc</span><span class="si">}</span><span class="s2"> from </span><span class="si">{</span><span class="n">start_date</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">end_date</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                         <span class="n">xaxis_title</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span>
+                         <span class="n">yaxis_title</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;Transferred Energy in GWh/</span><span class="si">{</span><span class="n">group</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                         <span class="n">hovermode</span><span class="o">=</span><span class="s2">&quot;closest&quot;</span><span class="p">,</span>
+                         <span class="n">legend</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">font</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">10</span><span class="p">),</span> <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;v&quot;</span><span class="p">),)</span>
+    <span class="n">figure</span><span class="o">.</span><span class="n">update_yaxes</span><span class="p">(</span><span class="n">ticksuffix</span><span class="o">=</span><span class="s2">&quot; GWh&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">figure</span></div>
+
+
+<div class="viewcode-block" id="updatePointsLabelGraph"><a class="viewcode-back" href="../entsog_dash.html#entsog_dash.updatePointsLabelGraph">[docs]</a><span class="nd">@app</span><span class="o">.</span><span class="n">callback</span><span class="p">(</span>
+    <span class="n">Output</span><span class="p">(</span><span class="s2">&quot;points_label_graph&quot;</span><span class="p">,</span> <span class="s2">&quot;figure&quot;</span><span class="p">),</span>
+    <span class="p">[</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;point_control&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;date_picker&quot;</span><span class="p">,</span> <span class="s2">&quot;start_date&quot;</span><span class="p">),</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;date_picker&quot;</span><span class="p">,</span> <span class="s2">&quot;end_date&quot;</span><span class="p">),</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;group_by_control&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;point_control&quot;</span><span class="p">,</span> <span class="s2">&quot;options&quot;</span><span class="p">)</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">updatePointsLabelGraph</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">start_date</span><span class="p">,</span> <span class="n">end_date</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> <span class="n">options</span><span class="p">):</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">start_date</span><span class="p">,</span> <span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1">&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">()</span>
+    <span class="n">end</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">end_date</span><span class="p">,</span> <span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1">&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">()</span>
+
+    <span class="n">desc</span> <span class="o">=</span> <span class="s1">&#39;no valid points&#39;</span>
+
+    <span class="k">if</span> <span class="n">points</span> <span class="o">!=</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="c1"># include with topointkey:</span>
+        <span class="n">inter</span> <span class="o">=</span> <span class="n">incons</span><span class="p">[</span><span class="n">incons</span><span class="p">[</span><span class="s1">&#39;pointkey&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">points</span><span class="p">)]</span>
+
+        <span class="c1"># select both from and to points here</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">points</span><span class="p">)</span> <span class="o">|</span> <span class="nb">set</span><span class="p">(</span><span class="n">inter</span><span class="p">[</span><span class="s1">&#39;topointkey&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()))</span>
+
+        <span class="n">valid_points</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">points</span> <span class="k">if</span> <span class="n">x</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">valid_points</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">5</span><span class="p">:</span>
+            <span class="n">desc</span> <span class="o">=</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">valid_points</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">desc</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">valid_points</span><span class="p">))</span> <span class="o">+</span> <span class="s1">&#39; points&#39;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">valid_points</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1">#valid_points = list(map(lambda x: x[&#39;value&#39;],options))</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">valid_points</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;layout&#39;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;No Points selected&quot;</span><span class="p">)}</span>
+
+    <span class="n">filt</span> <span class="o">=</span> <span class="n">Filter</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">group</span><span class="p">)</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">operationaldataByPoints</span><span class="p">(</span>
+        <span class="n">valid_points</span><span class="p">,</span> <span class="n">filt</span><span class="p">,</span> <span class="p">[</span><span class="s1">&#39;pointkey&#39;</span><span class="p">,</span> <span class="s1">&#39;directionkey&#39;</span><span class="p">])</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">operationaldataByPoints</span><span class="p">(</span><span class="n">valid_points</span><span class="p">,</span> <span class="n">filt</span><span class="p">,</span> <span class="p">[</span>
+                                   <span class="s1">&#39;pointkey&#39;</span><span class="p">,</span> <span class="s1">&#39;directionkey&#39;</span><span class="p">],</span> <span class="n">table</span><span class="o">=</span><span class="s1">&#39;Allocation&#39;</span><span class="p">)</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">operationaldataByPoints</span><span class="p">(</span><span class="n">valid_points</span><span class="p">,</span> <span class="n">filt</span><span class="p">,</span> <span class="p">[</span>
+                                   <span class="s1">&#39;pointkey&#39;</span><span class="p">,</span> <span class="s1">&#39;directionkey&#39;</span><span class="p">],</span> <span class="n">table</span><span class="o">=</span><span class="s1">&#39;firm_technical&#39;</span><span class="p">)</span>    
+    <span class="n">p</span><span class="p">[</span><span class="s1">&#39;indicator&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;phys&#39;</span>
+    <span class="n">a</span><span class="p">[</span><span class="s1">&#39;indicator&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;alloc&#39;</span>
+    <span class="n">t</span><span class="p">[</span><span class="s1">&#39;indicator&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;ftc&#39;</span>
+
+    <span class="n">g</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">p</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">t</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">g</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;layout&#39;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;No Data Found for </span><span class="si">{</span><span class="n">desc</span><span class="si">}</span><span class="s2"> from </span><span class="si">{</span><span class="n">start_date</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">end_date</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)}</span>
+
+    <span class="n">g</span><span class="p">[</span><span class="s1">&#39;point&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span><span class="s1">&#39;directionkey&#39;</span><span class="p">]</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">g</span><span class="p">[</span><span class="s1">&#39;pointlabel&#39;</span><span class="p">]</span>
+    <span class="n">g</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">g</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">]</span><span class="o">/</span><span class="mf">1e6</span>  <span class="c1"># show in GW</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">g</span><span class="p">[</span><span class="s1">&#39;pip&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">c</span><span class="p">:</span> <span class="s1">&#39; PIP&#39;</span> <span class="k">if</span> <span class="p">(</span>
+        <span class="n">c</span><span class="p">[</span><span class="s1">&#39;pipeinpipewithtsokey&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span> <span class="ow">and</span> <span class="n">c</span><span class="p">[</span><span class="s1">&#39;indicator&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;phys&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">g</span><span class="p">[</span><span class="s1">&#39;indicator&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span><span class="s1">&#39;indicator&#39;</span><span class="p">]</span><span class="o">+</span><span class="n">g</span><span class="p">[</span><span class="s1">&#39;pip&#39;</span><span class="p">]</span>
+
+    <span class="n">g</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">sort_index</span><span class="p">()</span>
+
+    <span class="c1"># sort values alphabetically for better visualization</span>
+    <span class="n">ordered</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span><span class="s1">&#39;point&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+    <span class="n">ordered</span><span class="o">.</span><span class="n">sort</span><span class="p">()</span>
+    <span class="c1"># TODO remove phys flow with PiP</span>
+
+    <span class="n">figure</span> <span class="o">=</span> <span class="n">px</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">g</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">&quot;value&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;point&#39;</span><span class="p">,</span> <span class="n">line_group</span><span class="o">=</span><span class="s2">&quot;point&quot;</span><span class="p">,</span>
+                     <span class="n">line_dash</span><span class="o">=</span><span class="s1">&#39;indicator&#39;</span><span class="p">,</span> <span class="n">custom_data</span><span class="o">=</span><span class="p">[</span>
+                         <span class="s1">&#39;operatorlabel&#39;</span><span class="p">,</span> <span class="s1">&#39;pointkey&#39;</span><span class="p">,</span> <span class="s1">&#39;pipeinpipewithtsokey&#39;</span><span class="p">],</span> <span class="n">category_orders</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;point&#39;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">ordered</span><span class="p">)})</span>
+    <span class="n">figure</span><span class="o">.</span><span class="n">update_traces</span><span class="p">(</span>
+        <span class="n">hovertemplate</span><span class="o">=</span><span class="s1">&#39;&lt;b&gt;%</span><span class="si">{y}</span><span class="s1">&lt;/b&gt;, %</span><span class="si">{customdata[0]}</span><span class="s1">, %</span><span class="si">{customdata[1]}</span><span class="s1">, %</span><span class="si">{customdata[2]}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">figure</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Flow in GWh/</span><span class="si">{</span><span class="n">group</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">desc</span><span class="si">}</span><span class="s2"> from </span><span class="si">{</span><span class="n">start_date</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">end_date</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                         <span class="n">xaxis_title</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span>
+                         <span class="n">yaxis_title</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;Transferred Energy in GWh/</span><span class="si">{</span><span class="n">group</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                         <span class="n">hovermode</span><span class="o">=</span><span class="s2">&quot;x unified&quot;</span><span class="p">,</span>
+                         <span class="n">legend</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">font</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">10</span><span class="p">),</span> <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;v&quot;</span><span class="p">),</span>
+                         <span class="n">height</span><span class="o">=</span><span class="mi">700</span><span class="p">,)</span>
+    <span class="n">figure</span><span class="o">.</span><span class="n">update_yaxes</span><span class="p">(</span><span class="n">ticksuffix</span><span class="o">=</span><span class="s2">&quot; GWh&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">figure</span></div>
+
+
+<div class="viewcode-block" id="updateCrossborderGraph"><a class="viewcode-back" href="../entsog_dash.html#entsog_dash.updateCrossborderGraph">[docs]</a><span class="nd">@app</span><span class="o">.</span><span class="n">callback</span><span class="p">(</span>
+    <span class="n">Output</span><span class="p">(</span><span class="s2">&quot;crossborder_graph&quot;</span><span class="p">,</span> <span class="s2">&quot;figure&quot;</span><span class="p">),</span>
+    <span class="p">[</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;operator_control&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;bz_control&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;date_picker&quot;</span><span class="p">,</span> <span class="s2">&quot;start_date&quot;</span><span class="p">),</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;date_picker&quot;</span><span class="p">,</span> <span class="s2">&quot;end_date&quot;</span><span class="p">),</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;group_by_control&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s1">&#39;cumulative_control&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">)</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">updateCrossborderGraph</span><span class="p">(</span><span class="n">operators</span><span class="p">,</span> <span class="n">bz</span><span class="p">,</span> <span class="n">start_date</span><span class="p">,</span> <span class="n">end_date</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> <span class="n">cumulative</span><span class="p">):</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">start_date</span><span class="p">,</span> <span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1">&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">()</span>
+    <span class="n">end</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">end_date</span><span class="p">,</span> <span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1">&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">()</span>
+    <span class="n">filt</span> <span class="o">=</span> <span class="n">Filter</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">group</span><span class="p">)</span>
+
+    <span class="n">desc</span><span class="p">,</span> <span class="n">operators</span> <span class="o">=</span> <span class="n">handleBzOperator</span><span class="p">(</span><span class="n">bz</span><span class="p">,</span> <span class="n">operators</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">operators</span> <span class="o">==</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">operators</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;layout&#39;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;No Operators or Zone selected&quot;</span><span class="p">)}</span>
+
+    <span class="n">p</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">crossborder</span><span class="p">(</span><span class="n">operators</span><span class="p">,</span> <span class="n">filt</span><span class="p">)</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">crossborder</span><span class="p">(</span><span class="n">operators</span><span class="p">,</span> <span class="n">filt</span><span class="p">,</span> <span class="n">table</span><span class="o">=</span><span class="s1">&#39;Allocation&#39;</span><span class="p">)</span>
+    <span class="n">a</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">+</span><span class="s1">&#39; alloc&#39;</span><span class="p">,</span> <span class="n">a</span><span class="o">.</span><span class="n">columns</span><span class="p">))</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">+</span><span class="s1">&#39; phy&#39;</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">columns</span><span class="p">))</span>
+
+    <span class="n">g</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">p</span><span class="p">,</span> <span class="n">a</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">g</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;layout&#39;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;No Data Found for </span><span class="si">{</span><span class="n">bz</span><span class="si">}</span><span class="s2"> from </span><span class="si">{</span><span class="n">start_date</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">end_date</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)}</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span><span class="n">g</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">sort_values</span><span class="p">()]</span>
+
+    <span class="n">figure</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">cumulative</span> <span class="o">==</span> <span class="s1">&#39;none&#39;</span><span class="p">:</span>
+        <span class="n">addTraces</span><span class="p">(</span><span class="n">figure</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span>
+        <span class="n">addTraces</span><span class="p">(</span><span class="n">figure</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">addTraces</span><span class="p">(</span><span class="n">figure</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">legendgroup</span><span class="o">=</span><span class="s1">&#39;phy&#39;</span><span class="p">,</span> <span class="n">stackgroup</span><span class="o">=</span><span class="s1">&#39;phy&#39;</span><span class="p">)</span>
+        <span class="n">addTraces</span><span class="p">(</span><span class="n">figure</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">legendgroup</span><span class="o">=</span><span class="s1">&#39;alloc&#39;</span><span class="p">,</span> <span class="n">stackgroup</span><span class="o">=</span><span class="s1">&#39;alloc&#39;</span><span class="p">)</span>
+
+    <span class="n">figure</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Crossborder Flow in GWh/</span><span class="si">{</span><span class="n">group</span><span class="si">}</span><span class="s2"> for </span><span class="si">{</span><span class="n">desc</span><span class="si">}</span><span class="s2"> from </span><span class="si">{</span><span class="n">start_date</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">end_date</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                         <span class="n">xaxis_title</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span>
+                         <span class="n">yaxis_title</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;Imported Energy in GWh/</span><span class="si">{</span><span class="n">group</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                         <span class="n">hovermode</span><span class="o">=</span><span class="s2">&quot;x unified&quot;</span><span class="p">,</span>
+                         <span class="n">legend</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">font</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">10</span><span class="p">),</span> <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;v&quot;</span><span class="p">),</span>
+                         <span class="n">height</span><span class="o">=</span><span class="mi">700</span><span class="p">,)</span>
+    <span class="n">figure</span><span class="o">.</span><span class="n">update_yaxes</span><span class="p">(</span><span class="n">ticksuffix</span><span class="o">=</span><span class="s2">&quot; GWh&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">figure</span></div>
+
+<span class="c1">##### Infrastructure Graph #######</span>
+
+
+<div class="viewcode-block" id="updateInfrastructureGraph"><a class="viewcode-back" href="../entsog_dash.html#entsog_dash.updateInfrastructureGraph">[docs]</a><span class="nd">@app</span><span class="o">.</span><span class="n">callback</span><span class="p">(</span>
+    <span class="n">Output</span><span class="p">(</span><span class="s2">&quot;infrastructure_graph&quot;</span><span class="p">,</span> <span class="s2">&quot;figure&quot;</span><span class="p">),</span>
+    <span class="p">[</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;operator_control&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;bz_control&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;date_picker&quot;</span><span class="p">,</span> <span class="s2">&quot;start_date&quot;</span><span class="p">),</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;date_picker&quot;</span><span class="p">,</span> <span class="s2">&quot;end_date&quot;</span><span class="p">),</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s2">&quot;group_by_control&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span>
+        <span class="n">Input</span><span class="p">(</span><span class="s1">&#39;cumulative_control&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">)</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">updateInfrastructureGraph</span><span class="p">(</span><span class="n">operators</span><span class="p">,</span> <span class="n">bz</span><span class="p">,</span> <span class="n">start_date</span><span class="p">,</span> <span class="n">end_date</span><span class="p">,</span> <span class="n">group</span><span class="p">,</span> <span class="n">cumulative</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">bz</span> <span class="o">==</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">bz</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;layout&#39;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s1">&#39;No zone selected&#39;</span><span class="p">)}</span>
+
+    <span class="n">start</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">start_date</span><span class="p">,</span> <span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1">&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">()</span>
+    <span class="n">end</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">end_date</span><span class="p">,</span> <span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1">&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">()</span>
+    <span class="n">filt</span> <span class="o">=</span> <span class="n">Filter</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">group</span><span class="p">)</span>
+
+    <span class="n">desc</span><span class="p">,</span> <span class="n">operators</span> <span class="o">=</span> <span class="n">handleBzOperator</span><span class="p">(</span><span class="n">bz</span><span class="p">,</span> <span class="n">operators</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">operators</span> <span class="o">==</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">operators</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;layout&#39;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;No Operators or Zone selected&quot;</span><span class="p">)}</span>
+
+    <span class="n">p</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">bilanz</span><span class="p">(</span><span class="n">operators</span><span class="p">,</span> <span class="n">filt</span><span class="p">)</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">bilanz</span><span class="p">(</span><span class="n">operators</span><span class="p">,</span> <span class="n">filt</span><span class="p">,</span> <span class="n">table</span><span class="o">=</span><span class="s1">&#39;Allocation&#39;</span><span class="p">)</span>
+    <span class="n">t</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">bilanz</span><span class="p">(</span><span class="n">operators</span><span class="p">,</span> <span class="n">filt</span><span class="p">,</span> <span class="n">table</span><span class="o">=</span><span class="s1">&#39;firm_technical&#39;</span><span class="p">)</span>
+    <span class="c1"># if len(p.columns) &gt; 1:</span>
+    <span class="c1">#     p[&#39;sum&#39;]=p.sum(axis=1)</span>
+    <span class="c1"># if len(a.columns) &gt; 1:</span>
+    <span class="c1">#     a[&#39;sum&#39;]=a.sum(axis=1)</span>
+    <span class="n">a</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">+</span><span class="s1">&#39; alloc&#39;</span><span class="p">,</span> <span class="n">a</span><span class="o">.</span><span class="n">columns</span><span class="p">))</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">+</span><span class="s1">&#39; phy&#39;</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">columns</span><span class="p">))</span>
+    <span class="n">t</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">+</span><span class="s1">&#39; ftc&#39;</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">columns</span><span class="p">))</span> <span class="c1"># firm technical capacity</span>
+    <span class="n">pa</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">a</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">t</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">pa</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;layout&#39;</span><span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;No Data Found for </span><span class="si">{</span><span class="n">bz</span><span class="si">}</span><span class="s2"> from </span><span class="si">{</span><span class="n">start_date</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">end_date</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)}</span>
+
+    <span class="n">figure</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">cumulative</span> <span class="o">==</span> <span class="s1">&#39;none&#39;</span><span class="p">:</span>
+        <span class="n">addTraces</span><span class="p">(</span><span class="n">figure</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span>
+        <span class="n">addTraces</span><span class="p">(</span><span class="n">figure</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+        <span class="n">addTraces</span><span class="p">(</span><span class="n">figure</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">addTraces</span><span class="p">(</span><span class="n">figure</span><span class="p">,</span> <span class="n">p</span><span class="p">,</span> <span class="n">legendgroup</span><span class="o">=</span><span class="s1">&#39;phy&#39;</span><span class="p">,</span> <span class="n">stackgroup</span><span class="o">=</span><span class="s1">&#39;phy&#39;</span><span class="p">)</span>
+        <span class="n">addTraces</span><span class="p">(</span><span class="n">figure</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">legendgroup</span><span class="o">=</span><span class="s1">&#39;alloc&#39;</span><span class="p">,</span> <span class="n">stackgroup</span><span class="o">=</span><span class="s1">&#39;alloc&#39;</span><span class="p">)</span>
+        <span class="c1">#addTraces(figure, t, legendgroup=&#39;ftc&#39;, stackgroup=&#39;ftc&#39;)</span>
+
+    <span class="n">figure</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Flow per Infrastructure type in GWh/</span><span class="si">{</span><span class="n">group</span><span class="si">}</span><span class="s2"> for </span><span class="si">{</span><span class="n">desc</span><span class="si">}</span><span class="s2"> from </span><span class="si">{</span><span class="n">start_date</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">end_date</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                         <span class="n">xaxis_title</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span>
+                         <span class="n">yaxis_title</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;Energy added to </span><span class="si">{</span><span class="n">desc</span><span class="si">}</span><span class="s1"> in GWh/</span><span class="si">{</span><span class="n">group</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span>
+                         <span class="n">hovermode</span><span class="o">=</span><span class="s2">&quot;x unified&quot;</span><span class="p">,</span>
+                         <span class="n">showlegend</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                         <span class="n">legend</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">font</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">10</span><span class="p">),</span> <span class="n">orientation</span><span class="o">=</span><span class="s2">&quot;v&quot;</span><span class="p">),</span>
+                         <span class="n">height</span><span class="o">=</span><span class="mi">700</span><span class="p">,</span>
+                         <span class="n">legend_title_text</span><span class="o">=</span><span class="s1">&#39;System kind&#39;</span><span class="p">)</span>
+    <span class="n">figure</span><span class="o">.</span><span class="n">update_yaxes</span><span class="p">(</span><span class="n">ticksuffix</span><span class="o">=</span><span class="s2">&quot; GWh&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">figure</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">layout</span> <span class="o">=</span> <span class="n">layout</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">run_server</span><span class="p">(</span><span class="n">debug</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">use_reloader</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="s1">&#39;0.0.0.0&#39;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">8050</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Florian Maurer.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

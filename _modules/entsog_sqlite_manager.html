@@ -1,0 +1,396 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>entsog_sqlite_manager &#8212; ENTSOE/G-Monitor 0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for entsog_sqlite_manager</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Created on Sun Nov 29 23:15:16 2020</span>
+
+<span class="sd">@author: maurer</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+
+<span class="kn">from</span> <span class="nn">entsog_data_manager</span> <span class="kn">import</span> <span class="n">EntsogDataManager</span><span class="p">,</span> <span class="n">Filter</span>
+
+<span class="kn">import</span> <span class="nn">sqlite3</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">closing</span><span class="p">,</span> <span class="n">contextmanager</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">create_engine</span>
+
+<span class="n">ftime_sqlite</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;day&#39;</span><span class="p">:</span> <span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1">&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;month&#39;</span><span class="p">:</span> <span class="s1">&#39;%Y-%m-01&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;year&#39;</span><span class="p">:</span> <span class="s1">&#39;%Y-01-01&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;hour&#39;</span><span class="p">:</span> <span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1"> %H:00:00&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;minute&#39;</span><span class="p">:</span> <span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1"> %H:%M:00&#39;</span><span class="p">}</span>
+
+<span class="n">ftime_pg</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;day&#39;</span><span class="p">:</span> <span class="s1">&#39;YYYY-MM-DD&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;month&#39;</span><span class="p">:</span> <span class="s1">&#39;YYYY-MM-01&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;year&#39;</span><span class="p">:</span> <span class="s1">&#39;YYYY-01-01&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;hour&#39;</span><span class="p">:</span> <span class="s1">&#39;YYYY-MM-DD hh24:00:00&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;minute&#39;</span><span class="p">:</span> <span class="s1">&#39;YYYY-MM-DD hh24:mi:00&#39;</span><span class="p">}</span>
+
+<span class="n">checkPipeInPipe</span> <span class="o">=</span> <span class="s2">&quot;pipeinpipewithtsokey is NULL&quot;</span>
+
+
+<div class="viewcode-block" id="timeFilter"><a class="viewcode-back" href="../entsog_sqlite_manager.html#entsog_sqlite_manager.timeFilter">[docs]</a><span class="k">def</span> <span class="nf">timeFilter</span><span class="p">(</span><span class="n">filt</span><span class="p">):</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;&#39;</span><span class="si">{</span><span class="n">filt</span><span class="o">.</span><span class="n">begin</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1">&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39; &lt; periodFrom and periodFrom &lt; &#39;</span><span class="si">{</span><span class="n">filt</span><span class="o">.</span><span class="n">end</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1">&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39; &quot;</span></div>
+
+
+<span class="n">physFlowTableName</span> <span class="o">=</span> <span class="s1">&#39;physical_flow&#39;</span>
+
+
+<div class="viewcode-block" id="EntsogSQLite"><a class="viewcode-back" href="../entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite">[docs]</a><span class="k">class</span> <span class="nc">EntsogSQLite</span><span class="p">(</span><span class="n">EntsogDataManager</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">database</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_pg</span> <span class="o">=</span> <span class="n">database</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;postgresql&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_pg</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">engine</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="n">database</span><span class="p">)</span>
+            <span class="nd">@contextmanager</span>
+            <span class="k">def</span> <span class="nf">access_db</span><span class="p">():</span>
+                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">,</span> <span class="n">conn</span><span class="o">.</span><span class="n">begin</span><span class="p">():</span>
+                    <span class="k">yield</span> <span class="n">conn</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span> <span class="o">=</span> <span class="n">access_db</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">closing</span><span class="p">(</span><span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">database</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_pg</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">checkDoubleReporting</span> <span class="o">=</span> <span class="s2">&quot;isdoublereporting is not TRUE&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">checkDoubleReporting</span> <span class="o">=</span> <span class="s2">&quot;not isdoublereporting&quot;</span>
+
+<div class="viewcode-block" id="EntsogSQLite.groupTime"><a class="viewcode-back" href="../entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite.groupTime">[docs]</a>    <span class="k">def</span> <span class="nf">groupTime</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">groupby</span><span class="p">,</span> <span class="n">column</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_pg</span><span class="p">:</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;to_char(</span><span class="si">{</span><span class="n">column</span><span class="si">}</span><span class="s2">::timestamp, &#39;</span><span class="si">{</span><span class="n">ftime_pg</span><span class="p">[</span><span class="n">groupby</span><span class="p">]</span><span class="si">}</span><span class="s2">&#39;)&quot;</span> <span class="c1"># PostgreSQL</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;strftime(&quot;</span><span class="si">{</span><span class="n">ftime_sqlite</span><span class="p">[</span><span class="n">groupby</span><span class="p">]</span><span class="si">}</span><span class="s1">&quot;, &quot;</span><span class="si">{</span><span class="n">column</span><span class="si">}</span><span class="s1">&quot;)&#39;</span> <span class="c1"># SQLite</span></div>
+        
+
+<div class="viewcode-block" id="EntsogSQLite.connectionpoints"><a class="viewcode-back" href="../entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite.connectionpoints">[docs]</a>    <span class="k">def</span> <span class="nf">connectionpoints</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">selectString</span> <span class="o">=</span> <span class="s1">&#39;tpMapX as lat, tpMapY as long, pointkey, pointlabel&#39;</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">zones</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql_query</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;select </span><span class="si">{</span><span class="n">selectString</span><span class="si">}</span><span class="s1"> from connectionpoints&#39;</span><span class="p">,</span> <span class="n">conn</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">zones</span></div>
+
+<div class="viewcode-block" id="EntsogSQLite.interconnections"><a class="viewcode-back" href="../entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite.interconnections">[docs]</a>    <span class="k">def</span> <span class="nf">interconnections</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        interconnections which are in one of the balancingZones</span>
+<span class="sd">        to be determined whats useful here (coming from, to or both)</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">selectString</span> <span class="o">=</span> <span class="s1">&#39;pointTpMapY as lat, pointTpMapX as lon, fromdirectionkey, &#39;</span>
+        <span class="n">selectString</span> <span class="o">+=</span> <span class="s1">&#39;pointkey, pointlabel, fromOperatorKey, fromoperatorlabel, fromcountrykey, fromBzKey, frombzlabel, &#39;</span>
+        <span class="n">selectString</span> <span class="o">+=</span> <span class="s1">&#39;toCountryKey, toOperatorKey,tooperatorlabel, toPointKey, topointlabel, toBzKey,toBzLabel&#39;</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">interconnections</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql_query</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;select </span><span class="si">{</span><span class="n">selectString</span><span class="si">}</span><span class="s1"> from Interconnections&#39;</span><span class="p">,</span> <span class="n">conn</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">interconnections</span></div>
+
+<div class="viewcode-block" id="EntsogSQLite.balancingzones"><a class="viewcode-back" href="../entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite.balancingzones">[docs]</a>    <span class="k">def</span> <span class="nf">balancingzones</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;also known as bidding zones&quot;&quot;&quot;</span>
+        <span class="n">selectString</span> <span class="o">=</span> <span class="s1">&#39;tpMapY as lat, tpMapX as lon, bzLabel&#39;</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">zones</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql_query</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;select </span><span class="si">{</span><span class="n">selectString</span><span class="si">}</span><span class="s1"> from balancingzones&#39;</span><span class="p">,</span> <span class="n">conn</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">zones</span></div>
+
+<div class="viewcode-block" id="EntsogSQLite.operators"><a class="viewcode-back" href="../entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite.operators">[docs]</a>    <span class="k">def</span> <span class="nf">operators</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">country</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">operatorType</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        returns operators which have an interconnection in one of the balancingZones</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="k">if</span> <span class="n">operatorType</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span> <span class="ow">and</span> <span class="n">country</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="n">whereString</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;where operatorTypeLabel=&#39;</span><span class="si">{</span><span class="n">operatorType</span><span class="si">}</span><span class="s2">&#39; and operatorCountryKey=&#39;</span><span class="si">{</span><span class="n">country</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+        <span class="k">elif</span> <span class="n">country</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="n">whereString</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;where operatorCountryKey=&#39;</span><span class="si">{</span><span class="n">country</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+        <span class="k">elif</span> <span class="n">operatorType</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="n">whereString</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;where operatorTypeLabel=&quot;</span><span class="si">{</span><span class="n">operatorType</span><span class="si">}</span><span class="s1">&quot;&#39;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">whereString</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+
+        <span class="n">selectString</span> <span class="o">=</span> <span class="s1">&#39;operatorKey, operatorLabel, operatorCountryKey, operatorTypeLabel&#39;</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">operators</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql_query</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;select </span><span class="si">{</span><span class="n">selectString</span><span class="si">}</span><span class="s1"> from operators </span><span class="si">{</span><span class="n">whereString</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">conn</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">operators</span></div>
+
+<div class="viewcode-block" id="EntsogSQLite.operatorpointdirections"><a class="viewcode-back" href="../entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite.operatorpointdirections">[docs]</a>    <span class="k">def</span> <span class="nf">operatorpointdirections</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">selectString</span> <span class="o">=</span> <span class="s1">&#39;pointkey, pointlabel, operatorLabel, directionkey, &#39;</span>
+        <span class="n">selectString</span> <span class="o">+=</span> <span class="s1">&#39;tpTsoItemLabel, tSOBalancingZone, tSOCountry, pipeinpipewithtsokey, isdoublereporting,&#39;</span>
+        <span class="n">selectString</span> <span class="o">+=</span> <span class="s1">&#39;adjacentcountry, connectedOperators, adjacentOperatorKey, adjacentzones&#39;</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">opd</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql_query</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;select </span><span class="si">{</span><span class="n">selectString</span><span class="si">}</span><span class="s1"> from operatorpointdirections&#39;</span><span class="p">,</span> <span class="n">conn</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">opd</span></div>
+
+<div class="viewcode-block" id="EntsogSQLite.operationaldata"><a class="viewcode-back" href="../entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite.operationaldata">[docs]</a>    <span class="k">def</span> <span class="nf">operationaldata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">operatorKeys</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">filt</span><span class="p">:</span> <span class="n">Filter</span><span class="p">,</span> <span class="n">group_by</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;directionkey&#39;</span><span class="p">],</span> <span class="n">table</span><span class="o">=</span><span class="n">physFlowTableName</span><span class="p">):</span>
+        <span class="n">whereString</span> <span class="o">=</span> <span class="n">timeFilter</span><span class="p">(</span><span class="n">filt</span><span class="p">)</span>
+        <span class="n">inJoinString</span> <span class="o">=</span> <span class="s2">&quot;&#39;,&#39;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">operatorKeys</span><span class="p">)</span>
+        <span class="n">inString</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;(&#39;</span><span class="si">{</span><span class="n">inJoinString</span><span class="si">}</span><span class="s2">&#39;)&quot;</span>
+        <span class="n">whereString</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;and t.operatorkey in </span><span class="si">{</span><span class="n">inString</span><span class="si">}</span><span class="s1"> and </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">checkDoubleReporting</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="n">joinString</span> <span class="o">=</span> <span class="s1">&#39; left join (select distinct pointkey, isdoublereporting, operatorKey, pipeinpipewithtsokey from operatorpointdirections) opd on t.pointkey = opd.pointkey and t.operatorkey = opd.operatorKey&#39;</span>
+
+        <span class="k">if</span> <span class="n">table</span> <span class="o">==</span> <span class="n">physFlowTableName</span><span class="p">:</span>
+            <span class="n">whereString</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39; and </span><span class="si">{</span><span class="n">checkPipeInPipe</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="n">group_by</span> <span class="o">=</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="s1">&#39;t.&#39;</span><span class="o">+</span><span class="n">x</span><span class="p">,</span> <span class="n">group_by</span><span class="p">)))</span>
+        <span class="n">selectString</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">groupTime</span><span class="p">(</span><span class="n">filt</span><span class="o">.</span><span class="n">groupby</span><span class="p">,</span> <span class="s2">&quot;periodfrom&quot;</span><span class="p">)</span><span class="si">}</span><span class="s1"> as time, &#39;</span>
+        <span class="n">selectString</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">group_by</span><span class="si">}</span><span class="s1">, sum(value) as value&#39;</span>
+        
+        <span class="n">groupString</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">groupTime</span><span class="p">(</span><span class="n">filt</span><span class="o">.</span><span class="n">groupby</span><span class="p">,</span> <span class="s2">&quot;periodfrom&quot;</span><span class="p">)</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">group_by</span><span class="si">}</span><span class="s1">&#39;</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;select </span><span class="si">{</span><span class="n">selectString</span><span class="si">}</span><span class="s1"> from </span><span class="si">{</span><span class="n">table</span><span class="si">}</span><span class="s1"> t </span><span class="si">{</span><span class="n">joinString</span><span class="si">}</span><span class="s1"> where </span><span class="si">{</span><span class="n">whereString</span><span class="si">}</span><span class="s1"> group by </span><span class="si">{</span><span class="n">groupString</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="n">flow</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql_query</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;time&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">flow</span></div>
+
+<div class="viewcode-block" id="EntsogSQLite.operationaldataByPoints"><a class="viewcode-back" href="../entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite.operationaldataByPoints">[docs]</a>    <span class="k">def</span> <span class="nf">operationaldataByPoints</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">points</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">filt</span><span class="p">:</span> <span class="n">Filter</span><span class="p">,</span> <span class="n">group_by</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;directionkey&#39;</span><span class="p">],</span> <span class="n">table</span><span class="o">=</span><span class="n">physFlowTableName</span><span class="p">):</span>
+        <span class="n">whereString</span> <span class="o">=</span> <span class="n">timeFilter</span><span class="p">(</span><span class="n">filt</span><span class="p">)</span>
+        <span class="n">inJoinString</span> <span class="o">=</span> <span class="s2">&quot;&#39;,&#39;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+        <span class="n">inString</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;(&#39;</span><span class="si">{</span><span class="n">inJoinString</span><span class="si">}</span><span class="s2">&#39;)&quot;</span>
+        <span class="n">whereString</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;and pointkey in </span><span class="si">{</span><span class="n">inString</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="n">selectString</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">groupTime</span><span class="p">(</span><span class="n">filt</span><span class="o">.</span><span class="n">groupby</span><span class="p">,</span> <span class="s2">&quot;periodfrom&quot;</span><span class="p">)</span><span class="si">}</span><span class="s1"> as time, &#39;</span>
+        <span class="n">selectString</span> <span class="o">+=</span> <span class="s1">&#39;pointkey, pointlabel, operatorkey, operatorlabel, &#39;</span>
+        <span class="n">selectString</span> <span class="o">+=</span> <span class="s1">&#39;directionkey, sum(value) as value, indicator, pipeinpipewithtsokey&#39;</span>
+        <span class="n">joinString</span> <span class="o">=</span> <span class="s1">&#39; left join (select distinct pointkey as pk, isdoublereporting, operatorKey as ok, pipeinpipewithtsokey from operatorpointdirections) opd on t.pointkey = opd.pk and t.operatorkey = opd.ok&#39;</span>
+
+        <span class="n">group_by</span> <span class="o">=</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">group_by</span><span class="p">)</span>
+        <span class="n">groupString</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">groupTime</span><span class="p">(</span><span class="n">filt</span><span class="o">.</span><span class="n">groupby</span><span class="p">,</span> <span class="s2">&quot;periodfrom&quot;</span><span class="p">)</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">group_by</span><span class="si">}</span><span class="s1">, pointkey, pointlabel, operatorkey, operatorlabel, indicator, pipeinpipewithtsokey&#39;</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;select </span><span class="si">{</span><span class="n">selectString</span><span class="si">}</span><span class="s1"> from </span><span class="si">{</span><span class="n">table</span><span class="si">}</span><span class="s1"> t </span><span class="si">{</span><span class="n">joinString</span><span class="si">}</span><span class="s1"> where </span><span class="si">{</span><span class="n">whereString</span><span class="si">}</span><span class="s1"> group by </span><span class="si">{</span><span class="n">groupString</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="n">flow</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql_query</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;time&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">flow</span></div>
+
+<div class="viewcode-block" id="EntsogSQLite.operatorsByBZ"><a class="viewcode-back" href="../entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite.operatorsByBZ">[docs]</a>    <span class="k">def</span> <span class="nf">operatorsByBZ</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bz</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;select distinct fromOperatorKey from Interconnections where frombzlabel=&#39;</span><span class="si">{</span><span class="n">bz</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+            <span class="n">operatorKeys</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql_query</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">conn</span><span class="p">)</span><span class="o">.</span><span class="n">dropna</span><span class="p">()[</span>
+                <span class="s1">&#39;fromoperatorkey&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">operatorKeys</span></div>
+
+<div class="viewcode-block" id="EntsogSQLite.bilanz"><a class="viewcode-back" href="../entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite.bilanz">[docs]</a>    <span class="k">def</span> <span class="nf">bilanz</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">operatorKeys</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">filt</span><span class="p">:</span> <span class="n">Filter</span><span class="p">,</span> <span class="n">table</span><span class="o">=</span><span class="n">physFlowTableName</span><span class="p">):</span>
+        <span class="n">inJoinString</span> <span class="o">=</span> <span class="s2">&quot;&#39;,&#39;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">operatorKeys</span><span class="p">)</span>
+        <span class="n">inString</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;(&#39;</span><span class="si">{</span><span class="n">inJoinString</span><span class="si">}</span><span class="s2">&#39;)&quot;</span>
+
+        <span class="n">whereString</span> <span class="o">=</span> <span class="n">timeFilter</span><span class="p">(</span><span class="n">filt</span><span class="p">)</span>
+        <span class="n">whereString</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39; and o.operatorKey in </span><span class="si">{</span><span class="n">inString</span><span class="si">}</span><span class="s1"> and </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">checkDoubleReporting</span><span class="si">}</span><span class="s1">&#39;</span>
+
+        <span class="n">selectString</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">groupTime</span><span class="p">(</span><span class="n">filt</span><span class="o">.</span><span class="n">groupby</span><span class="p">,</span> <span class="s2">&quot;periodfrom&quot;</span><span class="p">)</span><span class="si">}</span><span class="s1"> as time, &#39;</span>
+        <span class="c1"># TODO if connectionpoints would not have missing data, remove this hack</span>
+        <span class="c1"># this is using that the pointkeys first 3 chars are generelly indicating</span>
+        <span class="c1"># the infrastructureKey</span>
+        <span class="n">selectString</span> <span class="o">+=</span> <span class="s1">&#39;coalesce(c.infrastructureKey, substr(o.pointkey,0,4)) as infra, directionkey, sum(value) as value&#39;</span>
+        <span class="n">groupString</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">groupTime</span><span class="p">(</span><span class="n">filt</span><span class="o">.</span><span class="n">groupby</span><span class="p">,</span> <span class="s2">&quot;periodfrom&quot;</span><span class="p">)</span><span class="si">}</span><span class="s1">, directionkey, infra&#39;</span>
+        <span class="n">joinString</span> <span class="o">=</span> <span class="s1">&#39; left join (select distinct pointkey, isdoublereporting, operatorKey, pipeinpipewithtsokey from operatorpointdirections) opd on o.pointkey = opd.pointkey and o.operatorKey = opd.operatorKey&#39;</span>
+        <span class="k">if</span> <span class="n">table</span> <span class="o">==</span> <span class="n">physFlowTableName</span><span class="p">:</span>
+            <span class="n">whereString</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39; and </span><span class="si">{</span><span class="n">checkPipeInPipe</span><span class="si">}</span><span class="s1">&#39;</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;select </span><span class="si">{</span><span class="n">selectString</span><span class="si">}</span><span class="s1"> from </span><span class="si">{</span><span class="n">table</span><span class="si">}</span><span class="s1"> o </span><span class="si">{</span><span class="n">joinString</span><span class="si">}</span><span class="s1"> left join connectionpoints c on o.pointkey=c.pointkey where </span><span class="si">{</span><span class="n">whereString</span><span class="si">}</span><span class="s1"> group by </span><span class="si">{</span><span class="n">groupString</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="n">bil</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql_query</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;time&#39;</span><span class="p">)</span>
+        <span class="n">bilanz</span> <span class="o">=</span> <span class="n">bil</span><span class="o">.</span><span class="n">pivot</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;infra&#39;</span><span class="p">,</span> <span class="s1">&#39;directionkey&#39;</span><span class="p">])</span>
+        <span class="n">bilanz</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="n">bilanz</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">droplevel</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_diffHelper</span><span class="p">(</span><span class="n">bilanz</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_diffHelper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+        <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">        gets difference for each pair of entry and exit direction index column</span>
+<span class="sd">        &#39;&#39;&#39;</span>
+        <span class="n">l</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">col</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">l</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">col2</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="nb">str</span><span class="p">(</span><span class="n">col2</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">and</span> <span class="n">col</span> <span class="o">!=</span> <span class="n">col2</span><span class="p">:</span>
+                        <span class="c1"># same category</span>
+                        <span class="n">l</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+                        <span class="k">if</span> <span class="n">col</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;entry&#39;</span><span class="p">:</span>
+                            <span class="n">p</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">-</span><span class="n">df</span><span class="p">[</span><span class="n">col2</span><span class="p">]</span>
+                        <span class="k">else</span><span class="p">:</span>  <span class="c1"># entry - exit</span>
+                            <span class="n">p</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col2</span><span class="p">]</span><span class="o">-</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span>
+
+                <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">l</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">col</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;entry&#39;</span><span class="p">:</span>
+                        <span class="n">p</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">p</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">col</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span> <span class="o">=</span> <span class="o">-</span><span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">p</span>
+
+<div class="viewcode-block" id="EntsogSQLite.crossborder"><a class="viewcode-back" href="../entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite.crossborder">[docs]</a>    <span class="k">def</span> <span class="nf">crossborder</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">operatorKeys</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">filt</span><span class="p">:</span> <span class="n">Filter</span><span class="p">,</span> <span class="n">group_by</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;t.directionkey&#39;</span><span class="p">,</span> <span class="s1">&#39;opd.adjacentcountry&#39;</span><span class="p">],</span> <span class="n">table</span><span class="o">=</span><span class="n">physFlowTableName</span><span class="p">):</span>
+        <span class="n">whereString</span> <span class="o">=</span> <span class="n">timeFilter</span><span class="p">(</span><span class="n">filt</span><span class="p">)</span>
+        <span class="n">inJoinString</span> <span class="o">=</span> <span class="s2">&quot;&#39;,&#39;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">operatorKeys</span><span class="p">)</span>
+        <span class="n">inString</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;(&#39;</span><span class="si">{</span><span class="n">inJoinString</span><span class="si">}</span><span class="s2">&#39;)&quot;</span>
+        <span class="n">whereString</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;and t.operatorkey in </span><span class="si">{</span><span class="n">inString</span><span class="si">}</span><span class="s1"> and </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">checkDoubleReporting</span><span class="si">}</span><span class="s1">&#39;</span>
+
+        <span class="n">joinString</span> <span class="o">=</span> <span class="s1">&#39; left join (select distinct pointkey, isdoublereporting, operatorKey, pipeinpipewithtsokey, adjacentzones, adjacentcountry from operatorpointdirections) opd on t.pointkey = opd.pointkey and t.operatorkey = opd.operatorKey&#39;</span>
+        <span class="k">if</span> <span class="n">table</span> <span class="o">==</span> <span class="n">physFlowTableName</span><span class="p">:</span>
+            <span class="n">whereString</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39; and </span><span class="si">{</span><span class="n">checkPipeInPipe</span><span class="si">}</span><span class="s1">&#39;</span>
+        <span class="n">group_by</span> <span class="o">=</span> <span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="o">+</span><span class="n">x</span><span class="p">,</span> <span class="n">group_by</span><span class="p">)))</span>
+
+        <span class="n">selectString</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">groupTime</span><span class="p">(</span><span class="n">filt</span><span class="o">.</span><span class="n">groupby</span><span class="p">,</span> <span class="s2">&quot;periodfrom&quot;</span><span class="p">)</span><span class="si">}</span><span class="s1"> as time, &#39;</span>
+        <span class="n">selectString</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">group_by</span><span class="si">}</span><span class="s1">, coalesce(opd.adjacentzones, substr(t.pointkey,0,4)) as adjacentzones, sum(value) as value&#39;</span>
+        <span class="n">groupString</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">groupTime</span><span class="p">(</span><span class="n">filt</span><span class="o">.</span><span class="n">groupby</span><span class="p">,</span> <span class="s2">&quot;periodfrom&quot;</span><span class="p">)</span><span class="si">}</span><span class="s1">, coalesce(opd.adjacentzones, substr(t.pointkey,0,4)), </span><span class="si">{</span><span class="n">group_by</span><span class="si">}</span><span class="s1">&#39;</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;select </span><span class="si">{</span><span class="n">selectString</span><span class="si">}</span><span class="s1"> from </span><span class="si">{</span><span class="n">table</span><span class="si">}</span><span class="s1"> t </span><span class="si">{</span><span class="n">joinString</span><span class="si">}</span><span class="s1"> where </span><span class="si">{</span><span class="n">whereString</span><span class="si">}</span><span class="s1"> group by </span><span class="si">{</span><span class="n">groupString</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="n">flow</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql_query</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;time&#39;</span><span class="p">)</span>
+
+        <span class="n">flow</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">flow</span><span class="p">[</span><span class="s1">&#39;adjacentcountry&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span>
+            <span class="n">x</span><span class="p">)</span> <span class="k">if</span> <span class="n">x</span> <span class="k">else</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span><span class="o">+</span><span class="s1">&#39;:&#39;</span><span class="o">+</span><span class="n">flow</span><span class="p">[</span><span class="s1">&#39;adjacentzones&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">if</span> <span class="n">x</span> <span class="k">else</span> <span class="s1">&#39;-&#39;</span><span class="p">)</span>
+        <span class="k">del</span> <span class="n">flow</span><span class="p">[</span><span class="s1">&#39;adjacentcountry&#39;</span><span class="p">]</span>
+        <span class="k">del</span> <span class="n">flow</span><span class="p">[</span><span class="s1">&#39;adjacentzones&#39;</span><span class="p">]</span>
+
+        <span class="n">pivoted</span> <span class="o">=</span> <span class="n">flow</span><span class="o">.</span><span class="n">pivot</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;directionkey&#39;</span><span class="p">],</span> <span class="n">values</span><span class="o">=</span><span class="s1">&#39;value&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_diffHelper</span><span class="p">(</span><span class="n">pivoted</span><span class="p">)</span></div></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+
+    <span class="n">entsog</span> <span class="o">=</span> <span class="n">EntsogSQLite</span><span class="p">(</span><span class="s1">&#39;data/entsog.db&#39;</span><span class="p">)</span>
+    <span class="n">operators</span> <span class="o">=</span> <span class="n">entsog</span><span class="o">.</span><span class="n">operators</span><span class="p">()</span>
+
+    <span class="n">start</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2018</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">end</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2018</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">22</span><span class="p">)</span>
+    <span class="n">group</span> <span class="o">=</span> <span class="s1">&#39;hour&#39;</span>
+    <span class="n">filt</span> <span class="o">=</span> <span class="n">Filter</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">group</span><span class="p">)</span>
+    <span class="n">balzones</span> <span class="o">=</span> <span class="n">entsog</span><span class="o">.</span><span class="n">balancingzones</span><span class="p">()</span>
+    <span class="n">intercon</span> <span class="o">=</span> <span class="n">entsog</span><span class="o">.</span><span class="n">interconnections</span><span class="p">()</span>
+    <span class="n">cpp</span> <span class="o">=</span> <span class="n">entsog</span><span class="o">.</span><span class="n">connectionpoints</span><span class="p">()</span>
+    <span class="c1">#gen = generation.melt(var_name=&#39;kind&#39;, value_name=&#39;value&#39;,ignore_index=False)</span>
+    <span class="n">operatorKeys</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;DE-TSO-0004&#39;</span><span class="p">,</span> <span class="s1">&#39;DE-TSO-0007&#39;</span><span class="p">,</span> <span class="s1">&#39;DE-TSO-0005&#39;</span><span class="p">,</span> <span class="s1">&#39;DE-TSO-0006&#39;</span><span class="p">]</span>
+
+    <span class="n">phy</span> <span class="o">=</span> <span class="n">entsog</span><span class="o">.</span><span class="n">operationaldata</span><span class="p">(</span><span class="n">operatorKeys</span><span class="p">,</span> <span class="n">filt</span><span class="p">,</span> <span class="n">group_by</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;directionkey&#39;</span><span class="p">])</span>
+    <span class="n">piv</span> <span class="o">=</span> <span class="n">phy</span><span class="o">.</span><span class="n">pivot</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;operatorkey&#39;</span><span class="p">,</span> <span class="s1">&#39;directionkey&#39;</span><span class="p">],</span> <span class="n">values</span><span class="o">=</span><span class="s1">&#39;value&#39;</span><span class="p">)</span>
+    <span class="n">piv</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
+
+    <span class="n">point</span> <span class="o">=</span> <span class="n">entsog</span><span class="o">.</span><span class="n">operationaldataByPoints</span><span class="p">(</span>
+        <span class="p">[</span><span class="s1">&#39;ITP-00043&#39;</span><span class="p">,</span> <span class="s1">&#39;ITP-00111&#39;</span><span class="p">],</span> <span class="n">Filter</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">group</span><span class="p">),</span> <span class="p">[</span><span class="s1">&#39;pointkey&#39;</span><span class="p">,</span> <span class="s1">&#39;directionkey&#39;</span><span class="p">])</span>
+    <span class="n">point</span><span class="p">[</span><span class="s1">&#39;point&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">point</span><span class="p">[</span><span class="s1">&#39;pointlabel&#39;</span><span class="p">]</span><span class="o">+</span><span class="s1">&#39; &#39;</span> <span class="o">+</span> \
+        <span class="n">point</span><span class="p">[</span><span class="s1">&#39;directionkey&#39;</span><span class="p">]</span><span class="o">+</span><span class="s1">&#39; &#39;</span><span class="o">+</span><span class="n">point</span><span class="p">[</span><span class="s1">&#39;indicator&#39;</span><span class="p">]</span>
+    <span class="n">point</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">point</span><span class="p">[</span><span class="s1">&#39;value&#39;</span><span class="p">]</span><span class="o">/</span><span class="mf">1e6</span>
+    <span class="n">piv2</span> <span class="o">=</span> <span class="n">point</span><span class="o">.</span><span class="n">pivot</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;point&#39;</span><span class="p">],</span> <span class="n">values</span><span class="o">=</span><span class="s1">&#39;value&#39;</span><span class="p">)</span>
+    <span class="n">piv2</span><span class="o">.</span><span class="n">plot</span><span class="p">()</span>
+
+    <span class="n">end</span> <span class="o">=</span> <span class="n">datetime</span><span class="p">(</span><span class="mi">2018</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">filt</span> <span class="o">=</span> <span class="n">Filter</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="s1">&#39;hour&#39;</span><span class="p">)</span>
+    <span class="n">operatorKeys</span> <span class="o">=</span> <span class="n">entsog</span><span class="o">.</span><span class="n">operatorsByBZ</span><span class="p">(</span><span class="s1">&#39;Italy&#39;</span><span class="p">)</span>
+
+    <span class="n">operatorKeys</span> <span class="o">=</span> <span class="n">entsog</span><span class="o">.</span><span class="n">operatorsByBZ</span><span class="p">(</span><span class="s1">&#39;Portugal&#39;</span><span class="p">)</span>
+    <span class="n">bil</span> <span class="o">=</span> <span class="n">entsog</span><span class="o">.</span><span class="n">bilanz</span><span class="p">(</span><span class="n">operatorKeys</span><span class="p">,</span> <span class="n">filt</span><span class="p">)</span>
+    <span class="n">bil</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">rot</span><span class="o">=</span><span class="mi">45</span><span class="p">)</span>
+
+    <span class="n">operatorKeys</span> <span class="o">=</span> <span class="n">entsog</span><span class="o">.</span><span class="n">operatorsByBZ</span><span class="p">(</span><span class="s1">&#39;GASPOOL&#39;</span><span class="p">)</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">entsog</span><span class="o">.</span><span class="n">crossborder</span><span class="p">(</span><span class="n">operatorKeys</span><span class="p">,</span> <span class="n">filt</span><span class="p">)</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">rot</span><span class="o">=</span><span class="mi">45</span><span class="p">)</span>
+
+    <span class="c1"># 55 mrd Nm^3 sind 60 GWh</span>
+    <span class="c1"># 55 000 000 000 = 60 000 000 000 Wh pro Jahr</span>
+    <span class="c1"># taeglich circa 160 000 000 Wh also 160 MWh</span>
+    <span class="c1"># tatsaechlich 1 131 141 436 kWh pro Tag?? laut entsog</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">ENTSOE/G-Monitor</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../entsog_crawler.html">entsog_crawler module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../entsog_dash.html">entsog_dash module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../entsog_data_manager.html">entsog_data_manager module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../entsog_maploader.html">entsog_maploader module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../entsog_sqlite_manager.html">entsog_sqlite_manager module</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Florian Maurer.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.4.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

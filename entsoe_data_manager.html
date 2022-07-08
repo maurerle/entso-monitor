@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>entsoe_data_manager module &mdash; ENTSOE/G-Monitor 0.1 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="entsoe_sqlite_manager module" href="entsoe_sqlite_manager.html" />
+    <link rel="prev" title="entsoe_dash module" href="entsoe_dash.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> ENTSOE/G-Monitor
+          </a>
+              <div class="version">
+                0.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="entsoe_crawler.html">entsoe_crawler module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="entsoe_dash.html">entsoe_dash module</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">entsoe_data_manager module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="entsoe_sqlite_manager.html">entsoe_sqlite_manager module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="entsog_crawler.html">entsog_crawler module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="entsog_dash.html">entsog_dash module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="entsog_data_manager.html">entsog_data_manager module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="entsog_maploader.html">entsog_maploader module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="entsog_sqlite_manager.html">entsog_sqlite_manager module</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ENTSOE/G-Monitor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>entsoe_data_manager module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/entsoe_data_manager.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-entsoe_data_manager">
+<span id="entsoe-data-manager-module"></span><h1>entsoe_data_manager module<a class="headerlink" href="#module-entsoe_data_manager" title="Permalink to this headline"></a></h1>
+<p>Defines abstract Datamanagers for ENTSO-E
+Created on Sat Nov 28 09:30:46 2020</p>
+<p>&#64;author: maurer</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="entsoe_data_manager.EntsoeDataManager">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">entsoe_data_manager.</span></span><span class="sig-name descname"><span class="pre">EntsoeDataManager</span></span><a class="reference internal" href="_modules/entsoe_data_manager.html#EntsoeDataManager"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_data_manager.EntsoeDataManager" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Assumptions on the DataManager:</p>
+<p>index is time series, everything else are values
+no date and month columns</p>
+<p class="rubric">Methods</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 67%" />
+<col style="width: 33%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><strong>capacity</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><strong>climateImpact</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><strong>countries</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><strong>crossborderFlows</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-odd"><td><p><strong>generation</strong></p></td>
+<td></td>
+</tr>
+<tr class="row-even"><td><p><strong>load</strong></p></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt class="sig sig-object py" id="entsoe_data_manager.EntsoeDataManager.capacity">
+<span class="sig-name descname"><span class="pre">capacity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">country</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_data_manager.html#EntsoeDataManager.capacity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_data_manager.EntsoeDataManager.capacity" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="entsoe_data_manager.EntsoeDataManager.climateImpact">
+<span class="sig-name descname"><span class="pre">climateImpact</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_data_manager.html#EntsoeDataManager.climateImpact"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_data_manager.EntsoeDataManager.climateImpact" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="entsoe_data_manager.EntsoeDataManager.countries">
+<span class="sig-name descname"><span class="pre">countries</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_data_manager.html#EntsoeDataManager.countries"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_data_manager.EntsoeDataManager.countries" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="entsoe_data_manager.EntsoeDataManager.crossborderFlows">
+<span class="sig-name descname"><span class="pre">crossborderFlows</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">country</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#entsoe_data_manager.Filter" title="entsoe_data_manager.Filter"><span class="pre">entsoe_data_manager.Filter</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_data_manager.html#EntsoeDataManager.crossborderFlows"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_data_manager.EntsoeDataManager.crossborderFlows" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="entsoe_data_manager.EntsoeDataManager.generation">
+<span class="sig-name descname"><span class="pre">generation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">country</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#entsoe_data_manager.Filter" title="entsoe_data_manager.Filter"><span class="pre">entsoe_data_manager.Filter</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_data_manager.html#EntsoeDataManager.generation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_data_manager.EntsoeDataManager.generation" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="entsoe_data_manager.EntsoeDataManager.load">
+<span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">country</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#entsoe_data_manager.Filter" title="entsoe_data_manager.Filter"><span class="pre">entsoe_data_manager.Filter</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_data_manager.html#EntsoeDataManager.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_data_manager.EntsoeDataManager.load" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="entsoe_data_manager.EntsoePlantDataManager">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">entsoe_data_manager.</span></span><span class="sig-name descname"><span class="pre">EntsoePlantDataManager</span></span><a class="reference internal" href="_modules/entsoe_data_manager.html#EntsoePlantDataManager"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_data_manager.EntsoePlantDataManager" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Assumptions on the PlantDataManager:</p>
+<p>index is time series, everything else are values</p>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#entsoe_data_manager.EntsoePlantDataManager.capacityPerPlant" title="entsoe_data_manager.EntsoePlantDataManager.capacityPerPlant"><code class="xref py py-obj docutils literal notranslate"><span class="pre">capacityPerPlant</span></code></a>([country])</p></td>
+<td><p>returns capacities for all plants of a country or all if country is empty</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#entsoe_data_manager.EntsoePlantDataManager.getNames" title="entsoe_data_manager.EntsoePlantDataManager.getNames"><code class="xref py py-obj docutils literal notranslate"><span class="pre">getNames</span></code></a>()</p></td>
+<td><p>returns a dataframe with all power plant names</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#entsoe_data_manager.EntsoePlantDataManager.plantGen" title="entsoe_data_manager.EntsoePlantDataManager.plantGen"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plantGen</span></code></a>(names, filt)</p></td>
+<td><p>generation data per power plant</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#entsoe_data_manager.EntsoePlantDataManager.powersystems" title="entsoe_data_manager.EntsoePlantDataManager.powersystems"><code class="xref py py-obj docutils literal notranslate"><span class="pre">powersystems</span></code></a>([country])</p></td>
+<td><p>returns location data and capacities of power plants</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt class="sig sig-object py" id="entsoe_data_manager.EntsoePlantDataManager.capacityPerPlant">
+<span class="sig-name descname"><span class="pre">capacityPerPlant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">country</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_data_manager.html#EntsoePlantDataManager.capacityPerPlant"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_data_manager.EntsoePlantDataManager.capacityPerPlant" title="Permalink to this definition"></a></dt>
+<dd><p>returns capacities for all plants of a country
+or all if country is empty</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="entsoe_data_manager.EntsoePlantDataManager.getNames">
+<span class="sig-name descname"><span class="pre">getNames</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_data_manager.html#EntsoePlantDataManager.getNames"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_data_manager.EntsoePlantDataManager.getNames" title="Permalink to this definition"></a></dt>
+<dd><p>returns a dataframe with all power plant names</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="entsoe_data_manager.EntsoePlantDataManager.plantGen">
+<span class="sig-name descname"><span class="pre">plantGen</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#entsoe_data_manager.Filter" title="entsoe_data_manager.Filter"><span class="pre">entsoe_data_manager.Filter</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_data_manager.html#EntsoePlantDataManager.plantGen"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_data_manager.EntsoePlantDataManager.plantGen" title="Permalink to this definition"></a></dt>
+<dd><p>generation data per power plant</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="entsoe_data_manager.EntsoePlantDataManager.powersystems">
+<span class="sig-name descname"><span class="pre">powersystems</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">country</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_data_manager.html#EntsoePlantDataManager.powersystems"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_data_manager.EntsoePlantDataManager.powersystems" title="Permalink to this definition"></a></dt>
+<dd><p>returns location data and capacities of power plants</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="entsoe_data_manager.Filter">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">entsoe_data_manager.</span></span><span class="sig-name descname"><span class="pre">Filter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">begin</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">datetime.datetime</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">datetime.datetime</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">groupby</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'day'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_data_manager.html#Filter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_data_manager.Filter" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="entsoe_data_manager.revReplaceStr">
+<span class="sig-prename descclassname"><span class="pre">entsoe_data_manager.</span></span><span class="sig-name descname"><span class="pre">revReplaceStr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">string</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_data_manager.html#revReplaceStr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_data_manager.revReplaceStr" title="Permalink to this definition"></a></dt>
+<dd><p>replaces series names for better visualization</p>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="entsoe_dash.html" class="btn btn-neutral float-left" title="entsoe_dash module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="entsoe_sqlite_manager.html" class="btn btn-neutral float-right" title="entsoe_sqlite_manager module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Florian Maurer.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

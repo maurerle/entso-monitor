@@ -1,0 +1,351 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>entsog_crawler &#8212; ENTSOE/G-Monitor 0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for entsog_crawler</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Created on Fri Nov 13 12:04:45 2020</span>
+
+<span class="sd">@author: maurer</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">urllib</span>
+
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">date</span><span class="p">,</span> <span class="n">timedelta</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
+
+<span class="kn">import</span> <span class="nn">sqlite3</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">closing</span>
+
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">create_engine</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">()</span>
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;entsog&#39;</span><span class="p">)</span>
+<span class="n">log</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+
+<span class="n">api_endpoint</span> <span class="o">=</span> <span class="s1">&#39;https://transparency.entsog.eu/api/v1/&#39;</span>
+
+<span class="n">fr</span> <span class="o">=</span> <span class="n">date</span><span class="p">(</span><span class="mi">2020</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">18</span><span class="p">)</span>
+<span class="n">to</span> <span class="o">=</span> <span class="n">date</span><span class="o">.</span><span class="n">today</span><span class="p">()</span>
+
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">data = pd.read_csv(</span>
+<span class="sd">    f&#39;{api_endpoint}operationaldata.csv?limit=1000&amp;indicator=Allocation&amp;from={fr}&amp;to={to}&#39;)</span>
+<span class="sd">response = requests.get(api_endpoint+&#39;operationaldatas&#39;)</span>
+<span class="sd">data = pd.read_csv(api_endpoint+&#39;AggregatedData.csv?limit=1000&#39;)</span>
+<span class="sd">response = requests.get(api_endpoint+&#39;AggregatedData?limit=1000&#39;)</span>
+<span class="sd">data = pd.DataFrame(response.json()[&#39;AggregatedData&#39;])</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<div class="viewcode-block" id="getDataFrame"><a class="viewcode-back" href="../entsog_crawler.html#entsog_crawler.getDataFrame">[docs]</a><span class="k">def</span> <span class="nf">getDataFrame</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;limit=10000&#39;</span><span class="p">],</span> <span class="n">useJson</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="n">params_str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">params_str</span> <span class="o">=</span> <span class="s1">&#39;?&#39;</span>
+    <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">params</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+        <span class="n">params_str</span> <span class="o">=</span> <span class="n">params_str</span><span class="o">+</span><span class="n">param</span><span class="o">+</span><span class="s1">&#39;&amp;&#39;</span>
+    <span class="n">params_str</span> <span class="o">+=</span> <span class="n">params</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+    <span class="n">success</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">10</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">success</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">useJson</span><span class="p">:</span>
+                <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">api_endpoint</span><span class="si">}{</span><span class="n">name</span><span class="si">}</span><span class="s1">.json</span><span class="si">{</span><span class="n">params_str</span><span class="si">}</span><span class="s1">&#39;</span>
+                <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="n">name</span><span class="p">])</span>
+                <span class="c1"># replace empty string with None</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">replace</span><span class="p">([</span><span class="s1">&#39;&#39;</span><span class="p">],</span> <span class="p">[</span><span class="kc">None</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">api_endpoint</span><span class="si">}{</span><span class="n">name</span><span class="si">}</span><span class="s1">.csv</span><span class="si">{</span><span class="n">params_str</span><span class="si">}</span><span class="s1">&#39;</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">success</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">InvalidURL</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">e</span>
+        <span class="k">except</span> <span class="n">requests</span><span class="o">.</span><span class="n">exceptions</span><span class="o">.</span><span class="n">HTTPError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Error getting Dataframe&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">&gt;=</span> <span class="mi">500</span> <span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">reason</span><span class="si">}</span><span class="s1"> - waiting 30 seconds..&#39;</span><span class="p">)</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">30</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">urllib</span><span class="o">.</span><span class="n">error</span><span class="o">.</span><span class="n">HTTPError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Error getting Dataframe&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">code</span> <span class="o">&gt;=</span> <span class="mi">500</span> <span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">msg</span><span class="si">}</span><span class="s1"> - waiting 30 seconds..&#39;</span><span class="p">)</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">30</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">data</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;could not get any data for params:&#39;</span><span class="p">,</span> <span class="n">params_str</span><span class="p">)</span>
+    <span class="n">data</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">data</span></div>
+
+<div class="viewcode-block" id="EntsogCrawler"><a class="viewcode-back" href="../entsog_crawler.html#entsog_crawler.EntsogCrawler">[docs]</a><span class="k">class</span> <span class="nc">EntsogCrawler</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">database</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">database</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;postgresql&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">engine</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="n">database</span><span class="p">)</span>
+            <span class="nd">@contextmanager</span>
+            <span class="k">def</span> <span class="nf">access_db</span><span class="p">():</span>
+                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">,</span> <span class="n">conn</span><span class="o">.</span><span class="n">begin</span><span class="p">():</span>
+                    <span class="k">yield</span> <span class="n">conn</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span> <span class="o">=</span> <span class="n">access_db</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">closing</span><span class="p">(</span><span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">database</span><span class="p">))</span>
+
+<div class="viewcode-block" id="EntsogCrawler.pullData"><a class="viewcode-back" href="../entsog_crawler.html#entsog_crawler.EntsogCrawler.pullData">[docs]</a>    <span class="k">def</span> <span class="nf">pullData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">names</span><span class="p">):</span>
+        <span class="n">pbar</span> <span class="o">=</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">names</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">pbar</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">pbar</span><span class="o">.</span><span class="n">set_description</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+                <span class="c1"># use Json as connectionpoints have weird csv</span>
+                <span class="c1"># TODO Json somehow has different data</span>
+                <span class="c1"># connectionpoints count differ</span>
+                <span class="c1"># and tpTSO column are named tSO in connpointdirections</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">getDataFrame</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">useJson</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+                    <span class="n">tbl_name</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span><span class="s1">&#39;_&#39;</span><span class="p">)</span>
+                    <span class="n">data</span><span class="o">.</span><span class="n">to_sql</span><span class="p">(</span><span class="n">tbl_name</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">if_exists</span><span class="o">=</span><span class="s1">&#39;replace&#39;</span><span class="p">)</span>
+
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="s1">&#39;error pulling data&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s1">&#39;operatorpointdirections&#39;</span> <span class="ow">in</span> <span class="n">names</span><span class="p">:</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+                <span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="s1">&#39;CREATE INDEX IF NOT EXISTS &quot;idx_opd&quot; ON operatorpointdirections (operatorKey, pointKey,directionkey);&#39;</span><span class="p">)</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="EntsogCrawler.findNewBegin"><a class="viewcode-back" href="../entsog_crawler.html#entsog_crawler.EntsogCrawler.findNewBegin">[docs]</a>    <span class="k">def</span> <span class="nf">findNewBegin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_name</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+                <span class="n">query</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;select max(periodfrom) from </span><span class="si">{</span><span class="n">table_name</span><span class="si">}</span><span class="s1">&#39;</span>
+                <span class="n">d</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">begin</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">d</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">()</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">begin</span> <span class="o">=</span> <span class="n">date</span><span class="p">(</span><span class="mi">2017</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;table does not exist yet - using default start </span><span class="si">{</span><span class="n">begin</span><span class="si">}</span><span class="s1"> (</span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">begin</span></div>
+
+<div class="viewcode-block" id="EntsogCrawler.pullOperationalData"><a class="viewcode-back" href="../entsog_crawler.html#entsog_crawler.EntsogCrawler.pullOperationalData">[docs]</a>    <span class="k">def</span> <span class="nf">pullOperationalData</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">indicators</span><span class="p">,</span> <span class="n">initial_begin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;getting values from operationaldata&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">end</span><span class="p">:</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="n">date</span><span class="o">.</span><span class="n">today</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">indicator</span> <span class="ow">in</span> <span class="n">indicators</span><span class="p">:</span>
+            <span class="n">tbl_name</span> <span class="o">=</span> <span class="n">indicator</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span><span class="s1">&#39;_&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">initial_begin</span><span class="p">:</span>
+                <span class="n">begin</span> <span class="o">=</span> <span class="n">initial_begin</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">begin</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">findNewBegin</span><span class="p">(</span><span class="n">tbl_name</span><span class="p">)</span>
+
+            <span class="n">bulks</span> <span class="o">=</span> <span class="p">(</span><span class="n">end</span><span class="o">-</span><span class="n">begin</span><span class="p">)</span><span class="o">.</span><span class="n">days</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;start: </span><span class="si">{</span><span class="n">begin</span><span class="si">}</span><span class="s1">, end: </span><span class="si">{</span><span class="n">end</span><span class="si">}</span><span class="s1">, days: </span><span class="si">{</span><span class="n">bulks</span><span class="si">}</span><span class="s1">, indicator: </span><span class="si">{</span><span class="n">indicator</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">bulks</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">return</span>
+            <span class="n">delta</span> <span class="o">=</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="n">pbar</span> <span class="o">=</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">bulks</span><span class="p">)))</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">pbar</span><span class="p">:</span>
+                <span class="n">beg1</span> <span class="o">=</span> <span class="n">begin</span> <span class="o">+</span> <span class="n">i</span><span class="o">*</span><span class="n">delta</span>
+                <span class="n">end1</span> <span class="o">=</span> <span class="n">begin</span> <span class="o">+</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">delta</span>
+                <span class="n">pbar</span><span class="o">.</span><span class="n">set_description</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;op </span><span class="si">{</span><span class="n">beg1</span><span class="si">}</span><span class="s1"> to </span><span class="si">{</span><span class="n">end1</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+                <span class="n">params</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;limit=-1&#39;</span><span class="p">,</span> <span class="s1">&#39;indicator=&#39;</span><span class="o">+</span><span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">quote</span><span class="p">(</span><span class="n">indicator</span><span class="p">),</span> <span class="s1">&#39;from=&#39;</span> <span class="o">+</span>
+                      <span class="nb">str</span><span class="p">(</span><span class="n">beg1</span><span class="p">),</span> <span class="s1">&#39;to=&#39;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">end1</span><span class="p">),</span> <span class="s1">&#39;periodType=hour&#39;</span><span class="p">]</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+                <span class="c1"># impact of sleeping here is quite small in comparison to 50s query length</span>
+                <span class="c1"># rate limiting Gateway Timeouts</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">getDataFrame</span><span class="p">(</span><span class="s1">&#39;operationaldata&#39;</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span>
+                <span class="n">df</span><span class="p">[</span><span class="s1">&#39;periodfrom&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;periodfrom&#39;</span><span class="p">],</span> <span class="n">infer_datetime_format</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">df</span><span class="p">[</span><span class="s1">&#39;periodto&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s1">&#39;periodto&#39;</span><span class="p">],</span> <span class="n">infer_datetime_format</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+                        <span class="n">df</span><span class="o">.</span><span class="n">to_sql</span><span class="p">(</span><span class="n">tbl_name</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">if_exists</span><span class="o">=</span><span class="s1">&#39;append&#39;</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="c1"># allow adding a new column or converting type</span>
+                    <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+                        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;handling </span><span class="si">{</span><span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s1"> by concat&#39;</span><span class="p">)</span>
+                        <span class="c1"># merge old data with new data</span>
+                        <span class="n">prev</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql_query</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s1">&#39;select * from </span><span class="si">{</span><span class="n">tbl_name</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">conn</span><span class="p">)</span>
+                        <span class="n">dat</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">prev</span><span class="p">,</span> <span class="n">df</span><span class="p">])</span>
+                        <span class="c1"># convert type as pandas needs it</span>
+                        <span class="n">dat</span><span class="o">.</span><span class="n">to_sql</span><span class="p">(</span><span class="n">tbl_name</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">if_exists</span><span class="o">=</span><span class="s1">&#39;replace&#39;</span><span class="p">)</span>
+                        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;replaced table </span><span class="si">{</span><span class="n">tbl_name</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+                    <span class="n">query_create_hypertable</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;SELECT create_hypertable(&#39;</span><span class="si">{</span><span class="n">tbl_name</span><span class="si">}</span><span class="s2">&#39;, &#39;periodfrom&#39;, if_not_exists =&gt; TRUE, migrate_data =&gt; TRUE);&quot;</span>
+                    <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query_create_hypertable</span><span class="p">)</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;created hypertable </span><span class="si">{</span><span class="n">tbl_name</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;could not create hypertable </span><span class="si">{</span><span class="n">tbl_name</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="c1"># sqlite will only use one index. EXPLAIN QUERY PLAIN shows if index is used</span>
+        <span class="c1"># ref: https://www.sqlite.org/optoverview.html#or_optimizations</span>
+        <span class="c1"># reference https://stackoverflow.com/questions/31031561/sqlite-query-to-get-the-closest-datetime</span>
+        <span class="k">if</span> <span class="s1">&#39;Allocation&#39;</span> <span class="ow">in</span> <span class="n">indicators</span><span class="p">:</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+                <span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="s1">&#39;CREATE INDEX IF NOT EXISTS &quot;idx_opdata&quot; ON Allocation (operatorKey,periodfrom);&#39;</span><span class="p">)</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+
+                <span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="s1">&#39;CREATE INDEX IF NOT EXISTS &quot;idx_pointKey&quot; ON Allocation (pointKey,periodfrom);&#39;</span><span class="p">)</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s1">&#39;Physical Flow&#39;</span> <span class="ow">in</span> <span class="n">indicators</span><span class="p">:</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+                <span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="s1">&#39;CREATE INDEX IF NOT EXISTS &quot;idx_phys_operator&quot; ON Physical_Flow (operatorKey,periodfrom);&#39;</span><span class="p">)</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+
+                <span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="s1">&#39;CREATE INDEX IF NOT EXISTS &quot;idx_phys_point&quot; ON Physical_Flow (pointKey,periodfrom);&#39;</span><span class="p">)</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="s1">&#39;Firm Technical&#39;</span> <span class="ow">in</span> <span class="n">indicators</span><span class="p">:</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+                <span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="s1">&#39;CREATE INDEX IF NOT EXISTS &quot;idx_ft_opdata&quot; ON Firm_Technical (operatorKey,periodfrom);&#39;</span><span class="p">)</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+
+                <span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="s1">&#39;CREATE INDEX IF NOT EXISTS &quot;idx_ft_pointKey&quot; ON Firm_Technical (pointKey,periodfrom);&#39;</span><span class="p">)</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span></div></div>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">database</span> <span class="o">=</span> <span class="s1">&#39;data/entsog.db&#39;</span>
+    <span class="kn">import</span> <span class="nn">os</span>
+    <span class="n">craw</span> <span class="o">=</span> <span class="n">EntsogCrawler</span><span class="p">(</span><span class="n">database</span><span class="p">)</span>
+
+    <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;cmpUnsuccessfulRequests&#39;</span><span class="p">,</span>
+             <span class="c1"># &#39;operationaldata&#39;,</span>
+             <span class="c1"># &#39;cmpUnavailables&#39;,</span>
+             <span class="c1"># &#39;cmpAuctions&#39;,</span>
+             <span class="c1"># &#39;AggregatedData&#39;, # operationaldata aggregated for each zone</span>
+             <span class="c1"># &#39;tariffssimulations&#39;,</span>
+             <span class="c1"># &#39;tariffsfulls&#39;,</span>
+             <span class="c1"># &#39;urgentmarketmessages&#39;,</span>
+             <span class="s1">&#39;connectionpoints&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;operators&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;balancingzones&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;operatorpointdirections&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;Interconnections&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;aggregateInterconnections&#39;</span><span class="p">]</span>
+
+    <span class="n">craw</span><span class="o">.</span><span class="n">pullData</span><span class="p">(</span><span class="n">names</span><span class="p">)</span>
+
+    <span class="n">indicators</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;Physical Flow&#39;</span><span class="p">,</span> <span class="s1">&#39;Allocation&#39;</span><span class="p">,</span> <span class="s1">&#39;Firm Technical&#39;</span><span class="p">]</span>
+    <span class="n">craw</span><span class="o">.</span><span class="n">pullOperationalData</span><span class="p">(</span><span class="n">indicators</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">ENTSOE/G-Monitor</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../entsog_crawler.html">entsog_crawler module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../entsog_dash.html">entsog_dash module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../entsog_data_manager.html">entsog_data_manager module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../entsog_maploader.html">entsog_maploader module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../entsog_sqlite_manager.html">entsog_sqlite_manager module</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Florian Maurer.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.4.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

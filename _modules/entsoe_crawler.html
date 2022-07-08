@@ -1,0 +1,713 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>entsoe_crawler &#8212; ENTSOE/G-Monitor 0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for entsoe_crawler</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Created on Sun Nov 29 18:53:14 2020</span>
+
+<span class="sd">@author: maurer</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">closing</span>
+<span class="kn">import</span> <span class="nn">sqlite3</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">timedelta</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">create_engine</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
+
+<span class="kn">from</span> <span class="nn">entsoe</span> <span class="kn">import</span> <span class="n">EntsoePandasClient</span>
+<span class="kn">from</span> <span class="nn">entsoe.mappings</span> <span class="kn">import</span> <span class="n">PSRTYPE_MAPPINGS</span><span class="p">,</span> <span class="n">NEIGHBOURS</span><span class="p">,</span> <span class="n">Area</span>
+<span class="kn">from</span> <span class="nn">entsoe.exceptions</span> <span class="kn">import</span> <span class="n">NoMatchingDataError</span><span class="p">,</span> <span class="n">InvalidBusinessParameterError</span>
+<span class="kn">from</span> <span class="nn">requests.exceptions</span> <span class="kn">import</span> <span class="n">HTTPError</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">()</span>
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s1">&#39;entsoe&#39;</span><span class="p">)</span>
+<span class="n">log</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">)</span>
+
+<span class="n">from_n</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="n">to_n</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="k">for</span> <span class="n">n1</span> <span class="ow">in</span> <span class="n">NEIGHBOURS</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">n2</span> <span class="ow">in</span> <span class="n">NEIGHBOURS</span><span class="p">[</span><span class="n">n1</span><span class="p">]:</span>
+        <span class="n">from_n</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n1</span><span class="p">)</span>
+        <span class="n">to_n</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n2</span><span class="p">)</span>
+<span class="n">neighbours</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s1">&#39;from&#39;</span><span class="p">:</span> <span class="n">from_n</span><span class="p">,</span> <span class="s1">&#39;to&#39;</span><span class="p">:</span> <span class="n">to_n</span><span class="p">})</span>
+
+<span class="n">all_countries</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">Area</span><span class="p">]</span>
+
+<div class="viewcode-block" id="sanitize_series"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.sanitize_series">[docs]</a><span class="k">def</span> <span class="nf">sanitize_series</span><span class="p">(</span><span class="n">seriesname</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    replaces illegal values from a series name</span>
+<span class="sd">    for insertion into database</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    seriesname : str</span>
+<span class="sd">        name of the series</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+
+<span class="sd">    st : str</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">st</span> <span class="o">=</span> <span class="nb">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">seriesname</span><span class="p">),</span> <span class="s1">&#39;)&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">st</span> <span class="o">=</span> <span class="nb">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">st</span><span class="p">,</span> <span class="s1">&#39;(&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">st</span> <span class="o">=</span> <span class="nb">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">st</span><span class="p">,</span> <span class="s1">&#39;,&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">st</span> <span class="o">=</span> <span class="nb">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">st</span><span class="p">,</span> <span class="s2">&quot;&#39;&quot;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="n">st</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="n">st</span> <span class="o">=</span> <span class="nb">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">st</span><span class="p">,</span> <span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">st</span></div>
+
+
+<div class="viewcode-block" id="calculate_nett_generation"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.calculate_nett_generation">[docs]</a><span class="k">def</span> <span class="nf">calculate_nett_generation</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculates the difference between columns ending with _actual_aggregated and _actual_consumption.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    df : pd.DataFrame</span>
+<span class="sd">        DataFrame with columns ending with _actual_aggregated or _actual_consumption</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dat: pd.DataFrame</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">dat</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;_actual_aggregated&#39;</span><span class="p">),</span> <span class="n">dat</span><span class="o">.</span><span class="n">columns</span><span class="p">):</span>
+        <span class="n">new</span> <span class="o">=</span> <span class="nb">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="s1">&#39;_actual_aggregated&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">dif</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;_actual_consumption&#39;</span><span class="p">)</span>
+                          <span class="ow">and</span> <span class="n">x</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">new</span><span class="p">),</span> <span class="n">dat</span><span class="o">.</span><span class="n">columns</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dif</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># calc difference if both exists</span>
+            <span class="n">dat</span><span class="p">[</span><span class="n">new</span><span class="p">]</span> <span class="o">=</span> <span class="n">dat</span><span class="p">[</span><span class="n">c</span><span class="p">]</span><span class="o">-</span><span class="n">dat</span><span class="p">[</span><span class="n">dif</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+            <span class="k">del</span> <span class="n">dat</span><span class="p">[</span><span class="n">c</span><span class="p">]</span> <span class="c1"># delete handled series of our copy here</span>
+            <span class="k">del</span> <span class="n">dat</span><span class="p">[</span><span class="n">dif</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># if no consumption exists, directly return aggregated</span>
+            <span class="n">dat</span><span class="p">[</span><span class="n">new</span><span class="p">]</span> <span class="o">=</span> <span class="n">dat</span><span class="p">[</span><span class="n">c</span><span class="p">]</span>
+            <span class="k">del</span> <span class="n">dat</span><span class="p">[</span><span class="n">c</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;_actual_consumption&#39;</span><span class="p">),</span> <span class="n">dat</span><span class="o">.</span><span class="n">columns</span><span class="p">):</span>
+        <span class="c1"># if only consumption exists use the negative value</span>
+        <span class="n">new</span> <span class="o">=</span> <span class="nb">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="s1">&#39;_actual_consumption&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">dat</span><span class="p">[</span><span class="n">new</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">dat</span><span class="p">[</span><span class="n">c</span><span class="p">]</span>
+        <span class="k">del</span> <span class="n">dat</span><span class="p">[</span><span class="n">c</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">dat</span></div>
+
+
+<div class="viewcode-block" id="EntsoeCrawler"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler">[docs]</a><span class="k">class</span> <span class="nc">EntsoeCrawler</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    class to allow easier crawling of ENTSO-E timeseries data</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    database: str</span>
+<span class="sd">        database connection string or path to sqlite db</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">database</span><span class="p">):</span>
+        <span class="c1"># choice between pg and sqlite</span>
+        <span class="k">if</span> <span class="n">database</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;postgresql&#39;</span><span class="p">):</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">engine</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="n">database</span><span class="p">)</span>
+            <span class="nd">@contextmanager</span>
+            <span class="k">def</span> <span class="nf">access_db</span><span class="p">():</span>
+                <span class="sd">&quot;&quot;&quot;contextmanager to handle opening of db, similar to closing for sqlite3&quot;&quot;&quot;</span>
+                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">,</span> <span class="n">conn</span><span class="o">.</span><span class="n">begin</span><span class="p">():</span>
+                    <span class="k">yield</span> <span class="n">conn</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span> <span class="o">=</span> <span class="n">access_db</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">closing</span><span class="p">(</span><span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">database</span><span class="p">))</span>
+
+<div class="viewcode-block" id="EntsoeCrawler.init_base_sql"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.init_base_sql">[docs]</a>    <span class="k">def</span> <span class="nf">init_base_sql</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        write static data to database once</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">psrtype</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span>
+            <span class="n">PSRTYPE_MAPPINGS</span><span class="p">,</span> <span class="n">orient</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;prod_type&#39;</span><span class="p">])</span>
+        <span class="n">areas</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([[</span><span class="n">e</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">tz</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">meaning</span><span class="p">]</span>
+                              <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">Area</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;value&#39;</span><span class="p">,</span> <span class="s1">&#39;tz&#39;</span><span class="p">,</span> <span class="s1">&#39;meaning&#39;</span><span class="p">])</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">areas</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">areas</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+            <span class="n">psrtype</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">psrtype</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+            <span class="n">areas</span><span class="o">.</span><span class="n">to_sql</span><span class="p">(</span><span class="s1">&#39;areas&#39;</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">if_exists</span><span class="o">=</span><span class="s1">&#39;replace&#39;</span><span class="p">)</span>
+            <span class="n">psrtype</span><span class="o">.</span><span class="n">to_sql</span><span class="p">(</span><span class="s1">&#39;psrtype&#39;</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">if_exists</span><span class="o">=</span><span class="s1">&#39;replace&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="EntsoeCrawler.fetch_and_write_entsoe_df_to_db"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.fetch_and_write_entsoe_df_to_db">[docs]</a>    <span class="k">def</span> <span class="nf">fetch_and_write_entsoe_df_to_db</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">country</span><span class="p">,</span> <span class="n">proc</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Crawl data from ENTSO-E transparency platform and write it to the database</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        country : str</span>
+<span class="sd">            2-letter country code</span>
+<span class="sd">        proc :</span>
+<span class="sd">            procedure of entsoe-py client</span>
+<span class="sd">        start : pd.Timestamp</span>
+<span class="sd">            start time</span>
+<span class="sd">        end : pd.Timestamp</span>
+<span class="sd">            end time</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">proc</span><span class="p">(</span><span class="n">country</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="n">end</span><span class="p">))</span>
+            <span class="k">except</span> <span class="n">NoMatchingDataError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">e</span>
+            <span class="k">except</span> <span class="n">HTTPError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span><span class="si">}</span><span class="s1"> - </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">reason</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">==</span> <span class="mi">400</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">e</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;retrying: </span><span class="si">{</span><span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">start</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">end</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+                    <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">proc</span><span class="p">(</span><span class="n">country</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="n">end</span><span class="p">))</span>
+
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;retrying: </span><span class="si">{</span><span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">start</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">end</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">proc</span><span class="p">(</span><span class="n">country</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="n">end</span><span class="p">))</span>
+
+            <span class="c1"># replace spaces and invalid chars in column names</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">sanitize_series</span><span class="p">(</span><span class="n">x</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="c1"># XXX could have used nett=True in entsoe-py client</span>
+            <span class="c1"># calculate difference betweeen agg and consumption</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">calculate_nett_generation</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+            <span class="c1"># add country column</span>
+            <span class="n">data</span><span class="p">[</span><span class="s1">&#39;country&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">country</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+                    <span class="n">data</span><span class="o">.</span><span class="n">to_sql</span><span class="p">(</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">if_exists</span><span class="o">=</span><span class="s1">&#39;append&#39;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;handling </span><span class="si">{</span><span class="nb">repr</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s1"> by concat&#39;</span><span class="p">)</span>
+                    <span class="c1"># merge old data with new data</span>
+                    <span class="n">prev</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql_query</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s1">&#39;select * from </span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">)</span>
+                    <span class="n">dat</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">prev</span><span class="p">,</span> <span class="n">data</span><span class="p">])</span>
+                    <span class="c1"># convert type as pandas needs it</span>
+                    <span class="n">dat</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">dat</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;datetime64[ns]&#39;</span><span class="p">)</span>
+                    <span class="n">dat</span><span class="o">.</span><span class="n">to_sql</span><span class="p">(</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">if_exists</span><span class="o">=</span><span class="s1">&#39;replace&#39;</span><span class="p">)</span>
+                    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;replaced table </span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">NoMatchingDataError</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;no data found for </span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">country</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">start</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">end</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;error downloading </span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">country</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">start</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">end</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="EntsoeCrawler.get_latest_crawled_timestamp"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.get_latest_crawled_timestamp">[docs]</a>    <span class="k">def</span> <span class="nf">get_latest_crawled_timestamp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">tablename</span><span class="p">,</span> <span class="n">tz</span><span class="o">=</span><span class="s1">&#39;Europe/Berlin&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find the best Start for the given procedurename by finding the last timestemp where data was collected for.</span>
+<span class="sd">        Also calculates the best delta to update until today.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        start : pd.Timestamp </span>
+<span class="sd">        delta : pd.Timedelta</span>
+<span class="sd">            to check if a delta has already been set</span>
+<span class="sd">        tablename : str</span>
+<span class="sd">            name of the table</span>
+<span class="sd">        tz :  str</span>
+<span class="sd">            (Default value = &#39;Europe/Berlin&#39;)</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        type</span>
+<span class="sd">        start : pd.Timestamp</span>
+<span class="sd">            best start</span>
+<span class="sd">        delta : pd.Timedelta</span>
+<span class="sd">            best delta</span>
+<span class="sd">        </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">start</span> <span class="ow">and</span> <span class="n">delta</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">start</span><span class="p">,</span> <span class="n">delta</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+                    <span class="n">query</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;select max(&quot;index&quot;) from </span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">&#39;</span>
+                    <span class="n">d</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">start</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">start</span> <span class="o">=</span> <span class="n">start</span><span class="o">.</span><span class="n">tz_localize</span><span class="p">(</span><span class="s1">&#39;Europe/Berlin&#39;</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+                    <span class="c1"># if already localized</span>
+                        <span class="k">pass</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">start</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="s1">&#39;20150101&#39;</span><span class="p">,</span> <span class="n">tz</span><span class="o">=</span><span class="n">tz</span><span class="p">)</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;using default </span><span class="si">{</span><span class="n">start</span><span class="si">}</span><span class="s1"> timestamp </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+            <span class="n">end</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">tz</span><span class="o">=</span><span class="n">tz</span><span class="p">)</span>
+            <span class="n">delta</span> <span class="o">=</span> <span class="n">end</span><span class="o">-</span><span class="n">start</span>
+            <span class="k">return</span> <span class="n">start</span><span class="p">,</span> <span class="n">delta</span></div>
+
+
+<div class="viewcode-block" id="EntsoeCrawler.download_entsoe"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.download_entsoe">[docs]</a>    <span class="k">def</span> <span class="nf">download_entsoe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">countries</span><span class="p">,</span> <span class="n">proc</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">times</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Downloads data with a procedure from a EntsoePandasClient</span>
+<span class="sd">        and stores it in the configured database</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        countries : list[str]</span>
+<span class="sd">            list of country codes</span>
+<span class="sd">        proc :</span>
+<span class="sd">            procedure of entsoe-py</span>
+<span class="sd">        start : pd.Timestamp</span>
+<span class="sd">            </span>
+<span class="sd">        delta : pd.Timedelta</span>
+<span class="sd">            </span>
+<span class="sd">        times : int</span>
+<span class="sd">            </span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;****** </span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1"> *******&#39;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="p">(</span><span class="n">times</span><span class="o">*</span><span class="n">delta</span><span class="p">)</span><span class="o">.</span><span class="n">days</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;nothing to do&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">times</span><span class="p">):</span>
+            <span class="n">start_</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="n">delta</span>
+            <span class="n">end_</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">delta</span>
+            <span class="c1"># daten für jedes Land runterladen</span>
+            <span class="n">pbar</span> <span class="o">=</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">countries</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">country</span> <span class="ow">in</span> <span class="n">pbar</span><span class="p">:</span>
+                <span class="n">pbar</span><span class="o">.</span><span class="n">set_description</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">country</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">start_</span><span class="si">:</span><span class="s2">%Y-%m-%d</span><span class="si">}</span><span class="s2"> to </span><span class="si">{</span><span class="n">end_</span><span class="si">:</span><span class="s2">%Y-%m-%d</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">fetch_and_write_entsoe_df_to_db</span><span class="p">(</span><span class="n">country</span><span class="p">,</span> <span class="n">proc</span><span class="p">,</span> <span class="n">start_</span><span class="p">,</span> <span class="n">end_</span><span class="p">)</span>
+
+        <span class="c1"># indexe anlegen für schnelles suchen</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;creating index country_idx_</span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">&#39;CREATE INDEX IF NOT EXISTS &quot;country_idx_</span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">&quot; ON &quot;</span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">&quot; (&quot;country&quot;, &quot;index&quot;);&#39;</span><span class="p">)</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+                <span class="c1">#query = (f&#39;CREATE INDEX IF NOT EXISTS &quot;country_{proc.__name__}&quot; ON &quot;{proc.__name__}&quot; (&quot;country&quot;);&#39;)</span>
+                <span class="c1"># conn.execute(query)</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;created indexes country_idx_</span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;could not create index if needed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="c1"># falls es eine TimescaleDB ist, erzeuge eine Hypertable</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+                <span class="n">query_create_hypertable</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;SELECT create_hypertable(&#39;</span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&#39;, &#39;index&#39;, if_not_exists =&gt; TRUE, migrate_data =&gt; TRUE);&quot;</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query_create_hypertable</span><span class="p">)</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;created hypertable </span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;could not create hypertable: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="EntsoeCrawler.pull_crossborders"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.pull_crossborders">[docs]</a>    <span class="k">def</span> <span class="nf">pull_crossborders</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">times</span><span class="p">,</span> <span class="n">proc</span><span class="p">,</span> <span class="n">allZones</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Pulls transmissions across borders from entsoe</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        start :</span>
+<span class="sd">            param delta:</span>
+<span class="sd">        times :</span>
+<span class="sd">            param proc:</span>
+<span class="sd">        allZones :</span>
+<span class="sd">            Default value = True)</span>
+<span class="sd">        delta :</span>
+<span class="sd">            param proc:</span>
+<span class="sd">        proc :</span>
+<span class="sd">            </span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">start</span><span class="p">,</span> <span class="n">delta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_latest_crawled_timestamp</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">proc</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;****** </span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1"> *******&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">times</span><span class="o">*</span><span class="n">delta</span><span class="p">)</span><span class="o">.</span><span class="n">days</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;nothing to do&#39;</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">times</span><span class="p">):</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">()</span>
+            <span class="n">start_</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="n">delta</span>
+            <span class="n">end_</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">delta</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">start_</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">n1</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">NEIGHBOURS</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">n2</span> <span class="ow">in</span> <span class="n">NEIGHBOURS</span><span class="p">[</span><span class="n">n1</span><span class="p">]:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">n1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">n2</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span> <span class="ow">or</span> <span class="n">allZones</span><span class="p">:</span>
+                            <span class="n">dataN</span> <span class="o">=</span> <span class="n">proc</span><span class="p">(</span><span class="n">n1</span><span class="p">,</span> <span class="n">n2</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start_</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="n">end_</span><span class="p">)</span>
+                            <span class="n">data</span><span class="p">[</span><span class="n">n1</span><span class="o">+</span><span class="s1">&#39;-&#39;</span><span class="o">+</span><span class="n">n2</span><span class="p">]</span> <span class="o">=</span> <span class="n">dataN</span>
+                    <span class="k">except</span> <span class="p">(</span><span class="n">NoMatchingDataError</span><span class="p">,</span> <span class="n">InvalidBusinessParameterError</span><span class="p">):</span>
+                        <span class="c1">#log.info(&#39;no data found for &#39;,n1,n2)</span>
+                        <span class="k">pass</span>
+                    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                        <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Error crawling Crossboarders </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+            <span class="n">data</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+                    <span class="n">data</span><span class="o">.</span><span class="n">to_sql</span><span class="p">(</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">if_exists</span><span class="o">=</span><span class="s1">&#39;append&#39;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;error saving crossboarders </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="n">prev</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql_query</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s1">&#39;select * from </span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">index_col</span><span class="o">=</span><span class="s1">&#39;index&#39;</span><span class="p">)</span>
+
+                <span class="n">ges</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">prev</span><span class="p">,</span> <span class="n">data</span><span class="p">])</span>
+                <span class="n">ges</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">ges</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;datetime64[ns]&#39;</span><span class="p">)</span>
+                <span class="n">ges</span><span class="o">.</span><span class="n">to_sql</span><span class="p">(</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">if_exists</span><span class="o">=</span><span class="s1">&#39;replace&#39;</span><span class="p">)</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+                    <span class="n">query_create_hypertable</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;SELECT create_hypertable(&#39;</span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&#39;, &#39;index&#39;, if_not_exists =&gt; TRUE, migrate_data =&gt; TRUE);&quot;</span>
+                    <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query_create_hypertable</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;could not create hypertable: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="EntsoeCrawler.save_power_system_data"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.save_power_system_data">[docs]</a>    <span class="k">def</span> <span class="nf">save_power_system_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        pulls static data from opsd and reads it into the database</span>
+<span class="sd">        - used for mapping existing power plants from entsoe to a location on a map</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
+            <span class="s1">&#39;https://data.open-power-system-data.org/conventional_power_plants/latest/conventional_power_plants_EU.csv&#39;</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">,</span> <span class="s1">&#39;lat&#39;</span><span class="p">,</span> <span class="s1">&#39;eic_code&#39;</span><span class="p">])</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[[</span><span class="s1">&#39;eic_code&#39;</span><span class="p">,</span> <span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;company&#39;</span><span class="p">,</span> <span class="s1">&#39;country&#39;</span><span class="p">,</span>
+                 <span class="s1">&#39;capacity&#39;</span><span class="p">,</span> <span class="s1">&#39;energy_source&#39;</span><span class="p">,</span> <span class="s1">&#39;lon&#39;</span><span class="p">,</span> <span class="s1">&#39;lat&#39;</span><span class="p">]]</span>
+        <span class="c1"># delete those without location or eic_code</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">to_sql</span><span class="p">(</span><span class="s1">&#39;powersystemdata&#39;</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">if_exists</span><span class="o">=</span><span class="s1">&#39;replace&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">df</span></div>
+
+<div class="viewcode-block" id="EntsoeCrawler.download_entsoe_plant_data"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.download_entsoe_plant_data">[docs]</a>    <span class="k">def</span> <span class="nf">download_entsoe_plant_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">countries</span><span class="p">,</span> <span class="n">client</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">times</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Allows to download the generation per power plant from entsoe.</span>
+<span class="sd">        Uses download_entsoe to write the data into the DB.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        countries : list[str]</span>
+<span class="sd">            list of 2-letter countrycodes</span>
+<span class="sd">        client : entsoe.EntsoePandasClient</span>
+<span class="sd">            DataFrameClient of entsoe-py package</span>
+<span class="sd">        start : pd.Timestamp</span>
+<span class="sd">            timestamp aware pd.Timestamp</span>
+<span class="sd">        delta : pd.Timedelta</span>
+<span class="sd">            Timedelta to fetch data for per bulk</span>
+<span class="sd">        times : int</span>
+<span class="sd">            number of bulks with size delta to fetch</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># new proxy function</span>
+        <span class="k">def</span> <span class="nf">query_per_plant</span><span class="p">(</span><span class="n">country</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            wrapper function around query_generation_per_plant to convert multiindex</span>
+
+<span class="sd">            Parameters</span>
+<span class="sd">            ----------</span>
+<span class="sd">            country : str</span>
+<span class="sd">                country to fetch</span>
+<span class="sd">            start : pd.DateTime</span>
+<span class="sd">                param end:</span>
+<span class="sd">            end :</span>
+<span class="sd">                </span>
+
+<span class="sd">            Returns</span>
+<span class="sd">            -------</span>
+
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="n">ppp</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">query_generation_per_plant</span><span class="p">(</span>
+                <span class="n">country</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="n">end</span><span class="p">)</span>
+            <span class="c1"># convert multiindex into second column</span>
+            <span class="n">pp</span> <span class="o">=</span> <span class="n">ppp</span><span class="o">.</span><span class="n">melt</span><span class="p">(</span><span class="n">var_name</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;type&#39;</span><span class="p">],</span>
+                          <span class="n">value_name</span><span class="o">=</span><span class="s1">&#39;value&#39;</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">pp</span>
+
+        <span class="n">start_</span><span class="p">,</span> <span class="n">delta_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_latest_crawled_timestamp</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">query_per_plant</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">download_entsoe</span><span class="p">(</span><span class="n">countries</span><span class="p">,</span> <span class="n">query_per_plant</span><span class="p">,</span> <span class="n">start_</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="n">delta_</span><span class="p">,</span> <span class="n">times</span><span class="o">=</span><span class="n">times</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+                <span class="n">query</span> <span class="o">=</span> <span class="s1">&#39;CREATE INDEX IF NOT EXISTS &quot;idx_name_query_per_plant&quot; ON &quot;query_per_plant&quot; (&quot;name&quot;, &quot;index&quot;, &quot;country&quot;);&#39;</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;could not create index: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+                <span class="n">query</span> <span class="o">=</span> <span class="s1">&#39;select distinct name, country,type from query_per_plant&#39;</span>
+                <span class="n">names</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_sql_query</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">conn</span><span class="p">)</span>
+                <span class="n">names</span><span class="o">.</span><span class="n">to_sql</span><span class="p">(</span><span class="s1">&#39;plant_names&#39;</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">if_exists</span><span class="o">=</span><span class="s1">&#39;replace&#39;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;could not create plant_names: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="EntsoeCrawler.countries_with_plant_data"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.countries_with_plant_data">[docs]</a>    <span class="k">def</span> <span class="nf">countries_with_plant_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">client</span><span class="p">,</span> <span class="n">countries</span><span class="o">=</span><span class="n">all_countries</span><span class="p">,</span> <span class="n">st</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="s1">&#39;20180101&#39;</span><span class="p">,</span> <span class="n">tz</span><span class="o">=</span><span class="s1">&#39;Europe/Berlin&#39;</span><span class="p">)):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        checks for all countries if the have available data at date.</span>
+<span class="sd">        Returns list of countries with existing generation data per plant at given timestamp</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        client : entsoe.EntsoePandasClient</span>
+<span class="sd">        countries : list[str], default all_countries</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        plant_countries : list[str]</span>
+<span class="sd">            list of country_codes with existing data for generation per plant</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">plant_countries</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">country</span> <span class="ow">in</span> <span class="n">countries</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">_</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">query_generation_per_plant</span><span class="p">(</span>
+                    <span class="n">country</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">st</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="n">st</span><span class="o">+</span><span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+                <span class="n">plant_countries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">country</span><span class="p">)</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;found data for </span><span class="si">{</span><span class="n">country</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="k">continue</span>
+        <span class="k">return</span> <span class="n">plant_countries</span></div>
+
+<div class="viewcode-block" id="EntsoeCrawler.update_database"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.update_database">[docs]</a>    <span class="k">def</span> <span class="nf">update_database</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">client</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">countries</span><span class="o">=</span><span class="n">all_countries</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Runs everything which is needed to update the database and pull the data since the last successful pull.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        client : entsoe.EntsoePandasClient</span>
+<span class="sd">            entsoe-py client</span>
+<span class="sd">        delta : pd.Timedelta</span>
+<span class="sd">        countries : list[str], default all_countries</span>
+<span class="sd">        start : pd.Timestamp</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">proc_cap</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">query_installed_generation_capacity</span>
+        <span class="n">start_</span><span class="p">,</span> <span class="n">delta_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_latest_crawled_timestamp</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">proc_cap</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">delta_</span><span class="o">.</span><span class="n">days</span> <span class="o">&gt;</span> <span class="mi">365</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">download_entsoe</span><span class="p">(</span><span class="n">countries</span><span class="p">,</span> <span class="n">proc_cap</span><span class="p">,</span>
+                            <span class="n">start_</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="n">delta_</span><span class="p">,</span> <span class="n">times</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># timeseries</span>
+        <span class="n">ts_procs</span> <span class="o">=</span> <span class="p">[</span><span class="n">client</span><span class="o">.</span><span class="n">query_day_ahead_prices</span><span class="p">,</span>
+                    <span class="n">client</span><span class="o">.</span><span class="n">query_load</span><span class="p">,</span>
+                    <span class="n">client</span><span class="o">.</span><span class="n">query_load_forecast</span><span class="p">,</span>
+                    <span class="n">client</span><span class="o">.</span><span class="n">query_generation_forecast</span><span class="p">,</span>
+                    <span class="n">client</span><span class="o">.</span><span class="n">query_wind_and_solar_forecast</span><span class="p">,</span>
+                    <span class="n">client</span><span class="o">.</span><span class="n">query_generation</span><span class="p">]</span>
+
+        <span class="c1"># Download load and generation</span>
+        <span class="c1"># hier könnte man parallelisieren</span>
+        <span class="k">for</span> <span class="n">proc</span> <span class="ow">in</span> <span class="n">ts_procs</span><span class="p">:</span>
+            <span class="n">start_</span><span class="p">,</span> <span class="n">delta_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_latest_crawled_timestamp</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">download_entsoe</span><span class="p">(</span><span class="n">countries</span><span class="p">,</span> <span class="n">proc</span><span class="p">,</span> <span class="n">start_</span><span class="p">,</span> <span class="n">delta_</span><span class="p">,</span> <span class="n">times</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">pull_crossborders</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">client</span><span class="o">.</span><span class="n">query_crossborder_flows</span><span class="p">)</span>
+
+        <span class="n">plant_countries</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">countries_with_plant_data</span><span class="p">(</span><span class="n">client</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">download_entsoe_plant_data</span><span class="p">(</span>
+            <span class="n">plant_countries</span><span class="p">[:],</span> <span class="n">client</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">times</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="EntsoeCrawler.create_database"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.create_database">[docs]</a>    <span class="k">def</span> <span class="nf">create_database</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">client</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">countries</span><span class="o">=</span><span class="p">[]):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        client : entsoe.EntsoePandasClient</span>
+<span class="sd">            param start:</span>
+<span class="sd">        delta :</span>
+<span class="sd">            param countries:  (Default value = [])</span>
+<span class="sd">        start :</span>
+<span class="sd">            param countries:  (Default value = [])</span>
+<span class="sd">        countries :</span>
+<span class="sd">             (Default value = [])</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">init_base_sql</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">save_power_system_data</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">download_entsoe</span><span class="p">(</span><span class="n">countries</span><span class="p">,</span> <span class="n">client</span><span class="o">.</span><span class="n">query_installed_generation_capacity_per_unit</span><span class="p">,</span>
+                            <span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="n">delta</span><span class="p">,</span> <span class="n">times</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;ENTSOE&#39;</span><span class="p">)</span>
+
+    <span class="n">client</span> <span class="o">=</span> <span class="n">EntsoePandasClient</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="s1">&#39;ae2ed060-c25c-4eea-8ae4-007712f95375&#39;</span><span class="p">)</span>
+
+    <span class="n">start</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="s1">&#39;20150101&#39;</span><span class="p">,</span> <span class="n">tz</span><span class="o">=</span><span class="s1">&#39;Europe/Berlin&#39;</span><span class="p">)</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
+    <span class="n">end</span> <span class="o">=</span> <span class="n">start</span><span class="o">+</span><span class="n">delta</span>
+
+    <span class="n">times</span> <span class="o">=</span> <span class="mi">7</span><span class="o">*</span><span class="mi">12</span>  <span class="c1"># bis 2022</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="s1">&#39;postgresql://entso:entso@localhost:5432/entsoe&#39;</span>
+    <span class="c1">#db = &#39;data/entsoe.db&#39;</span>
+
+    <span class="n">crawler</span> <span class="o">=</span> <span class="n">EntsoeCrawler</span><span class="p">(</span><span class="n">database</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">procs</span> <span class="o">=</span> <span class="p">[</span><span class="n">client</span><span class="o">.</span><span class="n">query_day_ahead_prices</span><span class="p">,</span>
+             <span class="n">client</span><span class="o">.</span><span class="n">query_net_position</span><span class="p">,</span>
+             <span class="n">client</span><span class="o">.</span><span class="n">query_load</span><span class="p">,</span>
+             <span class="n">client</span><span class="o">.</span><span class="n">query_load_forecast</span><span class="p">,</span>
+             <span class="n">client</span><span class="o">.</span><span class="n">query_generation_forecast</span><span class="p">,</span>
+             <span class="n">client</span><span class="o">.</span><span class="n">query_wind_and_solar_forecast</span><span class="p">,</span>
+             <span class="n">client</span><span class="o">.</span><span class="n">query_generation</span><span class="p">]</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="c1"># Download load and generation</span>
+    <span class="k">for</span> <span class="n">proc</span> <span class="ow">in</span> <span class="n">procs</span><span class="p">:</span>
+        <span class="c1"># hier könnte man parallelisieren</span>
+        <span class="n">crawler</span><span class="o">.</span><span class="n">download_entsoe</span><span class="p">(</span><span class="n">countries</span><span class="p">,</span> <span class="n">proc</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">times</span><span class="p">)</span>
+
+    <span class="c1"># Capacities</span>
+    <span class="n">procs</span> <span class="o">=</span> <span class="p">[</span><span class="n">client</span><span class="o">.</span><span class="n">query_installed_generation_capacity</span><span class="p">,</span>
+             <span class="n">client</span><span class="o">.</span><span class="n">query_installed_generation_capacity_per_unit</span><span class="p">]</span>
+
+    <span class="c1"># crawler.pull_crossborders(start,delta,1,client.query_crossborder_flows)</span>
+
+    <span class="c1"># per plant generation</span>
+    <span class="n">crawler</span><span class="o">.</span><span class="n">countries_with_plant_data</span><span class="p">(</span><span class="n">client</span><span class="p">,</span> <span class="n">all_countries</span><span class="p">)</span>
+
+    <span class="c1">#db = &#39;data/entsoe.db&#39;</span>
+    <span class="n">crawler</span> <span class="o">=</span> <span class="n">EntsoeCrawler</span><span class="p">(</span><span class="n">database</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
+
+    <span class="c1"># 2017-12-16 bis 2018-03-15 runterladen</span>
+    <span class="n">crawler</span><span class="o">.</span><span class="n">download_entsoe_plant_data</span><span class="p">(</span>
+        <span class="n">plant_countries</span><span class="p">[:],</span> <span class="n">client</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">times</span><span class="p">)</span>
+
+    <span class="c1"># create indices if not existing</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">ENTSOE/G-Monitor</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../entsog_crawler.html">entsog_crawler module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../entsog_dash.html">entsog_dash module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../entsog_data_manager.html">entsog_data_manager module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../entsog_maploader.html">entsog_maploader module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../entsog_sqlite_manager.html">entsog_sqlite_manager module</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2022, Florian Maurer.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.4.0</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

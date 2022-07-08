@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>entsoe_crawler module &mdash; ENTSOE/G-Monitor 0.1 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="entsoe_dash module" href="entsoe_dash.html" />
+    <link rel="prev" title="Welcome to ENTSOE/G-Monitor’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> ENTSOE/G-Monitor
+          </a>
+              <div class="version">
+                0.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">entsoe_crawler module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="entsoe_dash.html">entsoe_dash module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="entsoe_data_manager.html">entsoe_data_manager module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="entsoe_sqlite_manager.html">entsoe_sqlite_manager module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="entsog_crawler.html">entsog_crawler module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="entsog_dash.html">entsog_dash module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="entsog_data_manager.html">entsog_data_manager module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="entsog_maploader.html">entsog_maploader module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="entsog_sqlite_manager.html">entsog_sqlite_manager module</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">ENTSOE/G-Monitor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>entsoe_crawler module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/entsoe_crawler.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-entsoe_crawler">
+<span id="entsoe-crawler-module"></span><h1>entsoe_crawler module<a class="headerlink" href="#module-entsoe_crawler" title="Permalink to this headline"></a></h1>
+<p>Created on Sun Nov 29 18:53:14 2020</p>
+<p>&#64;author: maurer</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="entsoe_crawler.EntsoeCrawler">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">entsoe_crawler.</span></span><span class="sig-name descname"><span class="pre">EntsoeCrawler</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_crawler.html#EntsoeCrawler"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_crawler.EntsoeCrawler" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>class to allow easier crawling of ENTSO-E timeseries data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>database: str</strong></dt><dd><p>database connection string or path to sqlite db</p>
+</dd>
+</dl>
+</dd>
+</dl>
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#entsoe_crawler.EntsoeCrawler.countries_with_plant_data" title="entsoe_crawler.EntsoeCrawler.countries_with_plant_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">countries_with_plant_data</span></code></a>(client[, ...])</p></td>
+<td><p>checks for all countries if the have available data at date.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#entsoe_crawler.EntsoeCrawler.create_database" title="entsoe_crawler.EntsoeCrawler.create_database"><code class="xref py py-obj docutils literal notranslate"><span class="pre">create_database</span></code></a>(client, start, delta[, ...])</p></td>
+<td><p><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p></p></dd>
+</dl>
+</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#entsoe_crawler.EntsoeCrawler.download_entsoe" title="entsoe_crawler.EntsoeCrawler.download_entsoe"><code class="xref py py-obj docutils literal notranslate"><span class="pre">download_entsoe</span></code></a>(countries, proc, start, ...)</p></td>
+<td><p>Downloads data with a procedure from a EntsoePandasClient and stores it in the configured database</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#entsoe_crawler.EntsoeCrawler.download_entsoe_plant_data" title="entsoe_crawler.EntsoeCrawler.download_entsoe_plant_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">download_entsoe_plant_data</span></code></a>(countries, ...)</p></td>
+<td><p>Allows to download the generation per power plant from entsoe.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#entsoe_crawler.EntsoeCrawler.fetch_and_write_entsoe_df_to_db" title="entsoe_crawler.EntsoeCrawler.fetch_and_write_entsoe_df_to_db"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fetch_and_write_entsoe_df_to_db</span></code></a>(country, ...)</p></td>
+<td><p>Crawl data from ENTSO-E transparency platform and write it to the database</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#entsoe_crawler.EntsoeCrawler.get_latest_crawled_timestamp" title="entsoe_crawler.EntsoeCrawler.get_latest_crawled_timestamp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_latest_crawled_timestamp</span></code></a>(start, delta, ...)</p></td>
+<td><p>Find the best Start for the given procedurename by finding the last timestemp where data was collected for.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#entsoe_crawler.EntsoeCrawler.init_base_sql" title="entsoe_crawler.EntsoeCrawler.init_base_sql"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_base_sql</span></code></a>()</p></td>
+<td><p>write static data to database once</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#entsoe_crawler.EntsoeCrawler.pull_crossborders" title="entsoe_crawler.EntsoeCrawler.pull_crossborders"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pull_crossborders</span></code></a>(start, delta, times, proc)</p></td>
+<td><p>Pulls transmissions across borders from entsoe</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#entsoe_crawler.EntsoeCrawler.save_power_system_data" title="entsoe_crawler.EntsoeCrawler.save_power_system_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save_power_system_data</span></code></a>()</p></td>
+<td><p>pulls static data from opsd and reads it into the database - used for mapping existing power plants from entsoe to a location on a map</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#entsoe_crawler.EntsoeCrawler.update_database" title="entsoe_crawler.EntsoeCrawler.update_database"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_database</span></code></a>(client[, start, delta, ...])</p></td>
+<td><p>Runs everything which is needed to update the database and pull the data since the last successful pull.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt class="sig sig-object py" id="entsoe_crawler.EntsoeCrawler.countries_with_plant_data">
+<span class="sig-name descname"><span class="pre">countries_with_plant_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">countries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['DE_50HZ',</span> <span class="pre">'AL',</span> <span class="pre">'DE_AMPRION',</span> <span class="pre">'AT',</span> <span class="pre">'BY',</span> <span class="pre">'BE',</span> <span class="pre">'BA',</span> <span class="pre">'BG',</span> <span class="pre">'CZ_DE_SK',</span> <span class="pre">'HR',</span> <span class="pre">'CWE',</span> <span class="pre">'CY',</span> <span class="pre">'CZ',</span> <span class="pre">'DE_AT_LU',</span> <span class="pre">'DE_LU',</span> <span class="pre">'DK',</span> <span class="pre">'DK_1',</span> <span class="pre">'DK_2',</span> <span class="pre">'DK_CA',</span> <span class="pre">'EE',</span> <span class="pre">'FI',</span> <span class="pre">'MK',</span> <span class="pre">'FR',</span> <span class="pre">'DE',</span> <span class="pre">'GR',</span> <span class="pre">'HU',</span> <span class="pre">'IS',</span> <span class="pre">'IE_SEM',</span> <span class="pre">'IE',</span> <span class="pre">'IT',</span> <span class="pre">'IT_SACO_AC',</span> <span class="pre">'IT_CALA',</span> <span class="pre">'IT_SACO_DC',</span> <span class="pre">'IT_BRNN',</span> <span class="pre">'IT_CNOR',</span> <span class="pre">'IT_CSUD',</span> <span class="pre">'IT_FOGN',</span> <span class="pre">'IT_GR',</span> <span class="pre">'IT_MACRO_NORTH',</span> <span class="pre">'IT_MACRO_SOUTH',</span> <span class="pre">'IT_MALTA',</span> <span class="pre">'IT_NORD',</span> <span class="pre">'IT_NORD_AT',</span> <span class="pre">'IT_NORD_CH',</span> <span class="pre">'IT_NORD_FR',</span> <span class="pre">'IT_NORD_SI',</span> <span class="pre">'IT_PRGP',</span> <span class="pre">'IT_ROSN',</span> <span class="pre">'IT_SARD',</span> <span class="pre">'IT_SICI',</span> <span class="pre">'IT_SUD',</span> <span class="pre">'RU_KGD',</span> <span class="pre">'LV',</span> <span class="pre">'LT',</span> <span class="pre">'LU',</span> <span class="pre">'MT',</span> <span class="pre">'ME',</span> <span class="pre">'GB',</span> <span class="pre">'GB_IFA',</span> <span class="pre">'GB_IFA2',</span> <span class="pre">'GB_ELECLINK',</span> <span class="pre">'UK',</span> <span class="pre">'NL',</span> <span class="pre">'NO_1',</span> <span class="pre">'NO_2',</span> <span class="pre">'NO_2_NSL',</span> <span class="pre">'NO_3',</span> <span class="pre">'NO_4',</span> <span class="pre">'NO_5',</span> <span class="pre">'NO',</span> <span class="pre">'PL_CZ',</span> <span class="pre">'PL',</span> <span class="pre">'PT',</span> <span class="pre">'MD',</span> <span class="pre">'RO',</span> <span class="pre">'RU',</span> <span class="pre">'SE_1',</span> <span class="pre">'SE_2',</span> <span class="pre">'SE_3',</span> <span class="pre">'SE_4',</span> <span class="pre">'RS',</span> <span class="pre">'SK',</span> <span class="pre">'SI',</span> <span class="pre">'GB_NIR',</span> <span class="pre">'ES',</span> <span class="pre">'SE',</span> <span class="pre">'CH',</span> <span class="pre">'DE_TENNET',</span> <span class="pre">'DE_TRANSNET',</span> <span class="pre">'TR',</span> <span class="pre">'UA',</span> <span class="pre">'UA_DOBTPP',</span> <span class="pre">'UA_BEI',</span> <span class="pre">'UA_IPS',</span> <span class="pre">'XK']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">st</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">Timestamp('2018-01-01</span> <span class="pre">00:00:00+0100',</span> <span class="pre">tz='Europe/Berlin')</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_crawler.html#EntsoeCrawler.countries_with_plant_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_crawler.EntsoeCrawler.countries_with_plant_data" title="Permalink to this definition"></a></dt>
+<dd><p>checks for all countries if the have available data at date.
+Returns list of countries with existing generation data per plant at given timestamp</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>client</strong><span class="classifier">entsoe.EntsoePandasClient</span></dt><dd></dd>
+<dt><strong>countries</strong><span class="classifier">list[str], default all_countries</span></dt><dd></dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>plant_countries</strong><span class="classifier">list[str]</span></dt><dd><p>list of country_codes with existing data for generation per plant</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="entsoe_crawler.EntsoeCrawler.create_database">
+<span class="sig-name descname"><span class="pre">create_database</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">countries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_crawler.html#EntsoeCrawler.create_database"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_crawler.EntsoeCrawler.create_database" title="Permalink to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>client</strong><span class="classifier">entsoe.EntsoePandasClient</span></dt><dd><p>param start:</p>
+</dd>
+<dt><strong>delta</strong></dt><dd><p>param countries:  (Default value = [])</p>
+</dd>
+<dt><strong>start</strong></dt><dd><p>param countries:  (Default value = [])</p>
+</dd>
+<dt><strong>countries</strong></dt><dd><p>(Default value = [])</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"></dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="entsoe_crawler.EntsoeCrawler.download_entsoe">
+<span class="sig-name descname"><span class="pre">download_entsoe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">countries</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">proc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_crawler.html#EntsoeCrawler.download_entsoe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_crawler.EntsoeCrawler.download_entsoe" title="Permalink to this definition"></a></dt>
+<dd><p>Downloads data with a procedure from a EntsoePandasClient
+and stores it in the configured database</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>countries</strong><span class="classifier">list[str]</span></dt><dd><p>list of country codes</p>
+</dd>
+<dt><strong>proc</strong></dt><dd><p>procedure of entsoe-py</p>
+</dd>
+<dt><strong>start</strong><span class="classifier">pd.Timestamp</span></dt><dd></dd>
+<dt><strong>delta</strong><span class="classifier">pd.Timedelta</span></dt><dd></dd>
+<dt><strong>times</strong><span class="classifier">int</span></dt><dd></dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"></dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="entsoe_crawler.EntsoeCrawler.download_entsoe_plant_data">
+<span class="sig-name descname"><span class="pre">download_entsoe_plant_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">countries</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">client</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_crawler.html#EntsoeCrawler.download_entsoe_plant_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_crawler.EntsoeCrawler.download_entsoe_plant_data" title="Permalink to this definition"></a></dt>
+<dd><p>Allows to download the generation per power plant from entsoe.
+Uses download_entsoe to write the data into the DB.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>countries</strong><span class="classifier">list[str]</span></dt><dd><p>list of 2-letter countrycodes</p>
+</dd>
+<dt><strong>client</strong><span class="classifier">entsoe.EntsoePandasClient</span></dt><dd><p>DataFrameClient of entsoe-py package</p>
+</dd>
+<dt><strong>start</strong><span class="classifier">pd.Timestamp</span></dt><dd><p>timestamp aware pd.Timestamp</p>
+</dd>
+<dt><strong>delta</strong><span class="classifier">pd.Timedelta</span></dt><dd><p>Timedelta to fetch data for per bulk</p>
+</dd>
+<dt><strong>times</strong><span class="classifier">int</span></dt><dd><p>number of bulks with size delta to fetch</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"></dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="entsoe_crawler.EntsoeCrawler.fetch_and_write_entsoe_df_to_db">
+<span class="sig-name descname"><span class="pre">fetch_and_write_entsoe_df_to_db</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">country</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">proc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_crawler.html#EntsoeCrawler.fetch_and_write_entsoe_df_to_db"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_crawler.EntsoeCrawler.fetch_and_write_entsoe_df_to_db" title="Permalink to this definition"></a></dt>
+<dd><p>Crawl data from ENTSO-E transparency platform and write it to the database</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>country</strong><span class="classifier">str</span></dt><dd><p>2-letter country code</p>
+</dd>
+<dt><strong>proc</strong></dt><dd><p>procedure of entsoe-py client</p>
+</dd>
+<dt><strong>start</strong><span class="classifier">pd.Timestamp</span></dt><dd><p>start time</p>
+</dd>
+<dt><strong>end</strong><span class="classifier">pd.Timestamp</span></dt><dd><p>end time</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"></dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="entsoe_crawler.EntsoeCrawler.get_latest_crawled_timestamp">
+<span class="sig-name descname"><span class="pre">get_latest_crawled_timestamp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tablename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tz</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Europe/Berlin'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_crawler.html#EntsoeCrawler.get_latest_crawled_timestamp"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_crawler.EntsoeCrawler.get_latest_crawled_timestamp" title="Permalink to this definition"></a></dt>
+<dd><p>Find the best Start for the given procedurename by finding the last timestemp where data was collected for.
+Also calculates the best delta to update until today.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>start</strong><span class="classifier">pd.Timestamp</span></dt><dd></dd>
+<dt><strong>delta</strong><span class="classifier">pd.Timedelta</span></dt><dd><p>to check if a delta has already been set</p>
+</dd>
+<dt><strong>tablename</strong><span class="classifier">str</span></dt><dd><p>name of the table</p>
+</dd>
+<dt><strong>tz</strong><span class="classifier">str</span></dt><dd><p>(Default value = ‘Europe/Berlin’)</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt>type</dt><dd></dd>
+<dt><strong>start</strong><span class="classifier">pd.Timestamp</span></dt><dd><p>best start</p>
+</dd>
+<dt><strong>delta</strong><span class="classifier">pd.Timedelta</span></dt><dd><p>best delta</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="entsoe_crawler.EntsoeCrawler.init_base_sql">
+<span class="sig-name descname"><span class="pre">init_base_sql</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_crawler.html#EntsoeCrawler.init_base_sql"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_crawler.EntsoeCrawler.init_base_sql" title="Permalink to this definition"></a></dt>
+<dd><p>write static data to database once</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="entsoe_crawler.EntsoeCrawler.pull_crossborders">
+<span class="sig-name descname"><span class="pre">pull_crossborders</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">times</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">proc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">allZones</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_crawler.html#EntsoeCrawler.pull_crossborders"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_crawler.EntsoeCrawler.pull_crossborders" title="Permalink to this definition"></a></dt>
+<dd><p>Pulls transmissions across borders from entsoe</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>start</strong></dt><dd><p>param delta:</p>
+</dd>
+<dt><strong>times</strong></dt><dd><p>param proc:</p>
+</dd>
+<dt><strong>allZones</strong></dt><dd><p>Default value = True)</p>
+</dd>
+<dt><strong>delta</strong></dt><dd><p>param proc:</p>
+</dd>
+<dt><strong>proc</strong></dt><dd></dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"></dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="entsoe_crawler.EntsoeCrawler.save_power_system_data">
+<span class="sig-name descname"><span class="pre">save_power_system_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_crawler.html#EntsoeCrawler.save_power_system_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_crawler.EntsoeCrawler.save_power_system_data" title="Permalink to this definition"></a></dt>
+<dd><p>pulls static data from opsd and reads it into the database
+- used for mapping existing power plants from entsoe to a location on a map</p>
+<dl class="field-list">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><blockquote>
+<div></div></blockquote>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"></dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="entsoe_crawler.EntsoeCrawler.update_database">
+<span class="sig-name descname"><span class="pre">update_database</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">client</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">countries</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['DE_50HZ',</span> <span class="pre">'AL',</span> <span class="pre">'DE_AMPRION',</span> <span class="pre">'AT',</span> <span class="pre">'BY',</span> <span class="pre">'BE',</span> <span class="pre">'BA',</span> <span class="pre">'BG',</span> <span class="pre">'CZ_DE_SK',</span> <span class="pre">'HR',</span> <span class="pre">'CWE',</span> <span class="pre">'CY',</span> <span class="pre">'CZ',</span> <span class="pre">'DE_AT_LU',</span> <span class="pre">'DE_LU',</span> <span class="pre">'DK',</span> <span class="pre">'DK_1',</span> <span class="pre">'DK_2',</span> <span class="pre">'DK_CA',</span> <span class="pre">'EE',</span> <span class="pre">'FI',</span> <span class="pre">'MK',</span> <span class="pre">'FR',</span> <span class="pre">'DE',</span> <span class="pre">'GR',</span> <span class="pre">'HU',</span> <span class="pre">'IS',</span> <span class="pre">'IE_SEM',</span> <span class="pre">'IE',</span> <span class="pre">'IT',</span> <span class="pre">'IT_SACO_AC',</span> <span class="pre">'IT_CALA',</span> <span class="pre">'IT_SACO_DC',</span> <span class="pre">'IT_BRNN',</span> <span class="pre">'IT_CNOR',</span> <span class="pre">'IT_CSUD',</span> <span class="pre">'IT_FOGN',</span> <span class="pre">'IT_GR',</span> <span class="pre">'IT_MACRO_NORTH',</span> <span class="pre">'IT_MACRO_SOUTH',</span> <span class="pre">'IT_MALTA',</span> <span class="pre">'IT_NORD',</span> <span class="pre">'IT_NORD_AT',</span> <span class="pre">'IT_NORD_CH',</span> <span class="pre">'IT_NORD_FR',</span> <span class="pre">'IT_NORD_SI',</span> <span class="pre">'IT_PRGP',</span> <span class="pre">'IT_ROSN',</span> <span class="pre">'IT_SARD',</span> <span class="pre">'IT_SICI',</span> <span class="pre">'IT_SUD',</span> <span class="pre">'RU_KGD',</span> <span class="pre">'LV',</span> <span class="pre">'LT',</span> <span class="pre">'LU',</span> <span class="pre">'MT',</span> <span class="pre">'ME',</span> <span class="pre">'GB',</span> <span class="pre">'GB_IFA',</span> <span class="pre">'GB_IFA2',</span> <span class="pre">'GB_ELECLINK',</span> <span class="pre">'UK',</span> <span class="pre">'NL',</span> <span class="pre">'NO_1',</span> <span class="pre">'NO_2',</span> <span class="pre">'NO_2_NSL',</span> <span class="pre">'NO_3',</span> <span class="pre">'NO_4',</span> <span class="pre">'NO_5',</span> <span class="pre">'NO',</span> <span class="pre">'PL_CZ',</span> <span class="pre">'PL',</span> <span class="pre">'PT',</span> <span class="pre">'MD',</span> <span class="pre">'RO',</span> <span class="pre">'RU',</span> <span class="pre">'SE_1',</span> <span class="pre">'SE_2',</span> <span class="pre">'SE_3',</span> <span class="pre">'SE_4',</span> <span class="pre">'RS',</span> <span class="pre">'SK',</span> <span class="pre">'SI',</span> <span class="pre">'GB_NIR',</span> <span class="pre">'ES',</span> <span class="pre">'SE',</span> <span class="pre">'CH',</span> <span class="pre">'DE_TENNET',</span> <span class="pre">'DE_TRANSNET',</span> <span class="pre">'TR',</span> <span class="pre">'UA',</span> <span class="pre">'UA_DOBTPP',</span> <span class="pre">'UA_BEI',</span> <span class="pre">'UA_IPS',</span> <span class="pre">'XK']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_crawler.html#EntsoeCrawler.update_database"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_crawler.EntsoeCrawler.update_database" title="Permalink to this definition"></a></dt>
+<dd><p>Runs everything which is needed to update the database and pull the data since the last successful pull.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>client</strong><span class="classifier">entsoe.EntsoePandasClient</span></dt><dd><p>entsoe-py client</p>
+</dd>
+<dt><strong>delta</strong><span class="classifier">pd.Timedelta</span></dt><dd></dd>
+<dt><strong>countries</strong><span class="classifier">list[str], default all_countries</span></dt><dd></dd>
+<dt><strong>start</strong><span class="classifier">pd.Timestamp</span></dt><dd></dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"></dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="entsoe_crawler.calculate_nett_generation">
+<span class="sig-prename descclassname"><span class="pre">entsoe_crawler.</span></span><span class="sig-name descname"><span class="pre">calculate_nett_generation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_crawler.html#calculate_nett_generation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_crawler.calculate_nett_generation" title="Permalink to this definition"></a></dt>
+<dd><p>Calculates the difference between columns ending with _actual_aggregated and _actual_consumption.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>df</strong><span class="classifier">pd.DataFrame</span></dt><dd><p>DataFrame with columns ending with _actual_aggregated or _actual_consumption</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt>dat: pd.DataFrame</dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="entsoe_crawler.sanitize_series">
+<span class="sig-prename descclassname"><span class="pre">entsoe_crawler.</span></span><span class="sig-name descname"><span class="pre">sanitize_series</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seriesname</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_crawler.html#sanitize_series"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_crawler.sanitize_series" title="Permalink to this definition"></a></dt>
+<dd><p>replaces illegal values from a series name
+for insertion into database</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><dl class="simple">
+<dt><strong>seriesname</strong><span class="classifier">str</span></dt><dd><p>name of the series</p>
+</dd>
+</dl>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><dl class="simple">
+<dt><strong>st</strong><span class="classifier">str</span></dt><dd></dd>
+</dl>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to ENTSOE/G-Monitor’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="entsoe_dash.html" class="btn btn-neutral float-right" title="entsoe_dash module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Florian Maurer.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
