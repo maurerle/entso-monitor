@@ -14,11 +14,11 @@
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="_static/doctools.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="entsog_maploader module" href="entsog_maploader.html" /> 
+    <link rel="search" title="Search" href="search.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -39,19 +39,11 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="entsoe_crawler.html">entsoe_crawler module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="entsoe_dash.html">entsoe_dash module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="entsoe_data_manager.html">entsoe_data_manager module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="entsoe_sqlite_manager.html">entsoe_sqlite_manager module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="entsog_crawler.html">entsog_crawler module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="entsog_dash.html">entsog_dash module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="entsog_data_manager.html">entsog_data_manager module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="entsog_maploader.html">entsog_maploader module</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">entsog_sqlite_manager module</a></li>
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">entsog_sqlite_manager module</a></li>
 </ul>
-
+</div>
         </div>
       </div>
     </nav>
@@ -77,15 +69,15 @@
            <div itemprop="articleBody">
              
   <section id="module-entsog_sqlite_manager">
-<span id="entsog-sqlite-manager-module"></span><h1>entsog_sqlite_manager module<a class="headerlink" href="#module-entsog_sqlite_manager" title="Permalink to this headline"></a></h1>
+<span id="entsog-sqlite-manager-module"></span><h1>entsog_sqlite_manager module<a class="headerlink" href="#module-entsog_sqlite_manager" title="Permalink to this heading"></a></h1>
 <p>Created on Sun Nov 29 23:15:16 2020</p>
 <p>&#64;author: maurer</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="entsog_sqlite_manager.EntsogSQLite">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">entsog_sqlite_manager.</span></span><span class="sig-name descname"><span class="pre">EntsogSQLite</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsog_sqlite_manager.html#EntsogSQLite"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsog_sqlite_manager.EntsogSQLite" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <a class="reference internal" href="entsog_data_manager.html#entsog_data_manager.EntsogDataManager" title="entsog_data_manager.EntsogDataManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">entsog_data_manager.EntsogDataManager</span></code></a></p>
+<dd><p>Bases: <a class="reference internal" href="entsog_data_manager.html#entsog_data_manager.EntsogDataManager" title="entsog_data_manager.EntsogDataManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">EntsogDataManager</span></code></a></p>
 <p class="rubric">Methods</p>
-<table class="longtable docutils align-default">
+<table class="autosummary longtable docutils align-default">
 <colgroup>
 <col style="width: 10%" />
 <col style="width: 90%" />
@@ -142,7 +134,7 @@
 
 <dl class="py method">
 <dt class="sig sig-object py" id="entsog_sqlite_manager.EntsogSQLite.bilanz">
-<span class="sig-name descname"><span class="pre">bilanz</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">operatorKeys</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="entsog_data_manager.html#entsog_data_manager.Filter" title="entsog_data_manager.Filter"><span class="pre">entsog_data_manager.Filter</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'physical_flow'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsog_sqlite_manager.html#EntsogSQLite.bilanz"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsog_sqlite_manager.EntsogSQLite.bilanz" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">bilanz</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">operatorKeys</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="entsog_data_manager.html#entsog_data_manager.Filter" title="entsog_data_manager.Filter"><span class="pre">Filter</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'physical_flow'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsog_sqlite_manager.html#EntsogSQLite.bilanz"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsog_sqlite_manager.EntsogSQLite.bilanz" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -152,7 +144,7 @@
 
 <dl class="py method">
 <dt class="sig sig-object py" id="entsog_sqlite_manager.EntsogSQLite.crossborder">
-<span class="sig-name descname"><span class="pre">crossborder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">operatorKeys</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="entsog_data_manager.html#entsog_data_manager.Filter" title="entsog_data_manager.Filter"><span class="pre">entsog_data_manager.Filter</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">['t.directionkey',</span> <span class="pre">'opd.adjacentcountry']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'physical_flow'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsog_sqlite_manager.html#EntsogSQLite.crossborder"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsog_sqlite_manager.EntsogSQLite.crossborder" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">crossborder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">operatorKeys</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="entsog_data_manager.html#entsog_data_manager.Filter" title="entsog_data_manager.Filter"><span class="pre">Filter</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">['t.directionkey',</span> <span class="pre">'opd.adjacentcountry']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'physical_flow'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsog_sqlite_manager.html#EntsogSQLite.crossborder"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsog_sqlite_manager.EntsogSQLite.crossborder" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -169,13 +161,13 @@ to be determined whats useful here (coming from, to or both)</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="entsog_sqlite_manager.EntsogSQLite.operationaldata">
-<span class="sig-name descname"><span class="pre">operationaldata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">operatorKeys</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="entsog_data_manager.html#entsog_data_manager.Filter" title="entsog_data_manager.Filter"><span class="pre">entsog_data_manager.Filter</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">['directionkey']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'physical_flow'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsog_sqlite_manager.html#EntsogSQLite.operationaldata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsog_sqlite_manager.EntsogSQLite.operationaldata" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">operationaldata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">operatorKeys</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="entsog_data_manager.html#entsog_data_manager.Filter" title="entsog_data_manager.Filter"><span class="pre">Filter</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">['directionkey']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'physical_flow'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsog_sqlite_manager.html#EntsogSQLite.operationaldata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsog_sqlite_manager.EntsogSQLite.operationaldata" title="Permalink to this definition"></a></dt>
 <dd><p>returns timeseries data of the given Indicator</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="entsog_sqlite_manager.EntsogSQLite.operationaldataByPoints">
-<span class="sig-name descname"><span class="pre">operationaldataByPoints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">points</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="entsog_data_manager.html#entsog_data_manager.Filter" title="entsog_data_manager.Filter"><span class="pre">entsog_data_manager.Filter</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">['directionkey']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'physical_flow'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsog_sqlite_manager.html#EntsogSQLite.operationaldataByPoints"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsog_sqlite_manager.EntsogSQLite.operationaldataByPoints" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">operationaldataByPoints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">points</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="entsog_data_manager.html#entsog_data_manager.Filter" title="entsog_data_manager.Filter"><span class="pre">Filter</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">group_by</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">['directionkey']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">table</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'physical_flow'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsog_sqlite_manager.html#EntsogSQLite.operationaldataByPoints"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsog_sqlite_manager.EntsogSQLite.operationaldataByPoints" title="Permalink to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -207,9 +199,7 @@ to be determined whats useful here (coming from, to or both)</p>
 
            </div>
           </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="entsog_maploader.html" class="btn btn-neutral float-left" title="entsog_maploader module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-    </div>
+          <footer>
 
   <hr/>
 
