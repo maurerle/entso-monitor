@@ -314,7 +314,7 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
-                    <span class="n">query</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;select max(&quot;index&quot;) from </span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">&#39;</span>
+                    <span class="n">query</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;select max(&quot;index&quot;) from </span><span class="si">{</span><span class="n">tablename</span><span class="si">}</span><span class="s1">&#39;</span>
                     <span class="n">d</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
                 <span class="n">start</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
                 <span class="k">try</span><span class="p">:</span>
@@ -324,7 +324,7 @@
                         <span class="k">pass</span>
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
                 <span class="n">start</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="s1">&#39;20150101&#39;</span><span class="p">,</span> <span class="n">tz</span><span class="o">=</span><span class="n">tz</span><span class="p">)</span>
-                <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;using default </span><span class="si">{</span><span class="n">start</span><span class="si">}</span><span class="s1"> timestamp </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;using default </span><span class="si">{</span><span class="n">start</span><span class="si">}</span><span class="s1"> timestamp (</span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">)&#39;</span><span class="p">)</span>
 
             <span class="n">end</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="o">.</span><span class="n">now</span><span class="p">(</span><span class="n">tz</span><span class="o">=</span><span class="n">tz</span><span class="p">)</span>
             <span class="n">delta</span> <span class="o">=</span> <span class="n">end</span><span class="o">-</span><span class="n">start</span>
@@ -413,7 +413,7 @@
 <span class="sd">        -------</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">start</span><span class="p">,</span> <span class="n">delta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_latest_crawled_timestamp</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">proc</span><span class="p">)</span>
+        <span class="n">start</span><span class="p">,</span> <span class="n">delta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_latest_crawled_timestamp</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
         <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;****** </span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1"> *******&#39;</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="p">(</span><span class="n">times</span><span class="o">*</span><span class="n">delta</span><span class="p">)</span><span class="o">.</span><span class="n">days</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
