@@ -234,7 +234,7 @@ class EntsoeCrawler:
         else:
             try:
                 with self.db_accessor() as conn:
-                    query = f'select max("index") from {proc.__name__}'
+                    query = f'select max("index") from {tablename}'
                     d = conn.execute(query).fetchone()[0]
                 start = pd.to_datetime(d)
                 try:
@@ -244,7 +244,7 @@ class EntsoeCrawler:
                         pass
             except Exception as e:
                 start = pd.Timestamp('20150101', tz=tz)
-                log.info(f'using default {start} timestamp {e}')
+                log.info(f'using default {start} timestamp ({e})')
 
             end = pd.Timestamp.now(tz=tz)
             delta = end-start
@@ -333,7 +333,7 @@ class EntsoeCrawler:
         -------
 
         """
-        start, delta = self.get_latest_crawled_timestamp(start, delta, proc)
+        start, delta = self.get_latest_crawled_timestamp(start, delta, proc.__name__)
         log.info(f'****** {proc.__name__} *******')
 
         if (times*delta).days < 2:

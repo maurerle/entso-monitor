@@ -52,11 +52,12 @@ def updateEntsog(db, first=False):
 
 if __name__ == '__main__':
     import os
+    first = False
     db = os.getenv('DATABASE_URI','postgresql://entso:entso@localhost:5432')
     from sqlalchemy import create_engine
 
     t = create_engine(f'{db}/entsoe')
 
     api_key = os.getenv('ENTSOE_API_KEY', 'ae2ed060-c25c-4eea-8ae4-007712f95375')
-    updateEntsoe(f'{db}/entsoe', api_key, first=True)
-    updateEntsog(f'{db}/entsog', first=True)
+    updateEntsoe(f'{db}/entsoe', api_key, first=first)
+    updateEntsog(f'{db}/entsog', first=first)
