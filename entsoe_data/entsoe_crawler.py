@@ -365,12 +365,14 @@ class EntsoeCrawler:
                     data.to_sql(proc.__name__, conn, if_exists='append')
             except Exception as e:
                 log.error(f'error saving crossboarders {e}')
-                prev = pd.read_sql_query(
-                    f'select * from {proc.__name__}', conn, index_col='index')
+                with self.db_accessor() as conn:
+                    prev = pd.read_sql_query(
+                        f'select * from {proc.__name__}', conn, index_col='index')
 
-                ges = pd.concat([prev, data])
-                ges.index = ges.index.astype('datetime64[ns]')
-                ges.to_sql(proc.__name__, conn, if_exists='replace')
+                    ges = pd.concat([prev, data])
+                    ges.index = ges.index.astype('datetime64[ns]')
+                    ges.to_sql(proc.__name__, conn, if_exists='replace')
+                log.info(f'fixed error by adding new columns to crossborders')
 
             try:
                 with self.db_accessor() as conn:
@@ -448,7 +450,7 @@ class EntsoeCrawler:
             pp = ppp.melt(var_name=['name', 'type'],
                           value_name='value', ignore_index=False)
             return pp
-
+        log.info(f'****** {query_per_plant.__name__} *******')
         start_, delta_ = self.get_latest_crawled_timestamp(start, delta, query_per_plant.__name__)
         self.download_entsoe(countries, query_per_plant, start_, delta=delta_, times=times)
 
@@ -484,6 +486,7 @@ class EntsoeCrawler:
 
         """
         plant_countries = []
+        log.info(f'****** find countries with plant_data *******')
         for country in countries:
             try:
                 _ = client.query_generation_per_plant(
@@ -537,6 +540,8 @@ class EntsoeCrawler:
 
         self.download_entsoe_plant_data(
             plant_countries[:], client, start, delta, times=1)
+
+        log.info(f'****** finished updating ENTSO-E *******')
 
     def create_database(self, client, start, delta, countries=[]):
         """
