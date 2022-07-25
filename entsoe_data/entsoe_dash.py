@@ -6,7 +6,7 @@ Created on Fri Nov 27 23:31:45 2020
 @author: maurer
 """
 
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from urllib.parse import urlparse, parse_qsl, urlencode
 import dash
 from dash.exceptions import PreventUpdate
@@ -23,7 +23,7 @@ import pandas as pd
 import os
 
 DATABASE_URI = 'postgresql://readonly:readonly@localhost:5432/entsoe'
-DATABASE_URI = os.getenv('DATABASE_URI','data/entsoe.db')
+DATABASE_URI = os.getenv('DATABASE_URI_ENTSOE','data/entsoe.db')
 ENTSOE_URL = 'https://transparency.entsoe.eu/content/static_content/Static content/web api/Guide.html#_areas'
 
 if __name__ == "__main__":
@@ -51,24 +51,24 @@ appname = 'Entsoe Monitor'
 color_map = {
     "Biomass": "DarkGreen",
     "Fossil Brown coal/Lignite": "SaddleBrown",
+    "Fossil Coal-derived gas": "RosyBrown",
     "Fossil Gas": "blue",
     "Fossil Hard coal": "DimGrey",
     "Fossil Oil": "black",
+    "Fossil Oil shale": "DarkGoldenRod",
+    "Fossil Peat": "Coral",
     "Geothermal": "FireBrick",
     "Hydro Pumped Storage": "DodgerBlue",
     "Hydro Run-of-river and poundage": "LightSeaGreen",
+    "Hydro Water Reservoir": "DarkKhaki",
+    "Nuclear": "purple",
     "Other": "Violet",
     "Other renewable": "Thistle",
     "Solar": "yellow",
     "Waste": "Tan",
     "Wind Offshore": "Steelblue",
     "Wind Onshore": "DeepSkyBlue",
-    "Fossil Coal-derived gas": "RosyBrown",
-    "Nuclear": "purple",
-    "Hydro Water Reservoir": "DarkKhaki",
     "Marine": "DarkBlue",
-    "Fossil Oil shale": "DarkGoldenRod",
-    "Fossil Peat": "Coral",
 }
 color_map = dict((k.lower(), v) for k, v in color_map.items())
 
@@ -145,9 +145,9 @@ layout = html.Div(
                         dcc.DatePickerRange(
                             id='datepicker',
                             min_date_allowed=date(2015, 1, 1),
-                            max_date_allowed=date.today(),
-                            start_date=date(2017, 8, 21),
-                            end_date=date(2017, 9, 4),
+                            max_date_allowed=date.today()+timedelta(days=30),
+                            start_date=date.today()-timedelta(days=30),
+                            end_date=date.today(),
                             display_format='DD.MM.YY',
                             # initial_visible_month='2020-08-01',
                             show_outside_days=True,
@@ -462,7 +462,9 @@ def make_capacity_figure(country_control):
     if g.empty:
         return {'data': [], 'layout': dict(title="No Data Found for current interval")}
 
-    figure = px.bar(g, x=g.index, y="value", color='kind', color_discrete_map=color_map,
+    figure = px.bar(g, x=g.index, y="value", color='kind', 
+                    color_discrete_map=color_map,
+                    category_orders={'kind': color_map.keys()},
                     text='value')  # bar_group="kind")
     figure.update_layout(title="Generation capacity for {} per year".format(country_control),
                          xaxis_title='',
@@ -534,8 +536,10 @@ def make_generation_figure(country_control, start_date, end_date, group, climate
 
     if g.empty:
         return dict(data=[], layout=dict(title="No Data Found for current interval"))
+
     figure = px.area(g, x=g.index, y="value", color='kind',
-                     color_discrete_map=color_map, line_group="kind")
+                     color_discrete_map=color_map, line_group="kind", 
+                     category_orders={'kind': color_map.keys()})
     figure.update_layout(title=desc+" for {} from {} to {}".format(country_control, start_date, end_date),
                          xaxis_title='',
                          yaxis_title=desc,

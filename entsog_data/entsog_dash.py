@@ -6,7 +6,7 @@ Created on Mon Nov 30 00:57:00 2020
 @author: maurer
 """
 
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from urllib.parse import urlparse, parse_qsl, urlencode
 import dash
 from dash.exceptions import PreventUpdate
@@ -23,7 +23,7 @@ from entsog_data_manager import Filter
 import os
 
 DATABASE_URI = 'postgresql://readonly:readonly@localhost:5432/entsog'
-DATABASE_URI = os.getenv('DATABASE_URI','data/entsog.db')
+DATABASE_URI = os.getenv('DATABASE_URI_ENTSOG','data/entsog.db')
 
 if __name__ == "__main__":
     app = dash.Dash(__name__, meta_tags=[
@@ -119,9 +119,9 @@ layout = html.Div(
                         dcc.DatePickerRange(
                             id='date_picker',
                             min_date_allowed=date(2017, 7, 1),
-                            max_date_allowed=date.today(),
-                            start_date=date(2019, 7, 2),
-                            end_date=date(2019, 7, 11),
+                            max_date_allowed=date.today()+timedelta(days=30),
+                            start_date=date.today()-timedelta(days=30),
+                            end_date=date.today(),
                             display_format='DD.MM.YY',
                             # initial_visible_month='2015-02-01',
                             show_outside_days=True,

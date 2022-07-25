@@ -21,7 +21,8 @@ services:
     image: registry.git.fh-aachen.de/nowum-energy/software-werkzeuge/entsoe-monitor:latest
     restart: always
     environment:
-      - DATABASE_URI=postgresql://entso:entso@db:5432
+      - DATABASE_URI_ENTSOE=postgresql://entso:entso@db:5432/entsoe
+      - DATABASE_URI_ENTSOG=postgresql://entso:entso@db:5432/entsog
       - ENTSOE_API_KEY=XXX
     ports:
       - "8000:8000"
