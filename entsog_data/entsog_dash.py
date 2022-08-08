@@ -618,6 +618,19 @@ def updateInfrastructureGraph(operators, bz, start_date, end_date, group, cumula
     p = dm.bilanz(operators, filt)
     a = dm.bilanz(operators, filt, table='Allocation')
     t = dm.bilanz(operators, filt, table='firm_technical')
+
+    actual_usage = p['ITP'].copy()
+
+    if 'PRD' in list(p.columns):
+        actual_usage += p['PRD']
+    if 'UGS' in list(p.columns):
+        actual_usage += p['UGS']
+
+    p['usage'] = actual_usage
+    # as DIS and FNC is not often valid, 
+    # we are calculating the actual usage by entry - exit
+    # This has to be compared with statistical data
+
     # if len(p.columns) > 1:
     #     p['sum']=p.sum(axis=1)
     # if len(a.columns) > 1:
