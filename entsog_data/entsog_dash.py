@@ -22,8 +22,8 @@ import pandas as pd
 from entsog_data_manager import Filter
 import os
 
-DATABASE_URI = 'postgresql://readonly:readonly@localhost:5432/entsog'
-DATABASE_URI = os.getenv('DATABASE_URI_ENTSOG','data/entsog.db')
+DATABASE_URI = 'postgresql://readonly:readonly@10.13.10.41:5432/entsog'
+#DATABASE_URI = os.getenv('DATABASE_URI_ENTSOG','data/entsog.db')
 
 if __name__ == "__main__":
     app = dash.Dash(__name__, meta_tags=[
@@ -320,17 +320,28 @@ def parse_state(url):
 ],
     inputs=[Input('url_entsog', 'href')])
 def page_load(href):
+    def str_to_list(x):
+        result = x.strip("][").replace("'", '')
+        # don't convert empty string to list
+        if result:
+            return result.split(',')
+        else:
+            return []
 
-    str_to_list = lambda x: x.strip(
-                    "][").replace("'", '').split(',')
     if not href:
-        return []
-    state = parse_state(href)
-    # for element in elements
-    if all(element in state for element in ['start_date', 'end_date', 'group_by_control', 'bz_control', 'operator_control']):
-        return state['start_date'], state['end_date'], state['group_by_control'], state['bz_control'], str_to_list(state['operator_control'])
-    else:
         raise PreventUpdate
+    state = parse_state(href)
+
+    start = state.get('start_date', dash.no_update)
+    end = state.get('end_date', dash.no_update)
+    group_by = state.get('group_by_control', dash.no_update)
+    bz = state.get('bz_control', dash.no_update)
+    op_control = str_to_list(state.get('operator_control',''))
+    if "None" in op_control:
+        op_control.remove('None')
+    op_control = op_control or dash.no_update
+
+    return start, end, group_by, bz, op_control
 
 
 @app.callback(Output('url_entsog', 'search'),
