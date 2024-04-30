@@ -1,21 +1,23 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Welcome to ENTSOE/G-Monitor’s documentation! &mdash; ENTSOE/G-Monitor 0.1 documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script src="_static/doctools.js"></script>
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=2709fde1"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -27,14 +29,18 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="#" class="icon icon-home"> ENTSOE/G-Monitor
+
+          
+          
+          <a href="#" class="icon icon-home">
+            ENTSOE/G-Monitor
           </a>
               <div class="version">
                 0.1
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -68,8 +74,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="#" class="icon icon-home"></a> &raquo;</li>
-      <li>Welcome to ENTSOE/G-Monitor’s documentation!</li>
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Welcome to ENTSOE/G-Monitor’s documentation!</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -80,7 +86,7 @@
            <div itemprop="articleBody">
              
   <section id="welcome-to-entsoe-g-monitor-s-documentation">
-<h1>Welcome to ENTSOE/G-Monitor’s documentation!<a class="headerlink" href="#welcome-to-entsoe-g-monitor-s-documentation" title="Permalink to this heading"></a></h1>
+<h1>Welcome to ENTSOE/G-Monitor’s documentation!<a class="headerlink" href="#welcome-to-entsoe-g-monitor-s-documentation" title="Link to this heading"></a></h1>
 <p>This is the documentation of the ENTSO-E and ENTSO-G monitor project.</p>
 <p>It is split into a part for crawling the data and storing it in a TimescaleDB.
 This is especially useful if the data is also used in other projects.</p>
@@ -89,22 +95,126 @@ Check out the <a class="reference internal" href="usage.html"><span class="doc">
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="entsoe_crawler.html">entsoe_crawler module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="entsoe_crawler.html">entsoe_crawler module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="entsoe_crawler.html#entsoe_crawler.EntsoeCrawler"><code class="docutils literal notranslate"><span class="pre">EntsoeCrawler</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.countries_with_plant_data"><code class="docutils literal notranslate"><span class="pre">EntsoeCrawler.countries_with_plant_data()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.create_database"><code class="docutils literal notranslate"><span class="pre">EntsoeCrawler.create_database()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.download_entsoe"><code class="docutils literal notranslate"><span class="pre">EntsoeCrawler.download_entsoe()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.download_entsoe_plant_data"><code class="docutils literal notranslate"><span class="pre">EntsoeCrawler.download_entsoe_plant_data()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.fetch_and_write_entsoe_df_to_db"><code class="docutils literal notranslate"><span class="pre">EntsoeCrawler.fetch_and_write_entsoe_df_to_db()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.get_latest_crawled_timestamp"><code class="docutils literal notranslate"><span class="pre">EntsoeCrawler.get_latest_crawled_timestamp()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.init_base_sql"><code class="docutils literal notranslate"><span class="pre">EntsoeCrawler.init_base_sql()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.pull_crossborders"><code class="docutils literal notranslate"><span class="pre">EntsoeCrawler.pull_crossborders()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.save_power_system_data"><code class="docutils literal notranslate"><span class="pre">EntsoeCrawler.save_power_system_data()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.update_database"><code class="docutils literal notranslate"><span class="pre">EntsoeCrawler.update_database()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="entsoe_crawler.html#entsoe_crawler.calculate_nett_generation"><code class="docutils literal notranslate"><span class="pre">calculate_nett_generation()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="entsoe_crawler.html#entsoe_crawler.sanitize_series"><code class="docutils literal notranslate"><span class="pre">sanitize_series()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="entsoe_dash.html">entsoe_dash module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="entsoe_data_manager.html">entsoe_data_manager module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="entsoe_sqlite_manager.html">entsoe_sqlite_manager module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="entsoe_data_manager.html">entsoe_data_manager module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.EntsoeDataManager"><code class="docutils literal notranslate"><span class="pre">EntsoeDataManager</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.EntsoeDataManager.capacity"><code class="docutils literal notranslate"><span class="pre">EntsoeDataManager.capacity()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.EntsoeDataManager.climateImpact"><code class="docutils literal notranslate"><span class="pre">EntsoeDataManager.climateImpact()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.EntsoeDataManager.countries"><code class="docutils literal notranslate"><span class="pre">EntsoeDataManager.countries()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.EntsoeDataManager.crossborderFlows"><code class="docutils literal notranslate"><span class="pre">EntsoeDataManager.crossborderFlows()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.EntsoeDataManager.generation"><code class="docutils literal notranslate"><span class="pre">EntsoeDataManager.generation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.EntsoeDataManager.load"><code class="docutils literal notranslate"><span class="pre">EntsoeDataManager.load()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.EntsoePlantDataManager"><code class="docutils literal notranslate"><span class="pre">EntsoePlantDataManager</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.EntsoePlantDataManager.capacityPerPlant"><code class="docutils literal notranslate"><span class="pre">EntsoePlantDataManager.capacityPerPlant()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.EntsoePlantDataManager.getNames"><code class="docutils literal notranslate"><span class="pre">EntsoePlantDataManager.getNames()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.EntsoePlantDataManager.plantGen"><code class="docutils literal notranslate"><span class="pre">EntsoePlantDataManager.plantGen()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.EntsoePlantDataManager.powersystems"><code class="docutils literal notranslate"><span class="pre">EntsoePlantDataManager.powersystems()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.Filter"><code class="docutils literal notranslate"><span class="pre">Filter</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.revReplaceStr"><code class="docutils literal notranslate"><span class="pre">revReplaceStr()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="entsoe_sqlite_manager.html">entsoe_sqlite_manager module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="entsoe_sqlite_manager.html#entsoe_sqlite_manager.EntsoePlantSQLite"><code class="docutils literal notranslate"><span class="pre">EntsoePlantSQLite</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_sqlite_manager.html#entsoe_sqlite_manager.EntsoePlantSQLite.capacityPerPlant"><code class="docutils literal notranslate"><span class="pre">EntsoePlantSQLite.capacityPerPlant()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_sqlite_manager.html#entsoe_sqlite_manager.EntsoePlantSQLite.getNames"><code class="docutils literal notranslate"><span class="pre">EntsoePlantSQLite.getNames()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_sqlite_manager.html#entsoe_sqlite_manager.EntsoePlantSQLite.groupTime"><code class="docutils literal notranslate"><span class="pre">EntsoePlantSQLite.groupTime()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_sqlite_manager.html#entsoe_sqlite_manager.EntsoePlantSQLite.plantGen"><code class="docutils literal notranslate"><span class="pre">EntsoePlantSQLite.plantGen()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_sqlite_manager.html#entsoe_sqlite_manager.EntsoePlantSQLite.powersystems"><code class="docutils literal notranslate"><span class="pre">EntsoePlantSQLite.powersystems()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="entsoe_sqlite_manager.html#entsoe_sqlite_manager.EntsoeSQLite"><code class="docutils literal notranslate"><span class="pre">EntsoeSQLite</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_sqlite_manager.html#entsoe_sqlite_manager.EntsoeSQLite.capacity"><code class="docutils literal notranslate"><span class="pre">EntsoeSQLite.capacity()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_sqlite_manager.html#entsoe_sqlite_manager.EntsoeSQLite.climateImpact"><code class="docutils literal notranslate"><span class="pre">EntsoeSQLite.climateImpact()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_sqlite_manager.html#entsoe_sqlite_manager.EntsoeSQLite.countries"><code class="docutils literal notranslate"><span class="pre">EntsoeSQLite.countries()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_sqlite_manager.html#entsoe_sqlite_manager.EntsoeSQLite.crossborderFlows"><code class="docutils literal notranslate"><span class="pre">EntsoeSQLite.crossborderFlows()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_sqlite_manager.html#entsoe_sqlite_manager.EntsoeSQLite.generation"><code class="docutils literal notranslate"><span class="pre">EntsoeSQLite.generation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_sqlite_manager.html#entsoe_sqlite_manager.EntsoeSQLite.groupTime"><code class="docutils literal notranslate"><span class="pre">EntsoeSQLite.groupTime()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsoe_sqlite_manager.html#entsoe_sqlite_manager.EntsoeSQLite.load"><code class="docutils literal notranslate"><span class="pre">EntsoeSQLite.load()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="entsoe_parquet_manager.html">entsoe_parquet_manager module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="entsog_crawler.html">entsog_crawler module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="entsog_crawler.html">entsog_crawler module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="entsog_crawler.html#entsog_crawler.EntsogCrawler"><code class="docutils literal notranslate"><span class="pre">EntsogCrawler</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="entsog_crawler.html#entsog_crawler.EntsogCrawler.findNewBegin"><code class="docutils literal notranslate"><span class="pre">EntsogCrawler.findNewBegin()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsog_crawler.html#entsog_crawler.EntsogCrawler.pullData"><code class="docutils literal notranslate"><span class="pre">EntsogCrawler.pullData()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsog_crawler.html#entsog_crawler.EntsogCrawler.pullOperationalData"><code class="docutils literal notranslate"><span class="pre">EntsogCrawler.pullOperationalData()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="entsog_crawler.html#entsog_crawler.getDataFrame"><code class="docutils literal notranslate"><span class="pre">getDataFrame()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="entsog_crawler.html#entsog_crawler.to"><code class="docutils literal notranslate"><span class="pre">to</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="entsog_dash.html">entsog_dash module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="entsog_data_manager.html">entsog_data_manager module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="entsog_maploader.html">entsog_maploader module</a></li>
-<li class="toctree-l1"><a class="reference internal" href="entsog_sqlite_manager.html">entsog_sqlite_manager module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="entsog_data_manager.html">entsog_data_manager module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="entsog_data_manager.html#entsog_data_manager.EntsogDataManager"><code class="docutils literal notranslate"><span class="pre">EntsogDataManager</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="entsog_data_manager.html#entsog_data_manager.EntsogDataManager.balancingzones"><code class="docutils literal notranslate"><span class="pre">EntsogDataManager.balancingzones()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsog_data_manager.html#entsog_data_manager.EntsogDataManager.bilanz"><code class="docutils literal notranslate"><span class="pre">EntsogDataManager.bilanz()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsog_data_manager.html#entsog_data_manager.EntsogDataManager.connectionpoints"><code class="docutils literal notranslate"><span class="pre">EntsogDataManager.connectionpoints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsog_data_manager.html#entsog_data_manager.EntsogDataManager.crossborder"><code class="docutils literal notranslate"><span class="pre">EntsogDataManager.crossborder()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsog_data_manager.html#entsog_data_manager.EntsogDataManager.interconnections"><code class="docutils literal notranslate"><span class="pre">EntsogDataManager.interconnections()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsog_data_manager.html#entsog_data_manager.EntsogDataManager.operationaldata"><code class="docutils literal notranslate"><span class="pre">EntsogDataManager.operationaldata()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsog_data_manager.html#entsog_data_manager.EntsogDataManager.operationaldataByPoints"><code class="docutils literal notranslate"><span class="pre">EntsogDataManager.operationaldataByPoints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsog_data_manager.html#entsog_data_manager.EntsogDataManager.operatorpointdirections"><code class="docutils literal notranslate"><span class="pre">EntsogDataManager.operatorpointdirections()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsog_data_manager.html#entsog_data_manager.EntsogDataManager.operators"><code class="docutils literal notranslate"><span class="pre">EntsogDataManager.operators()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsog_data_manager.html#entsog_data_manager.EntsogDataManager.operatorsByBZ"><code class="docutils literal notranslate"><span class="pre">EntsogDataManager.operatorsByBZ()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="entsog_data_manager.html#entsog_data_manager.Filter"><code class="docutils literal notranslate"><span class="pre">Filter</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="entsog_maploader.html">entsog_maploader module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="entsog_maploader.html#entsog_maploader.convertTmsXyz"><code class="docutils literal notranslate"><span class="pre">convertTmsXyz()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="entsog_maploader.html#entsog_maploader.loadMap"><code class="docutils literal notranslate"><span class="pre">loadMap()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="entsog_sqlite_manager.html">entsog_sqlite_manager module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite"><code class="docutils literal notranslate"><span class="pre">EntsogSQLite</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite.balancingzones"><code class="docutils literal notranslate"><span class="pre">EntsogSQLite.balancingzones()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite.bilanz"><code class="docutils literal notranslate"><span class="pre">EntsogSQLite.bilanz()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite.connectionpoints"><code class="docutils literal notranslate"><span class="pre">EntsogSQLite.connectionpoints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite.crossborder"><code class="docutils literal notranslate"><span class="pre">EntsogSQLite.crossborder()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite.groupTime"><code class="docutils literal notranslate"><span class="pre">EntsogSQLite.groupTime()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite.interconnections"><code class="docutils literal notranslate"><span class="pre">EntsogSQLite.interconnections()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite.operationaldata"><code class="docutils literal notranslate"><span class="pre">EntsogSQLite.operationaldata()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite.operationaldataByPoints"><code class="docutils literal notranslate"><span class="pre">EntsogSQLite.operationaldataByPoints()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite.operatorpointdirections"><code class="docutils literal notranslate"><span class="pre">EntsogSQLite.operatorpointdirections()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite.operators"><code class="docutils literal notranslate"><span class="pre">EntsogSQLite.operators()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="entsog_sqlite_manager.html#entsog_sqlite_manager.EntsogSQLite.operatorsByBZ"><code class="docutils literal notranslate"><span class="pre">EntsogSQLite.operatorsByBZ()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="entsog_sqlite_manager.html#entsog_sqlite_manager.timeFilter"><code class="docutils literal notranslate"><span class="pre">timeFilter()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
 </ul>
 </div>
 </section>
 <section id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this heading"></a></h1>
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading"></a></h1>
 <ul class="simple">
 <li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
 <li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>

@@ -1,20 +1,22 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>entsoe_data_manager &mdash; ENTSOE/G-Monitor 0.1 documentation</title>
-      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
   <!--[if lt IE 9]>
     <script src="../_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
-        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
-        <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script src="../_static/doctools.js"></script>
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=2709fde1"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" /> 
@@ -25,14 +27,18 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../index.html" class="icon icon-home"> ENTSOE/G-Monitor
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            ENTSOE/G-Monitor
           </a>
               <div class="version">
                 0.1
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -66,9 +72,9 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
-          <li><a href="index.html">Module code</a> &raquo;</li>
-      <li>entsoe_data_manager</li>
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">entsoe_data_manager</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -90,75 +96,116 @@
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span>
 
 
-<div class="viewcode-block" id="Filter"><a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.Filter">[docs]</a><span class="k">class</span> <span class="nc">Filter</span><span class="p">:</span>
+<div class="viewcode-block" id="Filter">
+<a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.Filter">[docs]</a>
+<span class="k">class</span> <span class="nc">Filter</span><span class="p">:</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">begin</span><span class="p">:</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">end</span><span class="p">:</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">groupby</span><span class="o">=</span><span class="s1">&#39;day&#39;</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">begin</span> <span class="o">=</span> <span class="n">begin</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">end</span> <span class="o">=</span> <span class="n">end</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">groupby</span> <span class="o">=</span> <span class="n">groupby</span></div>
 
 
-<div class="viewcode-block" id="EntsoeDataManager"><a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoeDataManager">[docs]</a><span class="k">class</span> <span class="nc">EntsoeDataManager</span><span class="p">:</span>
-    <span class="sd">&#39;&#39;&#39;</span>
+
+<div class="viewcode-block" id="EntsoeDataManager">
+<a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoeDataManager">[docs]</a>
+<span class="k">class</span> <span class="nc">EntsoeDataManager</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Assumptions on the DataManager:</span>
 
 <span class="sd">    index is time series, everything else are values</span>
 <span class="sd">    no date and month columns</span>
 <span class="sd">    &#39;&#39;&#39;</span>
 
-<div class="viewcode-block" id="EntsoeDataManager.capacity"><a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoeDataManager.capacity">[docs]</a>    <span class="k">def</span> <span class="nf">capacity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">country</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<div class="viewcode-block" id="EntsoeDataManager.capacity">
+<a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoeDataManager.capacity">[docs]</a>
+    <span class="k">def</span> <span class="nf">capacity</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">country</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
         <span class="k">pass</span></div>
 
-<div class="viewcode-block" id="EntsoeDataManager.load"><a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoeDataManager.load">[docs]</a>    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">country</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">filt</span><span class="p">:</span> <span class="n">Filter</span><span class="p">):</span>
+
+<div class="viewcode-block" id="EntsoeDataManager.load">
+<a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoeDataManager.load">[docs]</a>
+    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">country</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">filt</span><span class="p">:</span> <span class="n">Filter</span><span class="p">):</span>
         <span class="k">pass</span></div>
 
-<div class="viewcode-block" id="EntsoeDataManager.generation"><a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoeDataManager.generation">[docs]</a>    <span class="k">def</span> <span class="nf">generation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">country</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">filt</span><span class="p">:</span> <span class="n">Filter</span><span class="p">):</span>
+
+<div class="viewcode-block" id="EntsoeDataManager.generation">
+<a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoeDataManager.generation">[docs]</a>
+    <span class="k">def</span> <span class="nf">generation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">country</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">filt</span><span class="p">:</span> <span class="n">Filter</span><span class="p">):</span>
         <span class="k">pass</span></div>
 
-<div class="viewcode-block" id="EntsoeDataManager.crossborderFlows"><a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoeDataManager.crossborderFlows">[docs]</a>    <span class="k">def</span> <span class="nf">crossborderFlows</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">country</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">filt</span><span class="p">:</span> <span class="n">Filter</span><span class="p">):</span>
+
+<div class="viewcode-block" id="EntsoeDataManager.crossborderFlows">
+<a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoeDataManager.crossborderFlows">[docs]</a>
+    <span class="k">def</span> <span class="nf">crossborderFlows</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">country</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">filt</span><span class="p">:</span> <span class="n">Filter</span><span class="p">):</span>
         <span class="k">pass</span></div>
 
-<div class="viewcode-block" id="EntsoeDataManager.countries"><a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoeDataManager.countries">[docs]</a>    <span class="k">def</span> <span class="nf">countries</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+<div class="viewcode-block" id="EntsoeDataManager.countries">
+<a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoeDataManager.countries">[docs]</a>
+    <span class="k">def</span> <span class="nf">countries</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">pass</span></div>
 
-<div class="viewcode-block" id="EntsoeDataManager.climateImpact"><a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoeDataManager.climateImpact">[docs]</a>    <span class="k">def</span> <span class="nf">climateImpact</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">pass</span></div></div>
+
+<div class="viewcode-block" id="EntsoeDataManager.climateImpact">
+<a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoeDataManager.climateImpact">[docs]</a>
+    <span class="k">def</span> <span class="nf">climateImpact</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+</div>
 
 
-<div class="viewcode-block" id="EntsoePlantDataManager"><a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoePlantDataManager">[docs]</a><span class="k">class</span> <span class="nc">EntsoePlantDataManager</span><span class="p">:</span>
-    <span class="sd">&#39;&#39;&#39;</span>
+
+<div class="viewcode-block" id="EntsoePlantDataManager">
+<a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoePlantDataManager">[docs]</a>
+<span class="k">class</span> <span class="nc">EntsoePlantDataManager</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    Assumptions on the PlantDataManager:</span>
 
 <span class="sd">    index is time series, everything else are values</span>
 <span class="sd">    &#39;&#39;&#39;</span>
 
-<div class="viewcode-block" id="EntsoePlantDataManager.plantGen"><a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoePlantDataManager.plantGen">[docs]</a>    <span class="k">def</span> <span class="nf">plantGen</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">filt</span><span class="p">:</span> <span class="n">Filter</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
+<div class="viewcode-block" id="EntsoePlantDataManager.plantGen">
+<a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoePlantDataManager.plantGen">[docs]</a>
+    <span class="k">def</span> <span class="nf">plantGen</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">filt</span><span class="p">:</span> <span class="n">Filter</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        generation data per power plant</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">pass</span></div>
 
-<div class="viewcode-block" id="EntsoePlantDataManager.getNames"><a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoePlantDataManager.getNames">[docs]</a>    <span class="k">def</span> <span class="nf">getNames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
+
+<div class="viewcode-block" id="EntsoePlantDataManager.getNames">
+<a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoePlantDataManager.getNames">[docs]</a>
+    <span class="k">def</span> <span class="nf">getNames</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        returns a dataframe with all power plant names</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">pass</span></div>
 
-<div class="viewcode-block" id="EntsoePlantDataManager.capacityPerPlant"><a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoePlantDataManager.capacityPerPlant">[docs]</a>    <span class="k">def</span> <span class="nf">capacityPerPlant</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">country</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
+
+<div class="viewcode-block" id="EntsoePlantDataManager.capacityPerPlant">
+<a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoePlantDataManager.capacityPerPlant">[docs]</a>
+    <span class="k">def</span> <span class="nf">capacityPerPlant</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">country</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        returns capacities for all plants of a country</span>
 <span class="sd">        or all if country is empty</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">pass</span></div>
 
-<div class="viewcode-block" id="EntsoePlantDataManager.powersystems"><a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoePlantDataManager.powersystems">[docs]</a>    <span class="k">def</span> <span class="nf">powersystems</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">country</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
+
+<div class="viewcode-block" id="EntsoePlantDataManager.powersystems">
+<a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.EntsoePlantDataManager.powersystems">[docs]</a>
+    <span class="k">def</span> <span class="nf">powersystems</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">country</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        returns location data and capacities of power plants</span>
 <span class="sd">        &#39;&#39;&#39;</span>
-        <span class="k">pass</span></div></div>
+        <span class="k">pass</span></div>
+</div>
 
 
-<div class="viewcode-block" id="revReplaceStr"><a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.revReplaceStr">[docs]</a><span class="k">def</span> <span class="nf">revReplaceStr</span><span class="p">(</span><span class="n">string</span><span class="p">):</span>
-    <span class="sd">&#39;&#39;&#39;</span>
+
+<div class="viewcode-block" id="revReplaceStr">
+<a class="viewcode-back" href="../entsoe_data_manager.html#entsoe_data_manager.revReplaceStr">[docs]</a>
+<span class="k">def</span> <span class="nf">revReplaceStr</span><span class="p">(</span><span class="n">string</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">    replaces series names for better visualization</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">st</span> <span class="o">=</span> <span class="nb">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">string</span><span class="p">,</span> <span class="s1">&#39;sum(&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
@@ -168,6 +215,7 @@
     <span class="n">st</span> <span class="o">=</span> <span class="n">st</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
 
     <span class="k">return</span> <span class="n">st</span></div>
+
 </pre></div>
 
            </div>

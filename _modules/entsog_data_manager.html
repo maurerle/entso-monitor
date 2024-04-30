@@ -1,20 +1,22 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>entsog_data_manager &mdash; ENTSOE/G-Monitor 0.1 documentation</title>
-      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
   <!--[if lt IE 9]>
     <script src="../_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
-        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
-        <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script src="../_static/doctools.js"></script>
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=2709fde1"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" /> 
@@ -25,14 +27,18 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../index.html" class="icon icon-home"> ENTSOE/G-Monitor
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            ENTSOE/G-Monitor
           </a>
               <div class="version">
                 0.1
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -66,9 +72,9 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
-          <li><a href="index.html">Module code</a> &raquo;</li>
-      <li>entsog_data_manager</li>
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">entsog_data_manager</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -91,60 +97,96 @@
 
 <span class="n">physFlowTableName</span> <span class="o">=</span> <span class="s1">&#39;physical_flow&#39;</span>
 
-<div class="viewcode-block" id="Filter"><a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.Filter">[docs]</a><span class="k">class</span> <span class="nc">Filter</span><span class="p">:</span>
+<div class="viewcode-block" id="Filter">
+<a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.Filter">[docs]</a>
+<span class="k">class</span> <span class="nc">Filter</span><span class="p">:</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">begin</span><span class="p">:</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">end</span><span class="p">:</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">groupby</span><span class="o">=</span><span class="s1">&#39;day&#39;</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">begin</span> <span class="o">=</span> <span class="n">begin</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">end</span> <span class="o">=</span> <span class="n">end</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">groupby</span> <span class="o">=</span> <span class="n">groupby</span></div>
 
 
-<div class="viewcode-block" id="EntsogDataManager"><a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.EntsogDataManager">[docs]</a><span class="k">class</span> <span class="nc">EntsogDataManager</span><span class="p">:</span>
-<div class="viewcode-block" id="EntsogDataManager.connectionpoints"><a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.EntsogDataManager.connectionpoints">[docs]</a>    <span class="k">def</span> <span class="nf">connectionpoints</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+<div class="viewcode-block" id="EntsogDataManager">
+<a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.EntsogDataManager">[docs]</a>
+<span class="k">class</span> <span class="nc">EntsogDataManager</span><span class="p">:</span>
+<div class="viewcode-block" id="EntsogDataManager.connectionpoints">
+<a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.EntsogDataManager.connectionpoints">[docs]</a>
+    <span class="k">def</span> <span class="nf">connectionpoints</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">pass</span></div>
 
-<div class="viewcode-block" id="EntsogDataManager.interconnections"><a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.EntsogDataManager.interconnections">[docs]</a>    <span class="k">def</span> <span class="nf">interconnections</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
+
+<div class="viewcode-block" id="EntsogDataManager.interconnections">
+<a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.EntsogDataManager.interconnections">[docs]</a>
+    <span class="k">def</span> <span class="nf">interconnections</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        interconnections which are in one of the balancingZones</span>
 <span class="sd">        to be determined whats useful hiere (coming from, to or both)</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">pass</span></div>
 
-<div class="viewcode-block" id="EntsogDataManager.balancingzones"><a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.EntsogDataManager.balancingzones">[docs]</a>    <span class="k">def</span> <span class="nf">balancingzones</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="EntsogDataManager.balancingzones">
+<a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.EntsogDataManager.balancingzones">[docs]</a>
+    <span class="k">def</span> <span class="nf">balancingzones</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        returns a list of balancing zones.</span>
 <span class="sd">        also known as bidding zones</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">pass</span></div>
 
-<div class="viewcode-block" id="EntsogDataManager.operators"><a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.EntsogDataManager.operators">[docs]</a>    <span class="k">def</span> <span class="nf">operators</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
+
+<div class="viewcode-block" id="EntsogDataManager.operators">
+<a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.EntsogDataManager.operators">[docs]</a>
+    <span class="k">def</span> <span class="nf">operators</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        returns a list of operators</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">pass</span></div>
 
-<div class="viewcode-block" id="EntsogDataManager.operatorpointdirections"><a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.EntsogDataManager.operatorpointdirections">[docs]</a>    <span class="k">def</span> <span class="nf">operatorpointdirections</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
+
+<div class="viewcode-block" id="EntsogDataManager.operatorpointdirections">
+<a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.EntsogDataManager.operatorpointdirections">[docs]</a>
+    <span class="k">def</span> <span class="nf">operatorpointdirections</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        returns the result of the operatorpointdirections request</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">pass</span></div>
 
-<div class="viewcode-block" id="EntsogDataManager.operationaldata"><a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.EntsogDataManager.operationaldata">[docs]</a>    <span class="k">def</span> <span class="nf">operationaldata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">operatorKeys</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">filt</span><span class="p">:</span> <span class="n">Filter</span><span class="p">,</span> <span class="n">group_by</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;directionkey&#39;</span><span class="p">],</span> <span class="n">table</span><span class="o">=</span><span class="n">physFlowTableName</span><span class="p">):</span>
-        <span class="sd">&#39;&#39;&#39;</span>
+
+<div class="viewcode-block" id="EntsogDataManager.operationaldata">
+<a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.EntsogDataManager.operationaldata">[docs]</a>
+    <span class="k">def</span> <span class="nf">operationaldata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">operatorKeys</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">filt</span><span class="p">:</span> <span class="n">Filter</span><span class="p">,</span> <span class="n">group_by</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;directionkey&#39;</span><span class="p">],</span> <span class="n">table</span><span class="o">=</span><span class="n">physFlowTableName</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&#39;&#39;&#39;</span>
 <span class="sd">        returns timeseries data of the given Indicator</span>
 <span class="sd">        &#39;&#39;&#39;</span>
         <span class="k">pass</span></div>
 
-<div class="viewcode-block" id="EntsogDataManager.operationaldataByPoints"><a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.EntsogDataManager.operationaldataByPoints">[docs]</a>    <span class="k">def</span> <span class="nf">operationaldataByPoints</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">points</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">filt</span><span class="p">:</span> <span class="n">Filter</span><span class="p">,</span> <span class="n">group_by</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;directionkey&#39;</span><span class="p">],</span> <span class="n">table</span><span class="o">=</span><span class="n">physFlowTableName</span><span class="p">):</span>
+
+<div class="viewcode-block" id="EntsogDataManager.operationaldataByPoints">
+<a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.EntsogDataManager.operationaldataByPoints">[docs]</a>
+    <span class="k">def</span> <span class="nf">operationaldataByPoints</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">points</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">filt</span><span class="p">:</span> <span class="n">Filter</span><span class="p">,</span> <span class="n">group_by</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;directionkey&#39;</span><span class="p">],</span> <span class="n">table</span><span class="o">=</span><span class="n">physFlowTableName</span><span class="p">):</span>
         <span class="k">pass</span></div>
 
-<div class="viewcode-block" id="EntsogDataManager.operatorsByBZ"><a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.EntsogDataManager.operatorsByBZ">[docs]</a>    <span class="k">def</span> <span class="nf">operatorsByBZ</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bz</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+
+<div class="viewcode-block" id="EntsogDataManager.operatorsByBZ">
+<a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.EntsogDataManager.operatorsByBZ">[docs]</a>
+    <span class="k">def</span> <span class="nf">operatorsByBZ</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bz</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
         <span class="k">pass</span></div>
 
-<div class="viewcode-block" id="EntsogDataManager.bilanz"><a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.EntsogDataManager.bilanz">[docs]</a>    <span class="k">def</span> <span class="nf">bilanz</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">operatorKeys</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">filt</span><span class="p">:</span> <span class="n">Filter</span><span class="p">,</span> <span class="n">table</span><span class="o">=</span><span class="n">physFlowTableName</span><span class="p">):</span>
+
+<div class="viewcode-block" id="EntsogDataManager.bilanz">
+<a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.EntsogDataManager.bilanz">[docs]</a>
+    <span class="k">def</span> <span class="nf">bilanz</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">operatorKeys</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">filt</span><span class="p">:</span> <span class="n">Filter</span><span class="p">,</span> <span class="n">table</span><span class="o">=</span><span class="n">physFlowTableName</span><span class="p">):</span>
         <span class="k">pass</span></div>
 
-<div class="viewcode-block" id="EntsogDataManager.crossborder"><a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.EntsogDataManager.crossborder">[docs]</a>    <span class="k">def</span> <span class="nf">crossborder</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">operatorKeys</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">filt</span><span class="p">:</span> <span class="n">Filter</span><span class="p">,</span> <span class="n">group_by</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;t.directionkey&#39;</span><span class="p">,</span> <span class="s1">&#39;opd.adjacentzones&#39;</span><span class="p">,</span> <span class="s1">&#39;opd.adjacentcountry&#39;</span><span class="p">],</span> <span class="n">table</span><span class="o">=</span><span class="n">physFlowTableName</span><span class="p">):</span>
-        <span class="k">pass</span></div></div>
+
+<div class="viewcode-block" id="EntsogDataManager.crossborder">
+<a class="viewcode-back" href="../entsog_data_manager.html#entsog_data_manager.EntsogDataManager.crossborder">[docs]</a>
+    <span class="k">def</span> <span class="nf">crossborder</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">operatorKeys</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">filt</span><span class="p">:</span> <span class="n">Filter</span><span class="p">,</span> <span class="n">group_by</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;t.directionkey&#39;</span><span class="p">,</span> <span class="s1">&#39;opd.adjacentzones&#39;</span><span class="p">,</span> <span class="s1">&#39;opd.adjacentcountry&#39;</span><span class="p">],</span> <span class="n">table</span><span class="o">=</span><span class="n">physFlowTableName</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+</div>
+
 </pre></div>
 
            </div>

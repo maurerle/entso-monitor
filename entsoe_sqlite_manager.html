@@ -1,21 +1,23 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>entsoe_sqlite_manager module &mdash; ENTSOE/G-Monitor 0.1 documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script src="_static/doctools.js"></script>
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=2709fde1"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -28,14 +30,18 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="index.html" class="icon icon-home"> ENTSOE/G-Monitor
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            ENTSOE/G-Monitor
           </a>
               <div class="version">
                 0.1
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -46,7 +52,27 @@
 <li class="toctree-l1"><a class="reference internal" href="entsoe_crawler.html">entsoe_crawler module</a></li>
 <li class="toctree-l1"><a class="reference internal" href="entsoe_dash.html">entsoe_dash module</a></li>
 <li class="toctree-l1"><a class="reference internal" href="entsoe_data_manager.html">entsoe_data_manager module</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">entsoe_sqlite_manager module</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">entsoe_sqlite_manager module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#entsoe_sqlite_manager.EntsoePlantSQLite"><code class="docutils literal notranslate"><span class="pre">EntsoePlantSQLite</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#entsoe_sqlite_manager.EntsoePlantSQLite.capacityPerPlant"><code class="docutils literal notranslate"><span class="pre">EntsoePlantSQLite.capacityPerPlant()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#entsoe_sqlite_manager.EntsoePlantSQLite.getNames"><code class="docutils literal notranslate"><span class="pre">EntsoePlantSQLite.getNames()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#entsoe_sqlite_manager.EntsoePlantSQLite.groupTime"><code class="docutils literal notranslate"><span class="pre">EntsoePlantSQLite.groupTime()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#entsoe_sqlite_manager.EntsoePlantSQLite.plantGen"><code class="docutils literal notranslate"><span class="pre">EntsoePlantSQLite.plantGen()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#entsoe_sqlite_manager.EntsoePlantSQLite.powersystems"><code class="docutils literal notranslate"><span class="pre">EntsoePlantSQLite.powersystems()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#entsoe_sqlite_manager.EntsoeSQLite"><code class="docutils literal notranslate"><span class="pre">EntsoeSQLite</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#entsoe_sqlite_manager.EntsoeSQLite.capacity"><code class="docutils literal notranslate"><span class="pre">EntsoeSQLite.capacity()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#entsoe_sqlite_manager.EntsoeSQLite.climateImpact"><code class="docutils literal notranslate"><span class="pre">EntsoeSQLite.climateImpact()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#entsoe_sqlite_manager.EntsoeSQLite.countries"><code class="docutils literal notranslate"><span class="pre">EntsoeSQLite.countries()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#entsoe_sqlite_manager.EntsoeSQLite.crossborderFlows"><code class="docutils literal notranslate"><span class="pre">EntsoeSQLite.crossborderFlows()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#entsoe_sqlite_manager.EntsoeSQLite.generation"><code class="docutils literal notranslate"><span class="pre">EntsoeSQLite.generation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#entsoe_sqlite_manager.EntsoeSQLite.groupTime"><code class="docutils literal notranslate"><span class="pre">EntsoeSQLite.groupTime()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#entsoe_sqlite_manager.EntsoeSQLite.load"><code class="docutils literal notranslate"><span class="pre">EntsoeSQLite.load()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="entsoe_parquet_manager.html">entsoe_parquet_manager module</a></li>
 <li class="toctree-l1"><a class="reference internal" href="entsog_crawler.html">entsog_crawler module</a></li>
 <li class="toctree-l1"><a class="reference internal" href="entsog_dash.html">entsog_dash module</a></li>
@@ -69,8 +95,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>entsoe_sqlite_manager module</li>
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">entsoe_sqlite_manager module</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/entsoe_sqlite_manager.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -81,19 +107,15 @@
            <div itemprop="articleBody">
              
   <section id="module-entsoe_sqlite_manager">
-<span id="entsoe-sqlite-manager-module"></span><h1>entsoe_sqlite_manager module<a class="headerlink" href="#module-entsoe_sqlite_manager" title="Permalink to this heading"></a></h1>
+<span id="entsoe-sqlite-manager-module"></span><h1>entsoe_sqlite_manager module<a class="headerlink" href="#module-entsoe_sqlite_manager" title="Link to this heading"></a></h1>
 <p>Created on Sun Nov 29 14:58:52 2020</p>
 <p>&#64;author: maurer</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="entsoe_sqlite_manager.EntsoePlantSQLite">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">entsoe_sqlite_manager.</span></span><span class="sig-name descname"><span class="pre">EntsoePlantSQLite</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plantdatabase</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoePlantSQLite"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoePlantSQLite" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">entsoe_sqlite_manager.</span></span><span class="sig-name descname"><span class="pre">EntsoePlantSQLite</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">plantdatabase</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoePlantSQLite"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoePlantSQLite" title="Link to this definition"></a></dt>
 <dd><p>Bases: <a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.EntsoePlantDataManager" title="entsoe_data_manager.EntsoePlantDataManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">EntsoePlantDataManager</span></code></a></p>
 <p class="rubric">Methods</p>
 <table class="autosummary longtable docutils align-default">
-<colgroup>
-<col style="width: 10%" />
-<col style="width: 90%" />
-</colgroup>
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#entsoe_sqlite_manager.EntsoePlantSQLite.capacityPerPlant" title="entsoe_sqlite_manager.EntsoePlantSQLite.capacityPerPlant"><code class="xref py py-obj docutils literal notranslate"><span class="pre">capacityPerPlant</span></code></a>([country])</p></td>
 <td><p>returns capacities for all plants of a country or all if country is empty</p></td>
@@ -110,10 +132,6 @@
 </tbody>
 </table>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 57%" />
-<col style="width: 43%" />
-</colgroup>
 <tbody>
 <tr class="row-odd"><td><p><strong>groupTime</strong></p></td>
 <td></td>
@@ -122,31 +140,31 @@
 </table>
 <dl class="py method">
 <dt class="sig sig-object py" id="entsoe_sqlite_manager.EntsoePlantSQLite.capacityPerPlant">
-<span class="sig-name descname"><span class="pre">capacityPerPlant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">country</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoePlantSQLite.capacityPerPlant"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoePlantSQLite.capacityPerPlant" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">capacityPerPlant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">country</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoePlantSQLite.capacityPerPlant"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoePlantSQLite.capacityPerPlant" title="Link to this definition"></a></dt>
 <dd><p>returns capacities for all plants of a country
 or all if country is empty</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="entsoe_sqlite_manager.EntsoePlantSQLite.getNames">
-<span class="sig-name descname"><span class="pre">getNames</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoePlantSQLite.getNames"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoePlantSQLite.getNames" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">getNames</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoePlantSQLite.getNames"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoePlantSQLite.getNames" title="Link to this definition"></a></dt>
 <dd><p>returns a list of plant names and countries with existing generation data</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="entsoe_sqlite_manager.EntsoePlantSQLite.groupTime">
-<span class="sig-name descname"><span class="pre">groupTime</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">groupby</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoePlantSQLite.groupTime"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoePlantSQLite.groupTime" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">groupTime</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">groupby</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoePlantSQLite.groupTime"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoePlantSQLite.groupTime" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="entsoe_sqlite_manager.EntsoePlantSQLite.plantGen">
-<span class="sig-name descname"><span class="pre">plantGen</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.Filter" title="entsoe_data_manager.Filter"><span class="pre">Filter</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoePlantSQLite.plantGen"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoePlantSQLite.plantGen" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">plantGen</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.Filter" title="entsoe_data_manager.Filter"><span class="pre">Filter</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoePlantSQLite.plantGen"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoePlantSQLite.plantGen" title="Link to this definition"></a></dt>
 <dd><p>generation data per power plant</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="entsoe_sqlite_manager.EntsoePlantSQLite.powersystems">
-<span class="sig-name descname"><span class="pre">powersystems</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">country</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoePlantSQLite.powersystems"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoePlantSQLite.powersystems" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">powersystems</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">country</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoePlantSQLite.powersystems"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoePlantSQLite.powersystems" title="Link to this definition"></a></dt>
 <dd><p>returns a list of all power systems which exist in ENTSO-E and OPSD (open-power-system-data) - joined on the eic_code</p>
 </dd></dl>
 
@@ -154,14 +172,10 @@ or all if country is empty</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="entsoe_sqlite_manager.EntsoeSQLite">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">entsoe_sqlite_manager.</span></span><span class="sig-name descname"><span class="pre">EntsoeSQLite</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoeSQLite"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoeSQLite" title="Permalink to this definition"></a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">entsoe_sqlite_manager.</span></span><span class="sig-name descname"><span class="pre">EntsoeSQLite</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">database</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoeSQLite"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoeSQLite" title="Link to this definition"></a></dt>
 <dd><p>Bases: <a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.EntsoeDataManager" title="entsoe_data_manager.EntsoeDataManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">EntsoeDataManager</span></code></a></p>
 <p class="rubric">Methods</p>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 67%" />
-<col style="width: 33%" />
-</colgroup>
 <tbody>
 <tr class="row-odd"><td><p><strong>capacity</strong></p></td>
 <td></td>
@@ -188,37 +202,37 @@ or all if country is empty</p>
 </table>
 <dl class="py method">
 <dt class="sig sig-object py" id="entsoe_sqlite_manager.EntsoeSQLite.capacity">
-<span class="sig-name descname"><span class="pre">capacity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">country</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoeSQLite.capacity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoeSQLite.capacity" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">capacity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">country</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoeSQLite.capacity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoeSQLite.capacity" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="entsoe_sqlite_manager.EntsoeSQLite.climateImpact">
-<span class="sig-name descname"><span class="pre">climateImpact</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoeSQLite.climateImpact"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoeSQLite.climateImpact" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">climateImpact</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoeSQLite.climateImpact"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoeSQLite.climateImpact" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="entsoe_sqlite_manager.EntsoeSQLite.countries">
-<span class="sig-name descname"><span class="pre">countries</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoeSQLite.countries"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoeSQLite.countries" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">countries</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoeSQLite.countries"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoeSQLite.countries" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="entsoe_sqlite_manager.EntsoeSQLite.crossborderFlows">
-<span class="sig-name descname"><span class="pre">crossborderFlows</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">country</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.Filter" title="entsoe_data_manager.Filter"><span class="pre">Filter</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoeSQLite.crossborderFlows"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoeSQLite.crossborderFlows" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">crossborderFlows</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">country</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.Filter" title="entsoe_data_manager.Filter"><span class="pre">Filter</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoeSQLite.crossborderFlows"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoeSQLite.crossborderFlows" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="entsoe_sqlite_manager.EntsoeSQLite.generation">
-<span class="sig-name descname"><span class="pre">generation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">country</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.Filter" title="entsoe_data_manager.Filter"><span class="pre">Filter</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoeSQLite.generation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoeSQLite.generation" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">generation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">country</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.Filter" title="entsoe_data_manager.Filter"><span class="pre">Filter</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoeSQLite.generation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoeSQLite.generation" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="entsoe_sqlite_manager.EntsoeSQLite.groupTime">
-<span class="sig-name descname"><span class="pre">groupTime</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">groupby</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoeSQLite.groupTime"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoeSQLite.groupTime" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">groupTime</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">groupby</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">column</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoeSQLite.groupTime"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoeSQLite.groupTime" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="entsoe_sqlite_manager.EntsoeSQLite.load">
-<span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">country</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.Filter" title="entsoe_data_manager.Filter"><span class="pre">Filter</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoeSQLite.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoeSQLite.load" title="Permalink to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">country</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="entsoe_data_manager.html#entsoe_data_manager.Filter" title="entsoe_data_manager.Filter"><span class="pre">Filter</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/entsoe_sqlite_manager.html#EntsoeSQLite.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#entsoe_sqlite_manager.EntsoeSQLite.load" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 </dd></dl>

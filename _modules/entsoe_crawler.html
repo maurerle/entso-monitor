@@ -1,20 +1,22 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>entsoe_crawler &mdash; ENTSOE/G-Monitor 0.1 documentation</title>
-      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+
+  
   <!--[if lt IE 9]>
     <script src="../_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
-        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
-        <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
-        <script src="../_static/doctools.js"></script>
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=2709fde1"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" /> 
@@ -25,14 +27,18 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="../index.html" class="icon icon-home"> ENTSOE/G-Monitor
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            ENTSOE/G-Monitor
           </a>
               <div class="version">
                 0.1
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -66,9 +72,9 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
-          <li><a href="index.html">Module code</a> &raquo;</li>
-      <li>entsoe_crawler</li>
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">entsoe_crawler</li>
       <li class="wy-breadcrumbs-aside">
       </li>
   </ul>
@@ -116,8 +122,10 @@
 
 <span class="n">all_countries</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">Area</span><span class="p">]</span>
 
-<div class="viewcode-block" id="sanitize_series"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.sanitize_series">[docs]</a><span class="k">def</span> <span class="nf">sanitize_series</span><span class="p">(</span><span class="n">seriesname</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="sanitize_series">
+<a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.sanitize_series">[docs]</a>
+<span class="k">def</span> <span class="nf">sanitize_series</span><span class="p">(</span><span class="n">seriesname</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    replaces illegal values from a series name</span>
 <span class="sd">    for insertion into database</span>
 
@@ -142,8 +150,11 @@
     <span class="k">return</span> <span class="n">st</span></div>
 
 
-<div class="viewcode-block" id="calculate_nett_generation"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.calculate_nett_generation">[docs]</a><span class="k">def</span> <span class="nf">calculate_nett_generation</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="calculate_nett_generation">
+<a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.calculate_nett_generation">[docs]</a>
+<span class="k">def</span> <span class="nf">calculate_nett_generation</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Calculates the difference between columns ending with _actual_aggregated and _actual_consumption.</span>
 
 <span class="sd">    Parameters</span>
@@ -178,8 +189,11 @@
     <span class="k">return</span> <span class="n">dat</span></div>
 
 
-<div class="viewcode-block" id="EntsoeCrawler"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler">[docs]</a><span class="k">class</span> <span class="nc">EntsoeCrawler</span><span class="p">:</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="EntsoeCrawler">
+<a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler">[docs]</a>
+<span class="k">class</span> <span class="nc">EntsoeCrawler</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    class to allow easier crawling of ENTSO-E timeseries data</span>
 
 <span class="sd">    Parameters</span>
@@ -195,7 +209,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">engine</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="n">database</span><span class="p">)</span>
             <span class="nd">@contextmanager</span>
             <span class="k">def</span> <span class="nf">access_db</span><span class="p">():</span>
-                <span class="sd">&quot;&quot;&quot;contextmanager to handle opening of db, similar to closing for sqlite3&quot;&quot;&quot;</span>
+<span class="w">                </span><span class="sd">&quot;&quot;&quot;contextmanager to handle opening of db, similar to closing for sqlite3&quot;&quot;&quot;</span>
                 <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">engine</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">,</span> <span class="n">conn</span><span class="o">.</span><span class="n">begin</span><span class="p">():</span>
                     <span class="k">yield</span> <span class="n">conn</span>
 
@@ -203,8 +217,10 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span> <span class="o">=</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">closing</span><span class="p">(</span><span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">database</span><span class="p">))</span>
 
-<div class="viewcode-block" id="EntsoeCrawler.init_base_sql"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.init_base_sql">[docs]</a>    <span class="k">def</span> <span class="nf">init_base_sql</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="EntsoeCrawler.init_base_sql">
+<a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.init_base_sql">[docs]</a>
+    <span class="k">def</span> <span class="nf">init_base_sql</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        write static data to database once</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">psrtype</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span>
@@ -217,8 +233,11 @@
             <span class="n">areas</span><span class="o">.</span><span class="n">to_sql</span><span class="p">(</span><span class="s1">&#39;areas&#39;</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">if_exists</span><span class="o">=</span><span class="s1">&#39;replace&#39;</span><span class="p">)</span>
             <span class="n">psrtype</span><span class="o">.</span><span class="n">to_sql</span><span class="p">(</span><span class="s1">&#39;psrtype&#39;</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">if_exists</span><span class="o">=</span><span class="s1">&#39;replace&#39;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="EntsoeCrawler.fetch_and_write_entsoe_df_to_db"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.fetch_and_write_entsoe_df_to_db">[docs]</a>    <span class="k">def</span> <span class="nf">fetch_and_write_entsoe_df_to_db</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">country</span><span class="p">,</span> <span class="n">proc</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="EntsoeCrawler.fetch_and_write_entsoe_df_to_db">
+<a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.fetch_and_write_entsoe_df_to_db">[docs]</a>
+    <span class="k">def</span> <span class="nf">fetch_and_write_entsoe_df_to_db</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">country</span><span class="p">,</span> <span class="n">proc</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Crawl data from ENTSO-E transparency platform and write it to the database</span>
 
 <span class="sd">        Parameters</span>
@@ -284,8 +303,11 @@
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;error downloading </span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">country</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">start</span><span class="si">}</span><span class="s1">, </span><span class="si">{</span><span class="n">end</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="EntsoeCrawler.get_latest_crawled_timestamp"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.get_latest_crawled_timestamp">[docs]</a>    <span class="k">def</span> <span class="nf">get_latest_crawled_timestamp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">tablename</span><span class="p">,</span> <span class="n">tz</span><span class="o">=</span><span class="s1">&#39;Europe/Berlin&#39;</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="EntsoeCrawler.get_latest_crawled_timestamp">
+<a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.get_latest_crawled_timestamp">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_latest_crawled_timestamp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">tablename</span><span class="p">,</span> <span class="n">tz</span><span class="o">=</span><span class="s1">&#39;Europe/Berlin&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Find the best Start for the given procedurename by finding the last timestemp where data was collected for.</span>
 <span class="sd">        Also calculates the best delta to update until today.</span>
 
@@ -331,8 +353,11 @@
             <span class="k">return</span> <span class="n">start</span><span class="p">,</span> <span class="n">delta</span></div>
 
 
-<div class="viewcode-block" id="EntsoeCrawler.download_entsoe"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.download_entsoe">[docs]</a>    <span class="k">def</span> <span class="nf">download_entsoe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">countries</span><span class="p">,</span> <span class="n">proc</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">times</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="EntsoeCrawler.download_entsoe">
+<a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.download_entsoe">[docs]</a>
+    <span class="k">def</span> <span class="nf">download_entsoe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">countries</span><span class="p">,</span> <span class="n">proc</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">times</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Downloads data with a procedure from a EntsoePandasClient</span>
 <span class="sd">        and stores it in the configured database</span>
 
@@ -392,8 +417,11 @@
             <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;could not create hypertable: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="EntsoeCrawler.pull_crossborders"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.pull_crossborders">[docs]</a>    <span class="k">def</span> <span class="nf">pull_crossborders</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">times</span><span class="p">,</span> <span class="n">proc</span><span class="p">,</span> <span class="n">allZones</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="EntsoeCrawler.pull_crossborders">
+<a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.pull_crossborders">[docs]</a>
+    <span class="k">def</span> <span class="nf">pull_crossborders</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">times</span><span class="p">,</span> <span class="n">proc</span><span class="p">,</span> <span class="n">allZones</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Pulls transmissions across borders from entsoe</span>
 
 <span class="sd">        Parameters</span>
@@ -461,8 +489,11 @@
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
                 <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;could not create hypertable: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="EntsoeCrawler.save_power_system_data"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.save_power_system_data">[docs]</a>    <span class="k">def</span> <span class="nf">save_power_system_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="EntsoeCrawler.save_power_system_data">
+<a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.save_power_system_data">[docs]</a>
+    <span class="k">def</span> <span class="nf">save_power_system_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        pulls static data from opsd and reads it into the database</span>
 <span class="sd">        - used for mapping existing power plants from entsoe to a location on a map</span>
 
@@ -484,8 +515,11 @@
             <span class="n">df</span><span class="o">.</span><span class="n">to_sql</span><span class="p">(</span><span class="s1">&#39;powersystemdata&#39;</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">if_exists</span><span class="o">=</span><span class="s1">&#39;replace&#39;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">df</span></div>
 
-<div class="viewcode-block" id="EntsoeCrawler.download_entsoe_plant_data"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.download_entsoe_plant_data">[docs]</a>    <span class="k">def</span> <span class="nf">download_entsoe_plant_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">countries</span><span class="p">,</span> <span class="n">client</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">times</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="EntsoeCrawler.download_entsoe_plant_data">
+<a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.download_entsoe_plant_data">[docs]</a>
+    <span class="k">def</span> <span class="nf">download_entsoe_plant_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">countries</span><span class="p">,</span> <span class="n">client</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">times</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Allows to download the generation per power plant from entsoe.</span>
 <span class="sd">        Uses download_entsoe to write the data into the DB.</span>
 
@@ -508,7 +542,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># new proxy function</span>
         <span class="k">def</span> <span class="nf">query_per_plant</span><span class="p">(</span><span class="n">country</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">):</span>
-            <span class="sd">&quot;&quot;&quot;</span>
+<span class="w">            </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            wrapper function around query_generation_per_plant to convert multiindex</span>
 
 <span class="sd">            Parameters</span>
@@ -549,8 +583,11 @@
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;could not create plant_names: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="EntsoeCrawler.countries_with_plant_data"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.countries_with_plant_data">[docs]</a>    <span class="k">def</span> <span class="nf">countries_with_plant_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">client</span><span class="p">,</span> <span class="n">countries</span><span class="o">=</span><span class="n">all_countries</span><span class="p">,</span> <span class="n">st</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="s1">&#39;20180101&#39;</span><span class="p">,</span> <span class="n">tz</span><span class="o">=</span><span class="s1">&#39;Europe/Berlin&#39;</span><span class="p">)):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="EntsoeCrawler.countries_with_plant_data">
+<a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.countries_with_plant_data">[docs]</a>
+    <span class="k">def</span> <span class="nf">countries_with_plant_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">client</span><span class="p">,</span> <span class="n">countries</span><span class="o">=</span><span class="n">all_countries</span><span class="p">,</span> <span class="n">st</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="s1">&#39;20180101&#39;</span><span class="p">,</span> <span class="n">tz</span><span class="o">=</span><span class="s1">&#39;Europe/Berlin&#39;</span><span class="p">)):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        checks for all countries if the have available data at date.</span>
 <span class="sd">        Returns list of countries with existing generation data per plant at given timestamp</span>
 
@@ -577,8 +614,11 @@
                 <span class="k">continue</span>
         <span class="k">return</span> <span class="n">plant_countries</span></div>
 
-<div class="viewcode-block" id="EntsoeCrawler.update_database"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.update_database">[docs]</a>    <span class="k">def</span> <span class="nf">update_database</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">client</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">countries</span><span class="o">=</span><span class="n">all_countries</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="EntsoeCrawler.update_database">
+<a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.update_database">[docs]</a>
+    <span class="k">def</span> <span class="nf">update_database</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">client</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">countries</span><span class="o">=</span><span class="n">all_countries</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Runs everything which is needed to update the database and pull the data since the last successful pull.</span>
 
 <span class="sd">        Parameters</span>
@@ -623,8 +663,11 @@
 
         <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;****** finished updating ENTSO-E *******&#39;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="EntsoeCrawler.create_database"><a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.create_database">[docs]</a>    <span class="k">def</span> <span class="nf">create_database</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">client</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">countries</span><span class="o">=</span><span class="p">[]):</span>
-        <span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="EntsoeCrawler.create_database">
+<a class="viewcode-back" href="../entsoe_crawler.html#entsoe_crawler.EntsoeCrawler.create_database">[docs]</a>
+    <span class="k">def</span> <span class="nf">create_database</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">client</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">countries</span><span class="o">=</span><span class="p">[]):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -644,7 +687,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">init_base_sql</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">save_power_system_data</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">download_entsoe</span><span class="p">(</span><span class="n">countries</span><span class="p">,</span> <span class="n">client</span><span class="o">.</span><span class="n">query_installed_generation_capacity_per_unit</span><span class="p">,</span>
-                            <span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="n">delta</span><span class="p">,</span> <span class="n">times</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div></div>
+                            <span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="n">delta</span><span class="p">,</span> <span class="n">times</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
+</div>
+
 
 
 <span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
