@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="../">
 <head>
@@ -5,18 +7,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>entsoe_crawler &mdash; ENTSOE/G-Monitor 0.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
 
   
-  <!--[if lt IE 9]>
-    <script src="../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script src="../_static/jquery.js?v=5d32c60e"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../_static/documentation_options.js?v=2709fde1"></script>
-        <script src="../_static/doctools.js?v=9a2dae69"></script>
-        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=2709fde1"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" /> 
@@ -33,9 +31,6 @@
           <a href="../index.html" class="icon icon-home">
             ENTSOE/G-Monitor
           </a>
-              <div class="version">
-                0.1
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -97,7 +92,7 @@
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 <span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">timedelta</span>
 <span class="kn">import</span> <span class="nn">time</span>
-<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">create_engine</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy</span> <span class="kn">import</span> <span class="n">create_engine</span><span class="p">,</span> <span class="n">text</span>
 <span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
 
 <span class="kn">from</span> <span class="nn">entsoe</span> <span class="kn">import</span> <span class="n">EntsoePandasClient</span>
@@ -337,7 +332,7 @@
             <span class="k">try</span><span class="p">:</span>
                 <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
                     <span class="n">query</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;select max(&quot;index&quot;) from </span><span class="si">{</span><span class="n">tablename</span><span class="si">}</span><span class="s1">&#39;</span>
-                    <span class="n">d</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="n">d</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">text</span><span class="p">(</span><span class="n">query</span><span class="p">))</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
                 <span class="n">start</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
                 <span class="k">try</span><span class="p">:</span>
                     <span class="n">start</span> <span class="o">=</span> <span class="n">start</span><span class="o">.</span><span class="n">tz_localize</span><span class="p">(</span><span class="s1">&#39;Europe/Berlin&#39;</span><span class="p">)</span>
@@ -400,9 +395,9 @@
                 <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;creating index country_idx_</span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
                 <span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
                     <span class="sa">f</span><span class="s1">&#39;CREATE INDEX IF NOT EXISTS &quot;country_idx_</span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">&quot; ON &quot;</span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">&quot; (&quot;country&quot;, &quot;index&quot;);&#39;</span><span class="p">)</span>
-                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">text</span><span class="p">(</span><span class="n">query</span><span class="p">))</span>
                 <span class="c1">#query = (f&#39;CREATE INDEX IF NOT EXISTS &quot;country_{proc.__name__}&quot; ON &quot;{proc.__name__}&quot; (&quot;country&quot;);&#39;)</span>
-                <span class="c1"># conn.execute(query)</span>
+                <span class="c1"># conn.execute(text(query))</span>
                 <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;created indexes country_idx_</span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;could not create index if needed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
@@ -410,8 +405,8 @@
         <span class="c1"># falls es eine TimescaleDB ist, erzeuge eine Hypertable</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
-                <span class="n">query_create_hypertable</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;SELECT create_hypertable(&#39;</span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&#39;, &#39;index&#39;, if_not_exists =&gt; TRUE, migrate_data =&gt; TRUE);&quot;</span>
-                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query_create_hypertable</span><span class="p">)</span>
+                <span class="n">query_create_hypertable</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;SELECT public.create_hypertable(&#39;</span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&#39;, &#39;index&#39;, if_not_exists =&gt; TRUE, migrate_data =&gt; TRUE);&quot;</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">text</span><span class="p">(</span><span class="n">query_create_hypertable</span><span class="p">))</span>
             <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;created hypertable </span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;could not create hypertable: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span></div>
@@ -435,7 +430,7 @@
 <span class="sd">        delta :</span>
 <span class="sd">            param proc:</span>
 <span class="sd">        proc :</span>
-<span class="sd">            </span>
+
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -443,6 +438,8 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">start</span><span class="p">,</span> <span class="n">delta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_latest_crawled_timestamp</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
         <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;****** </span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1"> *******&#39;</span><span class="p">)</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timestamp</span><span class="p">(</span><span class="s2">&quot;2024-03-25 04:00&quot;</span><span class="p">,</span>  <span class="n">tz</span><span class="o">=</span><span class="s1">&#39;Europe/Berlin&#39;</span><span class="p">)</span>
+        <span class="n">delta</span> <span class="o">=</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="p">(</span><span class="n">times</span><span class="o">*</span><span class="n">delta</span><span class="p">)</span><span class="o">.</span><span class="n">days</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
             <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;nothing to do&#39;</span><span class="p">)</span>
@@ -485,7 +482,7 @@
             <span class="k">try</span><span class="p">:</span>
                 <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
                     <span class="n">query_create_hypertable</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;SELECT create_hypertable(&#39;</span><span class="si">{</span><span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">&#39;, &#39;index&#39;, if_not_exists =&gt; TRUE, migrate_data =&gt; TRUE);&quot;</span>
-                    <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query_create_hypertable</span><span class="p">)</span>
+                    <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">text</span><span class="p">(</span><span class="n">query_create_hypertable</span><span class="p">))</span>
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
                 <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;could not create hypertable: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span></div>
 
@@ -571,7 +568,7 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">db_accessor</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
                 <span class="n">query</span> <span class="o">=</span> <span class="s1">&#39;CREATE INDEX IF NOT EXISTS &quot;idx_name_query_per_plant&quot; ON &quot;query_per_plant&quot; (&quot;name&quot;, &quot;index&quot;, &quot;country&quot;);&#39;</span>
-                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">text</span><span class="p">(</span><span class="n">query</span><span class="p">))</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;could not create index: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 
@@ -649,12 +646,12 @@
                     <span class="n">client</span><span class="o">.</span><span class="n">query_generation</span><span class="p">]</span>
 
         <span class="c1"># Download load and generation</span>
-        <span class="c1"># hier könnte man parallelisieren</span>
-        <span class="k">for</span> <span class="n">proc</span> <span class="ow">in</span> <span class="n">ts_procs</span><span class="p">:</span>
-            <span class="n">start_</span><span class="p">,</span> <span class="n">delta_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_latest_crawled_timestamp</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="n">proc</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">download_entsoe</span><span class="p">(</span><span class="n">countries</span><span class="p">,</span> <span class="n">proc</span><span class="p">,</span> <span class="n">start_</span><span class="p">,</span> <span class="n">delta_</span><span class="p">,</span> <span class="n">times</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="c1">#        # hier könnte man parallelisieren</span>
+<span class="c1">#        for proc in ts_procs:</span>
+<span class="c1">#            start_, delta_ = self.get_latest_crawled_timestamp(start, delta, proc.__name__)</span>
+<span class="c1">#            self.download_entsoe(countries, proc, start_, delta_, times=1)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">pull_crossborders</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">client</span><span class="o">.</span><span class="n">query_crossborder_flows</span><span class="p">)</span>
+        <span class="c1">#self.pull_crossborders(start, delta, 1, client.query_crossborder_flows)</span>
 
         <span class="n">plant_countries</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">countries_with_plant_data</span><span class="p">(</span><span class="n">client</span><span class="p">)</span>
 
@@ -701,7 +698,7 @@
     <span class="n">delta</span> <span class="o">=</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
     <span class="n">end</span> <span class="o">=</span> <span class="n">start</span><span class="o">+</span><span class="n">delta</span>
 
-    <span class="n">times</span> <span class="o">=</span> <span class="mi">7</span><span class="o">*</span><span class="mi">12</span>  <span class="c1"># bis 2022</span>
+    <span class="n">times</span> <span class="o">=</span> <span class="mi">3</span><span class="o">*</span><span class="mi">12</span>  <span class="c1"># bis 2022</span>
     <span class="n">db</span> <span class="o">=</span> <span class="s1">&#39;postgresql://entso:entso@localhost:5432/entsoe&#39;</span>
     <span class="c1">#db = &#39;data/entsoe.db&#39;</span>
 
