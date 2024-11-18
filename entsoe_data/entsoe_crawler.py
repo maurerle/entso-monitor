@@ -11,7 +11,7 @@ import sqlite3
 import pandas as pd
 from datetime import timedelta
 import time
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from contextlib import contextmanager
 
 from entsoe import EntsoePandasClient
@@ -235,7 +235,7 @@ class EntsoeCrawler:
             try:
                 with self.db_accessor() as conn:
                     query = f'select max("index") from {tablename}'
-                    d = conn.execute(query).fetchone()[0]
+                    d = conn.execute(text(query)).fetchone()[0]
                 start = pd.to_datetime(d)
                 try:
                     start = start.tz_localize('Europe/Berlin')
@@ -295,9 +295,9 @@ class EntsoeCrawler:
                 log.info(f'creating index country_idx_{proc.__name__}')
                 query = (
                     f'CREATE INDEX IF NOT EXISTS "country_idx_{proc.__name__}" ON "{proc.__name__}" ("country", "index");')
-                conn.execute(query)
+                conn.execute(text(query))
                 #query = (f'CREATE INDEX IF NOT EXISTS "country_{proc.__name__}" ON "{proc.__name__}" ("country");')
-                # conn.execute(query)
+                # conn.execute(text(query))
                 log.info(f'created indexes country_idx_{proc.__name__}')
         except Exception as e:
             log.error(f'could not create index if needed: {e}')
@@ -305,8 +305,8 @@ class EntsoeCrawler:
         # falls es eine TimescaleDB ist, erzeuge eine Hypertable
         try:
             with self.db_accessor() as conn:
-                query_create_hypertable = f"SELECT create_hypertable('{proc.__name__}', 'index', if_not_exists => TRUE, migrate_data => TRUE);"
-                conn.execute(query_create_hypertable)
+                query_create_hypertable = f"SELECT public.create_hypertable('{proc.__name__}', 'index', if_not_exists => TRUE, migrate_data => TRUE);"
+                conn.execute(text(query_create_hypertable))
             log.info(f'created hypertable {proc.__name__}')
         except Exception as e:
             log.error(f'could not create hypertable: {e}')
@@ -327,7 +327,7 @@ class EntsoeCrawler:
         delta :
             param proc:
         proc :
-            
+
 
         Returns
         -------
@@ -335,6 +335,8 @@ class EntsoeCrawler:
         """
         start, delta = self.get_latest_crawled_timestamp(start, delta, proc.__name__)
         log.info(f'****** {proc.__name__} *******')
+        start = pd.Timestamp("2024-03-25 04:00",  tz='Europe/Berlin')
+        delta = timedelta(days=2)
 
         if (times*delta).days < 2:
             log.info('nothing to do')
@@ -377,7 +379,7 @@ class EntsoeCrawler:
             try:
                 with self.db_accessor() as conn:
                     query_create_hypertable = f"SELECT create_hypertable('{proc.__name__}', 'index', if_not_exists => TRUE, migrate_data => TRUE);"
-                    conn.execute(query_create_hypertable)
+                    conn.execute(text(query_create_hypertable))
             except Exception as e:
                 log.error(f'could not create hypertable: {e}')
 
@@ -457,7 +459,7 @@ class EntsoeCrawler:
         try:
             with self.db_accessor() as conn:
                 query = 'CREATE INDEX IF NOT EXISTS "idx_name_query_per_plant" ON "query_per_plant" ("name", "index", "country");'
-                conn.execute(query)
+                conn.execute(text(query))
         except Exception as e:
             log.error(f'could not create index: {e}')
 
@@ -529,12 +531,12 @@ class EntsoeCrawler:
                     client.query_generation]
 
         # Download load and generation
-        # hier könnte man parallelisieren
-        for proc in ts_procs:
-            start_, delta_ = self.get_latest_crawled_timestamp(start, delta, proc.__name__)
-            self.download_entsoe(countries, proc, start_, delta_, times=1)
+#        # hier könnte man parallelisieren
+#        for proc in ts_procs:
+#            start_, delta_ = self.get_latest_crawled_timestamp(start, delta, proc.__name__)
+#            self.download_entsoe(countries, proc, start_, delta_, times=1)
 
-        self.pull_crossborders(start, delta, 1, client.query_crossborder_flows)
+        #self.pull_crossborders(start, delta, 1, client.query_crossborder_flows)
 
         plant_countries = self.countries_with_plant_data(client)
 
@@ -576,7 +578,7 @@ if __name__ == "__main__":
     delta = timedelta(days=30)
     end = start+delta
 
-    times = 7*12  # bis 2022
+    times = 3*12  # bis 2022
     db = 'postgresql://entso:entso@localhost:5432/entsoe'
     #db = 'data/entsoe.db'
 

@@ -17,7 +17,7 @@ from tqdm import tqdm
 import sqlite3
 from contextlib import closing
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from contextlib import contextmanager
 
 import logging
@@ -118,13 +118,13 @@ class EntsogCrawler:
             with self.db_accessor() as conn:
                 query = (
                     'CREATE INDEX IF NOT EXISTS "idx_opd" ON operatorpointdirections (operatorKey, pointKey,directionkey);')
-                conn.execute(query)
+                conn.execute(text(query))
 
     def findNewBegin(self, table_name):
         try:
             with self.db_accessor() as conn:
                 query = f'select max(periodfrom) from {table_name}'
-                d = conn.execute(query).fetchone()[0]
+                d = conn.execute(text(query)).fetchone()[0]
             begin = pd.to_datetime(d).date()
         except Exception as e:
             begin = date(2017, 7, 10)
@@ -162,8 +162,8 @@ class EntsogCrawler:
                 # impact of sleeping here is quite small in comparison to 50s query length
                 # rate limiting Gateway Timeouts
                 df = getDataFrame('operationaldata', params)
-                df['periodfrom'] = pd.to_datetime(df['periodfrom'], infer_datetime_format=True)
-                df['periodto'] = pd.to_datetime(df['periodto'], infer_datetime_format=True)
+                df['periodfrom'] = pd.to_datetime(df['periodfrom'])
+                df['periodto'] = pd.to_datetime(df['periodto'])
 
                 try:
                     with self.db_accessor() as conn:
@@ -182,8 +182,8 @@ class EntsogCrawler:
 
             try:
                 with self.db_accessor() as conn:
-                    query_create_hypertable = f"SELECT create_hypertable('{tbl_name}', 'periodfrom', if_not_exists => TRUE, migrate_data => TRUE);"
-                    conn.execute(query_create_hypertable)
+                    query_create_hypertable = f"SELECT public.create_hypertable('{tbl_name}', 'periodfrom', if_not_exists => TRUE, migrate_data => TRUE);"
+                    conn.execute(text(query_create_hypertable))
                     log.info(f'created hypertable {tbl_name}')
             except Exception as e:
                 log.error(f'could not create hypertable {tbl_name}: {e}')
@@ -195,30 +195,30 @@ class EntsogCrawler:
             with self.db_accessor() as conn:
                 query = (
                     'CREATE INDEX IF NOT EXISTS "idx_opdata" ON Allocation (operatorKey,periodfrom);')
-                conn.execute(query)
+                conn.execute(text(query))
 
                 query = (
                     'CREATE INDEX IF NOT EXISTS "idx_pointKey" ON Allocation (pointKey,periodfrom);')
-                conn.execute(query)
+                conn.execute(text(query))
         if 'Physical Flow' in indicators:
             with self.db_accessor() as conn:
                 query = (
                     'CREATE INDEX IF NOT EXISTS "idx_phys_operator" ON Physical_Flow (operatorKey,periodfrom);')
-                conn.execute(query)
+                conn.execute(text(query))
 
                 query = (
                     'CREATE INDEX IF NOT EXISTS "idx_phys_point" ON Physical_Flow (pointKey,periodfrom);')
-                conn.execute(query)
+                conn.execute(text(query))
 
         if 'Firm Technical' in indicators:
             with self.db_accessor() as conn:
                 query = (
                     'CREATE INDEX IF NOT EXISTS "idx_ft_opdata" ON Firm_Technical (operatorKey,periodfrom);')
-                conn.execute(query)
+                conn.execute(text(query))
 
                 query = (
                     'CREATE INDEX IF NOT EXISTS "idx_ft_pointKey" ON Firm_Technical (pointKey,periodfrom);')
-                conn.execute(query)
+                conn.execute(text(query))
 
 if __name__ == "__main__":
     database = 'data/entsog.db'
